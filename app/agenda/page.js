@@ -10,6 +10,8 @@ export default function AgendaPage() {
   const [loading, setLoading] = useState(true)
   const [jogoSelecionado, setJogoSelecionado] = useState(null)
 
+  const LOGO_NOVORIZONTINO = "https://www.sofascore.com/static/images/team-logo/football/41555.png"
+
   useEffect(() => {
     async function loadData() {
       try {
@@ -17,7 +19,6 @@ export default function AgendaPage() {
         const response = await fetch(url)
         const csvText = await response.text()
         
-        // Simple CSV parser
         const lines = csvText.split('\n').filter(line => line.trim() !== '')
         const headers = lines[0].split(',')
         
@@ -28,23 +29,23 @@ export default function AgendaPage() {
             data[header.trim()] = values[i]?.trim()
           })
 
-          // Mapeamento de cores e siglas baseado no adversário
           const isMandante = data['Mandante'] === 'Grêmio Novorizontino'
-          const adversario = isMandante ? data['Visitante'] : data['Mandante']
           
           return {
             id: index,
             data: data['Data'],
             hora: data['Horário'],
-            adversario: adversario,
             mandante: data['Mandante'],
             visitante: data['Visitante'],
-            placar: `${data['Gols Mandante']} - ${data['Gols Visitante']}`,
+            placar: `${data['Gols Mandante'] || 0} - ${data['Gols Visitante'] || 0}`,
             status: data['Resultado'] ? 'passado' : 'proximo',
             campeonato: data['Competição'],
             local: data['Local'] || (isMandante ? 'Jorjão' : 'Fora'),
             escalaçaoIframe: data['código escalação'] || null,
-            golsRaw: data['Gols marcados mandante'] + " " + data['Gols marcados VISITANTE']
+            golsMandante: data['Gols marcados mandante'] || "",
+            golsVisitante: data['Gols marcados VISITANTE'] || "",
+            logoMandante: isMandante ? LOGO_NOVORIZONTINO : (data['logo'] || ""),
+            logoVisitante: !isMandante ? LOGO_NOVORIZONTINO : (data['logo'] || "")
           }
         })
 
@@ -58,6 +59,14 @@ export default function AgendaPage() {
     loadData()
   }, [])
 
+  // Função para limpar e renderizar o iframe com segurança
+  const renderIframe = (iframeString) => {
+    if (!iframeString) return null;
+    // Remove aspas extras se houver e garante que o estilo seja compatível
+    const cleanIframe = iframeString.replace(/style="[^"]*"/, 'style="width:100%; height:600px; border:none;"');
+    return <div className="bg-white rounded-xl overflow-hidden min-h-[600px]" dangerouslySetInnerHTML={{ __html: cleanIframe }} />;
+  }
+
   if (loading) return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">Carregando Agenda...</div>
 
   return (
@@ -67,7 +76,7 @@ export default function AgendaPage() {
           <button onClick={() => router.push('/')} className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors text-slate-400 hover:text-white">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
           </button>
-          <h1 className="text-3xl font-bold">Agenda de Jogos (Realtime)</h1>
+          <h1 className="text-3xl font-bold">Agenda de Jogos</h1>
         </div>
 
         <div className="space-y-4">
@@ -85,20 +94,16 @@ export default function AgendaPage() {
                   </div>
                   <div className="h-12 w-px bg-slate-700 hidden md:block"></div>
                   <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 ${jogo.mandante === 'Grêmio Novorizontino' ? 'bg-yellow-500 text-black' : 'bg-slate-700'} rounded-full flex items-center justify-center font-bold text-xs`}>
-                        {jogo.mandante === 'Grêmio Novorizontino' ? 'GN' : 'ADV'}
-                      </div>
-                      <span className="font-bold text-sm">{jogo.mandante}</span>
+                    <div className="flex flex-col items-center gap-2 w-24">
+                      <img src={jogo.logoMandante} alt={jogo.mandante} className="w-10 h-10 object-contain" onError={(e) => e.target.src = 'https://via.placeholder.com/40?text=TEAM'} />
+                      <span className="font-bold text-[10px] text-center line-clamp-1">{jogo.mandante}</span>
                     </div>
                     <div className="px-3 py-1 bg-slate-900 rounded text-xs font-bold text-slate-400">
                       {jogo.status === 'passado' ? jogo.placar : 'vs'}
                     </div>
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 ${jogo.visitante === 'Grêmio Novorizontino' ? 'bg-yellow-500 text-black' : 'bg-slate-700'} rounded-full flex items-center justify-center font-bold text-xs`}>
-                        {jogo.visitante === 'Grêmio Novorizontino' ? 'GN' : 'ADV'}
-                      </div>
-                      <span className="font-bold text-sm">{jogo.visitante}</span>
+                    <div className="flex flex-col items-center gap-2 w-24">
+                      <img src={jogo.logoVisitante} alt={jogo.visitante} className="w-10 h-10 object-contain" onError={(e) => e.target.src = 'https://via.placeholder.com/40?text=TEAM'} />
+                      <span className="font-bold text-[10px] text-center line-clamp-1">{jogo.visitante}</span>
                     </div>
                   </div>
                 </div>
@@ -127,41 +132,43 @@ export default function AgendaPage() {
               </div>
               <div className="p-6">
                 <div className="flex items-center justify-center gap-8 mb-8 bg-slate-900/50 p-6 rounded-xl border border-slate-700">
-                  <div className="text-center">
-                    <div className={`w-16 h-16 ${jogoSelecionado.mandante === 'Grêmio Novorizontino' ? 'bg-yellow-500 text-black' : 'bg-slate-700'} rounded-full flex items-center justify-center font-bold text-xl mx-auto mb-2`}>
-                      {jogoSelecionado.mandante === 'Grêmio Novorizontino' ? 'GN' : 'ADV'}
-                    </div>
+                  <div className="text-center flex flex-col items-center">
+                    <img src={jogoSelecionado.logoMandante} alt={jogoSelecionado.mandante} className="w-16 h-16 object-contain mb-2" />
                     <span className="font-bold block text-sm">{jogoSelecionado.mandante}</span>
                   </div>
                   <div className="text-3xl font-black text-emerald-400">
                     {jogoSelecionado.status === 'passado' ? jogoSelecionado.placar : 'VS'}
                   </div>
-                  <div className="text-center">
-                    <div className={`w-16 h-16 ${jogoSelecionado.visitante === 'Grêmio Novorizontino' ? 'bg-yellow-500 text-black' : 'bg-slate-700'} rounded-full flex items-center justify-center font-bold text-xl mx-auto mb-2`}>
-                      {jogoSelecionado.visitante === 'Grêmio Novorizontino' ? 'GN' : 'ADV'}
-                    </div>
+                  <div className="text-center flex flex-col items-center">
+                    <img src={jogoSelecionado.logoVisitante} alt={jogoSelecionado.visitante} className="w-16 h-16 object-contain mb-2" />
                     <span className="font-bold block text-sm">{jogoSelecionado.visitante}</span>
                   </div>
                 </div>
-                <div className="mb-8">
-                  <h3 className="text-emerald-400 font-bold text-sm uppercase mb-4 flex items-center gap-2">
-                    <span className="w-2 h-2 bg-emerald-400 rounded-full"></span>
-                    Gols e Eventos
-                  </h3>
-                  <div className="bg-slate-900 p-4 rounded-xl border border-slate-700 text-sm text-slate-300 whitespace-pre-line">
-                    {jogoSelecionado.golsRaw || "Nenhum dado de gol disponível."}
+
+                {/* GOLS SINALIZADOS POR TIME */}
+                <div className="grid grid-cols-2 gap-4 mb-8">
+                  <div className="space-y-2">
+                    <h4 className="text-[10px] font-bold text-slate-500 uppercase">Gols {jogoSelecionado.mandante}</h4>
+                    <div className="bg-slate-900/50 p-3 rounded-lg border border-slate-700 text-xs text-slate-300 min-h-[60px] whitespace-pre-line">
+                      {jogoSelecionado.golsMandante || "-"}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <h4 className="text-[10px] font-bold text-slate-500 uppercase text-right">Gols {jogoSelecionado.visitante}</h4>
+                    <div className="bg-slate-900/50 p-3 rounded-lg border border-slate-700 text-xs text-slate-300 min-h-[60px] text-right whitespace-pre-line">
+                      {jogoSelecionado.golsVisitante || "-"}
+                    </div>
                   </div>
                 </div>
+
                 <div>
                   <h3 className="text-emerald-400 font-bold text-sm uppercase mb-4 flex items-center gap-2">
                     <span className="w-2 h-2 bg-emerald-400 rounded-full"></span>
                     Escalação (SofaScore)
                   </h3>
-                  {jogoSelecionado.escalaçaoIframe ? (
-                    <div className="bg-white rounded-xl overflow-hidden min-h-[400px]" dangerouslySetInnerHTML={{ __html: jogoSelecionado.escalaçaoIframe }} />
-                  ) : (
+                  {renderIframe(jogoSelecionado.escalaçaoIframe) || (
                     <div className="bg-slate-900 p-12 rounded-xl border border-slate-700 text-center text-slate-500">
-                      Escalação não disponível para este jogo
+                      Escalação ainda não disponível para este jogo
                     </div>
                   )}
                 </div>
