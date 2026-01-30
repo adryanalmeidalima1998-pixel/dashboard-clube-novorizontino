@@ -1,18 +1,52 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Chart as ChartJS, RadarController, RadarElement, PointElement, LineElement, Filler, Tooltip, Legend, ScatterController, CategoryScale, LinearScale } from 'chart.js'
 import { Radar, Scatter } from 'react-chartjs-2'
-import { elencoReal } from '../../plantel/dados_elenco'
+import Papa from 'papaparse'
 
 ChartJS.register(RadarController, RadarElement, PointElement, LineElement, Filler, Tooltip, Legend, ScatterController, CategoryScale, LinearScale)
 
 export default function GraficosPage() {
   const router = useRouter()
-  const [jogadorSelecionado, setJogadorSelecionado] = useState(elencoReal[0]?.Jogador || '')
-  const [metricaX, setMetricaX] = useState('Partidas')
+  const [jogadores, setJogadores] = useState([])
+  const [carregando, setCarregando] = useState(true)
+  const [jogadorSelecionado, setJogadorSelecionado] = useState('')
+  const [metricaX, setMetricaX] = useState('Minutos jogados')
   const [metricaY, setMetricaY] = useState('Gols')
+
+  // Carregar dados do CSV
+  useEffect(() => {
+    const carregarDados = async () => {
+      try {
+        const response = await fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vSVC0eenchMDxK3wsOTXjq9kQiy3aHTFl0X1o5vwJZR7RiZzg1Irxxe_SL2IDrqb3c1i7ZL2ugpBJkN/pub?output=csv')
+        const csvText = await response.text()
+        
+        Papa.parse(csvText, {
+          header: true,
+          skipEmptyLines: true,
+          complete: (results) => {
+            const dados = results.data.filter(j => j.Jogador && j.Jogador.trim())
+            setJogadores(dados)
+            if (dados.length > 0) {
+              setJogadorSelecionado(dados[0].Jogador)
+            }
+            setCarregando(false)
+          },
+          error: (error) => {
+            console.error('Erro ao parsear CSV:', error)
+            setCarregando(false)
+          }
+        })
+      } catch (error) {
+        console.error('Erro ao carregar dados:', error)
+        setCarregando(false)
+      }
+    }
+
+    carregarDados()
+  }, [])
 
   const parseValue = (val) => {
     if (!val || val === '-' || val === 'nan') return 0
@@ -21,22 +55,22 @@ export default function GraficosPage() {
   }
 
   // Dados para o Gráfico de Radar
-  const jogadorAtual = elencoReal.find(j => j.Jogador === jogadorSelecionado)
+  const jogadorAtual = jogadores.find(j => j.Jogador === jogadorSelecionado)
   
   const radarData = useMemo(() => {
     if (!jogadorAtual) return null
 
     return {
-      labels: ['Gols', 'Passes %', 'Ações %', 'Dribles', 'Duelos %'],
+      labels: ['Gols', 'Passes %', 'Dribles', 'Desafios %', 'Interceptações'],
       datasets: [
         {
           label: jogadorAtual.Jogador,
           data: [
             parseValue(jogadorAtual.Gols),
-            parseValue(jogadorAtual.Passes_Precisos),
-            parseValue(jogadorAtual.Acoes_Sucesso),
+            parseValue(jogadorAtual['Passes precisos %']),
             parseValue(jogadorAtual.Dribles),
-            parseValue(jogadorAtual.Desafios)
+            parseValue(jogadorAtual['Desafios vencidos, %']),
+            parseValue(jogadorAtual.Interceptações)
           ],
           borderColor: '#10b981',
           backgroundColor: 'rgba(16, 185, 129, 0.1)',
@@ -53,23 +87,11 @@ export default function GraficosPage() {
 
   // Dados para o Gráfico de Dispersão
   const scatterData = useMemo(() => {
-    const metricasDisponiveis = {
-      'Partidas': 'Partidas',
-      'Gols': 'Gols',
-      'Passes %': 'Passes_Precisos',
-      'Ações %': 'Acoes_Sucesso',
-      'Dribles': 'Dribles',
-      'Duelos %': 'Desafios'
-    }
-
-    const xKey = metricasDisponiveis[metricaX]
-    const yKey = metricasDisponiveis[metricaY]
-
-    const pontos = elencoReal.map(j => ({
-      x: parseValue(j[xKey]),
-      y: parseValue(j[yKey]),
+    const pontos = jogadores.map(j => ({
+      x: parseValue(j[metricaX]),
+      y: parseValue(j[metricaY]),
       jogador: j.Jogador
-    })).filter(p => p.x > 0 && p.y > 0)
+    })).filter(p => p.x >= 0 && p.y >= 0)
 
     return {
       datasets: [
@@ -84,7 +106,7 @@ export default function GraficosPage() {
         }
       ]
     }
-  }, [metricaX, metricaY])
+  }, [jogadores, metricaX, metricaY])
 
   const radarOptions = {
     responsive: true,
@@ -143,7 +165,7 @@ export default function GraficosPage() {
         borderWidth: 1,
         callbacks: {
           label: function(context) {
-            return `${context.raw.jogador}: (${context.raw.x}, ${context.raw.y})`
+            return `${context.raw.jogador}: (${context.raw.x.toFixed(2)}, ${context.raw.y.toFixed(2)})`
           }
         }
       }
@@ -181,6 +203,8 @@ export default function GraficosPage() {
     }
   }
 
+  if (carregando) return <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center"><span className="text-lg">Carregando gráficos...</span></div>
+
   return (
     <div className="min-h-screen bg-slate-900 text-white p-6">
       <div className="max-w-7xl mx-auto">
@@ -190,7 +214,7 @@ export default function GraficosPage() {
           </button>
           <div>
             <h1 className="text-3xl font-bold">Análise Gráfica Avançada</h1>
-            <p className="text-slate-400 text-sm">Gráficos de Radar e Dispersão para Análise de Performance</p>
+            <p className="text-slate-400 text-sm">Gráficos de Radar e Dispersão em Tempo Real</p>
           </div>
         </div>
 
@@ -204,7 +228,7 @@ export default function GraficosPage() {
                 onChange={(e) => setJogadorSelecionado(e.target.value)}
                 className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:border-emerald-500 focus:outline-none"
               >
-                {elencoReal.map(j => (
+                {jogadores.map(j => (
                   <option key={j.Jogador} value={j.Jogador}>{j.Jogador}</option>
                 ))}
               </select>
@@ -225,14 +249,16 @@ export default function GraficosPage() {
                 <select 
                   value={metricaX} 
                   onChange={(e) => setMetricaX(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:border-emerald-500 focus:outline-none"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:border-emerald-500 focus:outline-none text-sm"
                 >
-                  <option>Partidas</option>
+                  <option>Minutos jogados</option>
                   <option>Gols</option>
-                  <option>Passes %</option>
-                  <option>Ações %</option>
+                  <option>Assistências</option>
+                  <option>Passes precisos %</option>
                   <option>Dribles</option>
-                  <option>Duelos %</option>
+                  <option>Desafios vencidos, %</option>
+                  <option>Interceptações</option>
+                  <option>Chances de gol</option>
                 </select>
               </div>
               <div>
@@ -240,14 +266,16 @@ export default function GraficosPage() {
                 <select 
                   value={metricaY} 
                   onChange={(e) => setMetricaY(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:border-emerald-500 focus:outline-none"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:border-emerald-500 focus:outline-none text-sm"
                 >
-                  <option>Partidas</option>
+                  <option>Minutos jogados</option>
                   <option>Gols</option>
-                  <option>Passes %</option>
-                  <option>Ações %</option>
+                  <option>Assistências</option>
+                  <option>Passes precisos %</option>
                   <option>Dribles</option>
-                  <option>Duelos %</option>
+                  <option>Desafios vencidos, %</option>
+                  <option>Interceptações</option>
+                  <option>Chances de gol</option>
                 </select>
               </div>
             </div>
