@@ -19,17 +19,57 @@ export default function AgendaPage() {
         const response = await fetch(url)
         const csvText = await response.text()
         
-        const lines = csvText.split('\n').filter(line => line.trim() !== '')
-        const headers = lines[0].split(',')
-        
-        const parsedJogos = lines.slice(1).map((line, index) => {
-          const values = line.split(',')
-          const data = {}
-          headers.forEach((header, i) => {
-            data[header.trim()] = values[i]?.trim()
-          })
+        // Função para parsear CSV lidando com campos entre aspas (como os iframes)
+        const parseCSV = (text) => {
+          const rows = [];
+          let currentRow = [];
+          let currentField = '';
+          let inQuotes = false;
 
-          const isMandante = data['Mandante'] === 'Grêmio Novorizontino'
+          for (let i = 0; i < text.length; i++) {
+            const char = text[i];
+            const nextChar = text[i + 1];
+
+            if (char === '"' && inQuotes && nextChar === '"') {
+              currentField += '"';
+              i++;
+            } else if (char === '"') {
+              inQuotes = !inQuotes;
+            } else if (char === ',' && !inQuotes) {
+              currentRow.push(currentField.trim());
+              currentField = '';
+            } else if ((char === '\r' || char === '\n') && !inQuotes) {
+              if (currentField || currentRow.length > 0) {
+                currentRow.push(currentField.trim());
+                rows.push(currentRow);
+                currentRow = [];
+                currentField = '';
+              }
+              if (char === '\r' && nextChar === '\n') i++;
+            } else {
+              currentField += char;
+            }
+          }
+          if (currentField || currentRow.length > 0) {
+            currentRow.push(currentField.trim());
+            rows.push(currentRow);
+          }
+          return rows;
+        };
+
+        const rows = parseCSV(csvText);
+        if (rows.length === 0) return;
+
+        const headers = rows[0];
+        const dataRows = rows.slice(1);
+
+        const parsedJogos = dataRows.map((row, index) => {
+          const data = {};
+          headers.forEach((header, i) => {
+            data[header.trim()] = row[i] || "";
+          });
+
+          const isMandante = data['Mandante'] === 'Grêmio Novorizontino';
           
           return {
             id: index,
@@ -44,27 +84,35 @@ export default function AgendaPage() {
             escalaçaoIframe: data['código escalação'] || null,
             golsMandante: data['Gols marcados mandante'] || "",
             golsVisitante: data['Gols marcados VISITANTE'] || "",
-            logoMandante: isMandante ? LOGO_NOVORIZONTINO : (data['logo'] || ""),
-            logoVisitante: !isMandante ? LOGO_NOVORIZONTINO : (data['logo'] || "")
-          }
-        })
+            logoMandante: isMandante ? LOGO_NOVORIZONTINO : (data['logo'] || "https://www.sofascore.com/static/images/team-logo/football/default.png"),
+            logoVisitante: !isMandante ? LOGO_NOVORIZONTINO : (data['logo'] || "https://www.sofascore.com/static/images/team-logo/football/default.png")
+          };
+        });
 
-        setJogos(parsedJogos)
+        setJogos(parsedJogos);
       } catch (error) {
-        console.error("Erro ao carregar agenda:", error)
+        console.error("Erro ao carregar agenda:", error);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
     }
-    loadData()
-  }, [])
+    loadData();
+  }, []);
 
-  // Função para limpar e renderizar o iframe com segurança
   const renderIframe = (iframeString) => {
-    if (!iframeString) return null;
-    // Remove aspas extras se houver e garante que o estilo seja compatível
-    const cleanIframe = iframeString.replace(/style="[^"]*"/, 'style="width:100%; height:600px; border:none;"');
-    return <div className="bg-white rounded-xl overflow-hidden min-h-[600px]" dangerouslySetInnerHTML={{ __html: cleanIframe }} />;
+    if (!iframeString || iframeString.trim() === "") return null;
+    
+    // Tenta extrair apenas a parte do iframe se houver lixo em volta
+    const iframeMatch = iframeString.match(/<iframe.*<\/iframe>/i);
+    let finalIframe = iframeMatch ? iframeMatch[0] : iframeString;
+
+    // Garante que o iframe tenha o estilo correto para o modal
+    finalIframe = finalIframe.replace(/style="[^"]*"/i, 'style="width:100%; height:600px; border:none;"');
+    if (!finalIframe.includes('style=')) {
+      finalIframe = finalIframe.replace('<iframe', '<iframe style="width:100%; height:600px; border:none;"');
+    }
+
+    return <div className="bg-white rounded-xl overflow-hidden min-h-[600px]" dangerouslySetInnerHTML={{ __html: finalIframe }} />;
   }
 
   if (loading) return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">Carregando Agenda...</div>
@@ -95,14 +143,14 @@ export default function AgendaPage() {
                   <div className="h-12 w-px bg-slate-700 hidden md:block"></div>
                   <div className="flex items-center gap-4">
                     <div className="flex flex-col items-center gap-2 w-24">
-                      <img src={jogo.logoMandante} alt={jogo.mandante} className="w-10 h-10 object-contain" onError={(e) => e.target.src = 'https://via.placeholder.com/40?text=TEAM'} />
+                      <img src={jogo.logoMandante} alt={jogo.mandante} className="w-10 h-10 object-contain" onError={(e) => e.target.src = 'https://www.sofascore.com/static/images/team-logo/football/default.png'} />
                       <span className="font-bold text-[10px] text-center line-clamp-1">{jogo.mandante}</span>
                     </div>
                     <div className="px-3 py-1 bg-slate-900 rounded text-xs font-bold text-slate-400">
                       {jogo.status === 'passado' ? jogo.placar : 'vs'}
                     </div>
                     <div className="flex flex-col items-center gap-2 w-24">
-                      <img src={jogo.logoVisitante} alt={jogo.visitante} className="w-10 h-10 object-contain" onError={(e) => e.target.src = 'https://via.placeholder.com/40?text=TEAM'} />
+                      <img src={jogo.logoVisitante} alt={jogo.visitante} className="w-10 h-10 object-contain" onError={(e) => e.target.src = 'https://www.sofascore.com/static/images/team-logo/football/default.png'} />
                       <span className="font-bold text-[10px] text-center line-clamp-1">{jogo.visitante}</span>
                     </div>
                   </div>
@@ -145,7 +193,6 @@ export default function AgendaPage() {
                   </div>
                 </div>
 
-                {/* GOLS SINALIZADOS POR TIME */}
                 <div className="grid grid-cols-2 gap-4 mb-8">
                   <div className="space-y-2">
                     <h4 className="text-[10px] font-bold text-slate-500 uppercase">Gols {jogoSelecionado.mandante}</h4>
