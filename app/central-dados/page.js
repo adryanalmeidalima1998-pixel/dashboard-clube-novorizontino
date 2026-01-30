@@ -7,6 +7,7 @@ import Papa from 'papaparse'
 export default function CentralDados() {
   const router = useRouter()
   const [jogadores, setJogadores] = useState([])
+  const [todasAsColunas, setTodasAsColunas] = useState([])
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState(null)
   
@@ -18,16 +19,13 @@ export default function CentralDados() {
   // Ordenação
   const [ordenacao, setOrdenacao] = useState({ coluna: 'Jogador', direcao: 'asc' })
 
-  // Métricas selecionadas
+  // Métricas selecionadas - começa com as principais
   const [metricasSelecionadas, setMetricasSelecionadas] = useState([
     'Index',
     'Minutos jogados',
     'Gols',
     'Assistências',
-    'Passes precisos %',
-    'Dribles',
-    'Desafios vencidos, %',
-    'Interceptações'
+    'Passes precisos %'
   ])
 
   const [painelAberto, setPainelAberto] = useState(false)
@@ -45,6 +43,13 @@ export default function CentralDados() {
           complete: (results) => {
             const dados = results.data.filter(j => j.Jogador && j.Jogador.trim())
             setJogadores(dados)
+            
+            // Extrair todas as colunas disponíveis
+            if (dados.length > 0) {
+              const colunas = Object.keys(dados[0]).filter(col => col && col.trim())
+              setTodasAsColunas(colunas)
+            }
+            
             setCarregando(false)
           },
           error: (error) => {
@@ -126,9 +131,18 @@ export default function CentralDados() {
     if (['Jogador', 'Time', 'Posição'].includes(metrica)) return
     if (metricasSelecionadas.includes(metrica)) {
       setMetricasSelecionadas(metricasSelecionadas.filter(m => m !== metrica))
-    } else if (metricasSelecionadas.length < 12) {
+    } else {
       setMetricasSelecionadas([...metricasSelecionadas, metrica])
     }
+  }
+
+  const selecionarTodas = () => {
+    const todasExcetoBasicas = todasAsColunas.filter(c => !['?', 'Jogador', 'Time', 'Posição'].includes(c))
+    setMetricasSelecionadas(todasExcetoBasicas)
+  }
+
+  const limparTodas = () => {
+    setMetricasSelecionadas(['Index', 'Minutos jogados', 'Gols'])
   }
 
   const times = [...new Set(jogadores.map(j => j.Time))].filter(Boolean).sort()
@@ -195,26 +209,44 @@ export default function CentralDados() {
         </select>
         <button 
           onClick={() => setPainelAberto(!painelAberto)}
-          className="bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg px-4 py-2 text-white font-bold transition-colors"
+          className="bg-emerald-600 hover:bg-emerald-500 border border-emerald-500 rounded-lg px-4 py-2 text-white font-bold transition-colors shadow-lg shadow-emerald-900/20"
         >
-          {painelAberto ? 'Fechar Métricas' : 'Selecionar Métricas'}
+          {painelAberto ? '✓ Fechar Métricas' : '+ Selecionar Métricas'}
         </button>
       </div>
 
       {/* PAINEL DE MÉTRICAS */}
       {painelAberto && (
-        <div className="bg-slate-800 rounded-lg p-4 mb-6 border border-slate-700 grid grid-cols-2 md:grid-cols-4 gap-2">
-          {['Index', 'Minutos jogados', 'Gols', 'Assistências', 'Passes precisos %', 'Dribles', 'Desafios vencidos, %', 'Interceptações', 'Chances de gol', 'Chutes', 'Cartões amarelos', 'Ações / com sucesso %'].map(m => (
-            <label key={m} className="flex items-center gap-2 cursor-pointer">
-              <input 
-                type="checkbox" 
-                checked={metricasSelecionadas.includes(m)}
-                onChange={() => toggleMetrica(m)}
-                className="w-4 h-4 rounded border-slate-600 text-emerald-600"
-              />
-              <span className="text-sm">{m}</span>
-            </label>
-          ))}
+        <div className="bg-slate-800 rounded-lg p-6 mb-6 border border-slate-700">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-bold">Todas as Métricas Disponíveis ({todasAsColunas.length})</h3>
+            <div className="flex gap-2">
+              <button onClick={selecionarTodas} className="bg-emerald-600 hover:bg-emerald-500 px-3 py-1 rounded text-sm font-bold transition-colors">
+                Selecionar Todas
+              </button>
+              <button onClick={limparTodas} className="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-sm font-bold transition-colors">
+                Limpar
+              </button>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-96 overflow-y-auto">
+            {todasAsColunas.filter(c => !['?'].includes(c)).map(m => (
+              <label key={m} className="flex items-center gap-2 cursor-pointer hover:bg-slate-700/50 p-2 rounded transition-colors">
+                <input 
+                  type="checkbox" 
+                  checked={metricasSelecionadas.includes(m)}
+                  onChange={() => toggleMetrica(m)}
+                  className="w-4 h-4 rounded border-slate-600 text-emerald-600 cursor-pointer"
+                />
+                <span className="text-sm">{m}</span>
+              </label>
+            ))}
+          </div>
+          
+          <div className="mt-4 text-sm text-slate-400">
+            Selecionadas: {metricasSelecionadas.length} de {todasAsColunas.filter(c => !['?'].includes(c)).length} métricas
+          </div>
         </div>
       )}
 
@@ -222,33 +254,33 @@ export default function CentralDados() {
       <div className="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden shadow-2xl">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-slate-900/50 border-b border-slate-700">
+            <thead className="bg-slate-900/50 border-b border-slate-700 sticky top-0">
               <tr>
-                <th className="p-4 text-left font-bold text-slate-400 uppercase text-[10px] cursor-pointer hover:text-white transition-colors sticky left-0 bg-slate-900 z-10" onClick={() => handleOrdenacao('Jogador')}>
+                <th className="p-4 text-left font-bold text-slate-400 uppercase text-[10px] cursor-pointer hover:text-white transition-colors sticky left-0 bg-slate-900 z-20" onClick={() => handleOrdenacao('Jogador')}>
                   Jogador {ordenacao.coluna === 'Jogador' && (ordenacao.direcao === 'asc' ? '↑' : '↓')}
                 </th>
-                <th className="p-4 text-left font-bold text-slate-400 uppercase text-[10px]">Time</th>
-                <th className="p-4 text-left font-bold text-slate-400 uppercase text-[10px]">Posição</th>
+                <th className="p-4 text-left font-bold text-slate-400 uppercase text-[10px] sticky left-32 bg-slate-900 z-20">Time</th>
+                <th className="p-4 text-left font-bold text-slate-400 uppercase text-[10px] sticky left-48 bg-slate-900 z-20">Posição</th>
                 {metricasSelecionadas.map(m => (
-                  <th key={m} className="p-4 text-center font-bold text-slate-400 uppercase text-[10px] cursor-pointer hover:text-white transition-colors" onClick={() => handleOrdenacao(m)}>
+                  <th key={m} className="p-4 text-center font-bold text-slate-400 uppercase text-[10px] cursor-pointer hover:text-white transition-colors whitespace-nowrap" onClick={() => handleOrdenacao(m)}>
                     {m} {ordenacao.coluna === m && (ordenacao.direcao === 'asc' ? '↑' : '↓')}
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-700/50">
-              {jogadoresFiltrados.slice(0, 100).map((j, i) => (
+              {jogadoresFiltrados.slice(0, 150).map((j, i) => (
                 <tr key={i} className="hover:bg-slate-700/30 transition-colors group">
                   <td className="p-4 font-bold text-white sticky left-0 bg-slate-800 group-hover:bg-slate-700/50 z-10">{j.Jogador}</td>
-                  <td className="p-4 text-slate-300">{j.Time}</td>
-                  <td className="p-4"><span className="bg-slate-900 px-2 py-1 rounded text-[10px] font-bold border border-slate-700 text-emerald-400">{j.Posição}</span></td>
+                  <td className="p-4 text-slate-300 sticky left-32 bg-slate-800 group-hover:bg-slate-700/50 z-10">{j.Time}</td>
+                  <td className="p-4 sticky left-48 bg-slate-800 group-hover:bg-slate-700/50 z-10"><span className="bg-slate-900 px-2 py-1 rounded text-[10px] font-bold border border-slate-700 text-emerald-400">{j.Posição}</span></td>
                   {metricasSelecionadas.map(m => {
                     const val = parseValue(j[m])
                     const media = mediaLiga[m]
                     const acimaMedia = val >= media
                     return (
-                      <td key={m} className="p-4 text-center">
-                        <span className={`font-bold ${acimaMedia && val > 0 ? 'text-emerald-400' : 'text-slate-300'}`}>
+                      <td key={m} className="p-4 text-center whitespace-nowrap">
+                        <span className={`font-bold text-sm ${acimaMedia && val > 0 ? 'text-emerald-400' : 'text-slate-300'}`}>
                           {j[m] || '-'}
                         </span>
                       </td>
@@ -262,7 +294,7 @@ export default function CentralDados() {
       </div>
 
       <div className="mt-4 text-center text-slate-400 text-sm">
-        Mostrando {Math.min(100, jogadoresFiltrados.length)} de {jogadoresFiltrados.length} jogadores • Total de {jogadores.length} na base de dados
+        Mostrando {Math.min(150, jogadoresFiltrados.length)} de {jogadoresFiltrados.length} jogadores • Total de {jogadores.length} na base de dados • {metricasSelecionadas.length} métricas visíveis
       </div>
     </div>
   )
