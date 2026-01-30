@@ -7,10 +7,11 @@ import { jogadores as todosJogadores } from '../central-dados/dados'
 
 export default function PlantelPage() {
   const router = useRouter()
-  const [sortConfig, setSortConfig] = useState({ key: 'Jogador', direction: 'asc' })
+  const [sortConfig, setSortConfig] = useState({ key: 'Index', direction: 'desc' })
   
-  // Métricas principais para o elenco
+  // Métricas principais para o elenco (incluindo Index)
   const metricasPrincipais = [
+    'Index',
     'Partidas',
     'Gols',
     'Nota_Media',
@@ -26,10 +27,26 @@ export default function PlantelPage() {
     return parseFloat(clean) || 0
   }
 
+  // Mapear Index da Central de Dados para o Elenco Real
+  const elencoComIndex = useMemo(() => {
+    return elencoReal.map(j => {
+      // Tentar encontrar o jogador na base de dados (busca por nome aproximado ou exato)
+      const dadosCentral = todosJogadores.find(cj => 
+        cj.Jogador.toLowerCase().includes(j.Jogador.toLowerCase()) || 
+        j.Jogador.toLowerCase().includes(cj.Jogador.toLowerCase())
+      )
+      return {
+        ...j,
+        Index: dadosCentral ? dadosCentral.Index : '-'
+      }
+    })
+  }, [])
+
   // Calcular média da liga para comparação
   const mediaLiga = useMemo(() => {
     const medias = {}
     const metricasMapeadas = {
+      'Index': 'Index',
       'Partidas': 'Partidas jogadas',
       'Gols': 'Gols',
       'Acoes_Sucesso': 'Ações / com sucesso %',
@@ -39,7 +56,7 @@ export default function PlantelPage() {
     }
 
     Object.entries(metricasMapeadas).forEach(([key, m]) => {
-      const valores = todosJogadores.map(j => parseValue(j[m]))
+      const valores = todosJogadores.map(j => parseValue(j[m])).filter(v => v > 0)
       medias[key] = valores.reduce((a, b) => a + b, 0) / (valores.length || 1)
     })
     
@@ -49,6 +66,7 @@ export default function PlantelPage() {
 
   const getLabel = (m) => {
     const labels = {
+      'Index': 'Index',
       'Partidas': 'PJ',
       'Gols': 'Gols',
       'Nota_Media': 'Nota',
@@ -92,26 +110,11 @@ export default function PlantelPage() {
   // Lógica de Categorização Robusta
   const getCategoria = (jogador) => {
     const pos = (jogador.Posicao || jogador.Posicao_Original || '').toUpperCase();
-    
-    // Goleiros
     if (pos.includes('GK') || pos.includes('GOL')) return 'Goleiros';
-    
-    // Defensores
-    if (pos.includes('DEF') || pos.includes('ZAG') || pos.includes('LAT') || 
-        pos.includes('LD') || pos.includes('LE') || pos.includes('DC') || 
-        pos.includes('DR') || pos.includes('DL') || pos.includes('CD')) return 'Defensores';
-    
-    // Meio-Campistas
-    if (pos.includes('MEI') || pos.includes('VOL') || pos.includes('MC') || 
-        pos.includes('DM') || pos.includes('AM') || pos.includes('CAM') || 
-        pos.includes('CM') || pos.includes('MID')) return 'Meio-Campistas';
-    
-    // Atacantes
-    if (pos.includes('ATA') || pos.includes('PON') || pos.includes('CEN') || 
-        pos.includes('CF') || pos.includes('ST') || pos.includes('RW') || 
-        pos.includes('LW') || pos.includes('FORW')) return 'Atacantes';
-    
-    return 'Atacantes'; // Fallback para atacantes se não identificar
+    if (pos.includes('DEF') || pos.includes('ZAG') || pos.includes('LAT') || pos.includes('LD') || pos.includes('LE') || pos.includes('DC') || pos.includes('DR') || pos.includes('DL') || pos.includes('CD')) return 'Defensores';
+    if (pos.includes('MEI') || pos.includes('VOL') || pos.includes('MC') || pos.includes('DM') || pos.includes('AM') || pos.includes('CAM') || pos.includes('CM') || pos.includes('MID')) return 'Meio-Campistas';
+    if (pos.includes('ATA') || pos.includes('PON') || pos.includes('CEN') || pos.includes('CF') || pos.includes('ST') || pos.includes('RW') || pos.includes('LW') || pos.includes('FORW')) return 'Atacantes';
+    return 'Atacantes';
   }
 
   const renderTabelaPosicao = (titulo, jogadores) => {
@@ -139,7 +142,10 @@ export default function PlantelPage() {
                   <th className="p-4 font-bold text-slate-500 uppercase text-[10px] tracking-wider">Pos</th>
                   {metricasPrincipais.map(m => (
                     <th key={m} onClick={() => requestSort(m)} className="p-4 font-bold text-slate-500 uppercase text-[10px] tracking-wider text-center cursor-pointer hover:text-white transition-colors">
-                      <div className="flex flex-col items-center gap-1">{getLabel(m)} {sortConfig.key === m && <span className="text-emerald-400">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>}</div>
+                      <div className="flex flex-col items-center gap-1">
+                        {getLabel(m)} 
+                        {sortConfig.key === m && <span className="text-emerald-400">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>}
+                      </div>
                     </th>
                   ))}
                 </tr>
@@ -167,7 +173,7 @@ export default function PlantelPage() {
                       return (
                         <td key={m} className="p-4">
                           <div className="flex flex-col items-center gap-1.5">
-                            <span className={`font-bold ${m === 'Nota_Media' ? 'text-yellow-400' : acimaMedia ? 'text-emerald-400' : 'text-slate-300'}`}>
+                            <span className={`font-bold ${m === 'Nota_Media' ? 'text-yellow-400' : m === 'Index' ? 'text-emerald-400' : acimaMedia ? 'text-emerald-400' : 'text-slate-300'}`}>
                               {j[m] === '0' || j[m] === '0%' || j[m] === '-' ? '-' : j[m]}
                             </span>
                             <div className="w-12 h-1 bg-slate-700 rounded-full overflow-hidden">
@@ -190,12 +196,12 @@ export default function PlantelPage() {
   // Agrupar jogadores
   const grupos = useMemo(() => {
     const g = { 'Goleiros': [], 'Defensores': [], 'Meio-Campistas': [], 'Atacantes': [] };
-    elencoReal.forEach(j => {
+    elencoComIndex.forEach(j => {
       const cat = getCategoria(j);
       g[cat].push(j);
     });
     return g;
-  }, []);
+  }, [elencoComIndex]);
 
   return (
     <div className="min-h-screen bg-slate-900 text-white p-6">
@@ -213,7 +219,7 @@ export default function PlantelPage() {
           <div className="hidden md:flex items-center gap-4 bg-slate-800/50 p-2 rounded-xl border border-slate-700">
             <div className="text-right">
               <span className="block text-[10px] text-slate-500 uppercase font-bold">Total do Elenco</span>
-              <span className="text-xl font-black text-emerald-400">{elencoReal.length} Atletas</span>
+              <span className="text-xl font-black text-emerald-400">{elencoComIndex.length} Atletas</span>
             </div>
           </div>
         </div>
@@ -223,7 +229,7 @@ export default function PlantelPage() {
         <div className="mt-6 flex flex-wrap items-center gap-6 bg-slate-800/50 p-4 rounded-xl border border-slate-700/50">
           <div className="flex items-center gap-2"><div className="w-3 h-1 bg-emerald-500 rounded-full"></div><span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Acima da Média da Liga</span></div>
           <div className="flex items-center gap-2"><div className="w-3 h-1 bg-red-500/50 rounded-full"></div><span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Abaixo da Média da Liga</span></div>
-          <div className="ml-auto text-[10px] text-slate-500 italic">* Clique nos cabeçalhos das colunas para ordenar os jogadores por métrica.</div>
+          <div className="ml-auto text-[10px] text-slate-500 italic">* Dados de Index integrados da Central de Inteligência.</div>
         </div>
       </div>
     </div>
