@@ -14,12 +14,20 @@ export default function CompeticaoPage() {
       iframeTabela: `<iframe id="sofa-standings-embed-57411-86993" src="https://widgets.sofascore.com/pt-BR/embed/tournament/57411/season/86993/standings/Paulista%2C%20Serie%20A1%202026?widgetTitle=Paulista%2C%20Serie%20A1%202026&showCompetitionLogo=true" style="height:963px!important;max-width:768px!important;width:100%!important;" frameborder="0" scrolling="no"></iframe>`,
       iframeSelecao: `<iframe id="sofa-totw-embed-372-86993-23741" width="100%" height="598" style="display:block;max-width:700px" src="https://widgets.sofascore.com/pt-BR/embed/unique-tournament/372/season/86993/round/23741/teamOfTheWeek?showCompetitionLogo=true&widgetTheme=light&widgetTitle=Paulista%20S%C3%A9rie%20A1" frameBorder="0" scrolling="no"></iframe>`,
       artilheiros: [
-        { nome: 'Robson', time: 'Novorizontino', gols: 6 },
+        { nome: 'Robson', time: 'Novorizontino', gols: 7 },
+        { nome: 'Jhon Jhon', time: 'Palmeiras', gols: 3 },
+        { nome: 'Renê Sousa', time: 'Novorizontino', gols: 3 },
+        { nome: 'Carlão', time: 'Novorizontino', gols: 3 },
+        { nome: 'José López', time: 'Palmeiras', gols: 2 },
+        { nome: 'Maceió', time: 'Portuguesa', gols: 2 },
+        { nome: 'Daniel Baianinho', time: 'Novorizontino', gols: 2 },
+        { nome: 'Rodolfo', time: 'Novorizontino', gols: 2 },
         { nome: 'Rômulo', time: 'Novorizontino', gols: 2 },
-        { nome: 'Hélio Borges', time: 'Novorizontino', gols: 1 },
-        { nome: 'Juninho', time: 'Novorizontino', gols: 1 },
-        { nome: 'Gabriel Poveda', time: 'Novorizontino', gols: 1 },
-        { nome: 'Maykon Jesus', time: 'Novorizontino', gols: 1 },
+        { nome: 'Jonathan Calleri', time: 'São Paulo', gols: 2 },
+        { nome: 'Echaporã', time: 'Novorizontino', gols: 2 },
+        { nome: 'Gabriel Poveda', time: 'Novorizontino', gols: 2 },
+        { nome: 'Gabriel Barbosa', time: 'Santos', gols: 2 },
+        { nome: 'Yuri Alberto', time: 'Corinthians', gols: 2 },
       ]
     },
     'serie-b': {
@@ -103,7 +111,7 @@ export default function CompeticaoPage() {
 
             {/* ARTILHEIROS */}
             <div className="bg-gray-800/50 backdrop-blur rounded-xl p-6 border border-gray-700">
-              <h2 className="text-emerald-400 font-bold text-sm uppercase mb-4">Artilheiros</h2>
+              <h2 className="text-emerald-400 font-bold text-sm uppercase mb-4">Artilheiros do Campeonato</h2>
               <div className="space-y-3">
                 {competicao.artilheiros.map((art, i) => (
                   <div key={i} className="flex items-center justify-between p-3 bg-gray-900 rounded-lg border border-gray-700/50">
