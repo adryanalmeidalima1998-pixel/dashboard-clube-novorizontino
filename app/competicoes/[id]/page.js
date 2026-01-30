@@ -14,10 +14,12 @@ export default function CompeticaoPage() {
       iframeTabela: `<iframe id="sofa-standings-embed-57411-86993" src="https://widgets.sofascore.com/pt-BR/embed/tournament/57411/season/86993/standings/Paulista%2C%20Serie%20A1%202026?widgetTitle=Paulista%2C%20Serie%20A1%202026&showCompetitionLogo=true" style="height:963px!important;max-width:768px!important;width:100%!important;" frameborder="0" scrolling="no"></iframe>`,
       iframeSelecao: `<iframe id="sofa-totw-embed-372-86993-23741" width="100%" height="598" style="display:block;max-width:700px" src="https://widgets.sofascore.com/pt-BR/embed/unique-tournament/372/season/86993/round/23741/teamOfTheWeek?showCompetitionLogo=true&widgetTheme=light&widgetTitle=Paulista%20S%C3%A9rie%20A1" frameBorder="0" scrolling="no"></iframe>`,
       artilheiros: [
-        { nome: 'Neto Pessoa', time: 'Novorizontino', gols: 5 },
-        { nome: 'Flaco López', time: 'Palmeiras', gols: 4 },
-        { nome: 'Yuri Alberto', time: 'Corinthians', gols: 3 },
-        { nome: 'Rodolfo', time: 'Novorizontino', gols: 3 },
+        { nome: 'Robson', time: 'Novorizontino', gols: 6 },
+        { nome: 'Rômulo', time: 'Novorizontino', gols: 2 },
+        { nome: 'Hélio Borges', time: 'Novorizontino', gols: 1 },
+        { nome: 'Juninho', time: 'Novorizontino', gols: 1 },
+        { nome: 'Gabriel Poveda', time: 'Novorizontino', gols: 1 },
+        { nome: 'Maykon Jesus', time: 'Novorizontino', gols: 1 },
       ]
     },
     'serie-b': {
