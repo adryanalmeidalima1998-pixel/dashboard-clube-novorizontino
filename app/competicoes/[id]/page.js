@@ -4,6 +4,7 @@
 import { useParams, useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { useState, useEffect } from 'react'
+import Papa from 'papaparse'
 
 export default function CompeticaoPage() {
   const params = useParams()
@@ -22,19 +23,18 @@ export default function CompeticaoPage() {
         const response = await fetch(url)
         const csvText = await response.text()
         
-        const lines = csvText.split('\n').filter(line => line.trim() !== '')
-        const headers = lines[0].split(',')
-        
-        const parsed = lines.slice(1).map(line => {
-          const values = line.split(',')
-          return {
-            nome: values[1]?.trim(),
-            gols: parseInt(values[2]?.trim()) || 0,
-            time: 'Competição' // Placeholder ou extrair se houver na planilha
+        Papa.parse(csvText, {
+          header: true,
+          skipEmptyLines: true,
+          complete: (results) => {
+            const parsed = results.data.map(row => ({
+              nome: row['Nome']?.trim(),
+              gols: parseInt(row['Gols']?.trim()) || 0,
+              time: 'Novorizontino' // Ajustar se houver coluna de time na planilha
+            })).sort((a, b) => b.gols - a.gols)
+            setArtilheiros(parsed)
           }
-        }).sort((a, b) => b.gols - a.gols)
-
-        setArtilheiros(parsed)
+        })
       } catch (error) {
         console.error("Erro ao carregar artilheiros:", error)
       } finally {
