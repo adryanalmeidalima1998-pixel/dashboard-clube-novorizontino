@@ -90,22 +90,41 @@ export default function PlantelPage() {
     setSortConfig({ key, direction })
   }
 
-  // Agrupar jogadores por posição
-  const posicoes = {
-    'Goleiros': ['Goleiro'],
-    'Defensores': ['Zagueiro', 'Lateral Esquerdo', 'Lateral Direito'],
-    'Meio-Campistas': ['Meio-Campo', 'Volante', 'Meia Ofensivo'],
-    'Atacantes': ['Atacante', 'Ponta Esquerda', 'Ponta Direita', 'Centroavante']
-  }
+  // Agrupar jogadores por posição (Mapeamento flexível)
+  const categorias = [
+    {
+      titulo: 'Goleiros',
+      matches: ['Goleiro', 'GOL', 'GK']
+    },
+    {
+      titulo: 'Defensores',
+      matches: ['Zagueiro', 'Lateral', 'DEF', 'LD', 'LE', 'DC', 'DR', 'DL', 'RCD', 'LCD', 'CD', 'Defender']
+    },
+    {
+      titulo: 'Meio-Campistas',
+      matches: ['Meio-Campo', 'Volante', 'MEI', 'MC', 'DM', 'AM', 'CAM', 'LCM', 'RCM', 'LCDM', 'RCDM', 'Midfielder']
+    },
+    {
+      titulo: 'Atacantes',
+      matches: ['Atacante', 'Ponta', 'Centroavante', 'CF', 'ST', 'RW', 'LW', 'RAM', 'LAM', 'LCAM', 'RCAM', 'Forward']
+    }
+  ]
 
-  const renderTabelaPosicao = (titulo, posicoesLista) => {
-    const jogadoresPosicao = elencoReal.filter(j => posicoesLista.includes(j.Posicao))
+  const renderTabelaPosicao = (categoria) => {
+    const { titulo, matches } = categoria
+    
+    // Filtrar jogadores que pertencem a esta categoria
+    const jogadoresPosicao = elencoReal.filter(j => {
+      const pos = (j.Posicao || j.Posicao_Original || '').toUpperCase()
+      return matches.some(m => pos.includes(m.toUpperCase()))
+    })
+
     if (jogadoresPosicao.length === 0) return null
 
     const jogadoresOrdenados = sortedJogadores(jogadoresPosicao)
 
     return (
-      <div className="mb-12">
+      <div className="mb-12" key={titulo}>
         <div className="flex items-center gap-3 mb-4 px-2">
           <div className="w-1 h-6 bg-emerald-500 rounded-full"></div>
           <h2 className="text-xl font-bold text-white uppercase tracking-wider">{titulo}</h2>
@@ -156,7 +175,7 @@ export default function PlantelPage() {
                       </div>
                     </td>
                     <td className="p-4">
-                      <span className="bg-slate-900 px-2 py-1 rounded text-[10px] font-bold border border-slate-700 text-emerald-400">{j.Posicao}</span>
+                      <span className="bg-slate-900 px-2 py-1 rounded text-[10px] font-bold border border-slate-700 text-emerald-400">{j.Posicao || j.Posicao_Original || '-'}</span>
                     </td>
                     {metricasPrincipais.map(m => {
                       const val = parseValue(j[m])
@@ -213,10 +232,7 @@ export default function PlantelPage() {
         </div>
 
         {/* TABELAS POR POSIÇÃO */}
-        {renderTabelaPosicao('Goleiros', posicoes['Goleiros'])}
-        {renderTabelaPosicao('Defensores', posicoes['Defensores'])}
-        {renderTabelaPosicao('Meio-Campistas', posicoes['Meio-Campistas'])}
-        {renderTabelaPosicao('Atacantes', posicoes['Atacantes'])}
+        {categorias.map(cat => renderTabelaPosicao(cat))}
 
         {/* LEGENDA */}
         <div className="mt-6 flex flex-wrap items-center gap-6 bg-slate-800/50 p-4 rounded-xl border border-slate-700/50">
