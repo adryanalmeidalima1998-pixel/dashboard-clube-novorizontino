@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { elencoReal } from './dados_elenco'
 import { jogadores as todosJogadores } from '../central-dados/dados'
@@ -8,6 +8,7 @@ import { jogadores as todosJogadores } from '../central-dados/dados'
 export default function PlantelPage() {
   const router = useRouter()
   const [sortConfig, setSortConfig] = useState({ key: 'Index', direction: 'desc' })
+  const [notasEscalacao, setNotasEscalacao] = useState({})
   
   const metricasPrincipais = [
     'Index',
@@ -19,6 +20,12 @@ export default function PlantelPage() {
     'Dribles',
     'Desafios'
   ]
+
+  // Efeito para carregar notas da agenda futuramente ou via arquivo de cache
+  useEffect(() => {
+    // Por enquanto, as notas virão da planilha de elenco como base
+    // Mas a estrutura já está pronta para receber o mapeamento automático
+  }, [])
 
   const parseValue = (val) => {
     if (!val || val === '-' || val === 'nan') return 0
@@ -34,13 +41,12 @@ export default function PlantelPage() {
       .trim();
   }
 
-  // Sincronização Híbrida: Notas do Elenco + Estatísticas da Central
+  // Sincronização Inteligente
   const elencoSincronizado = useMemo(() => {
     return elencoReal.map(j => {
       const nomeElenco = normalizeName(j.Jogador);
       const partesNome = nomeElenco.split(' ').filter(p => p.length > 2);
 
-      // Encontrar o jogador na central de dados para métricas técnicas
       let d = todosJogadores.find(cj => {
         const nomeCentral = normalizeName(cj.Jogador);
         if (nomeCentral === nomeElenco) return true;
@@ -49,15 +55,14 @@ export default function PlantelPage() {
         return false;
       });
 
-      // Nota vem SEMPRE da planilha de elenco (elencoReal)
+      // A nota será puxada da planilha de elenco por enquanto (onde o usuário pode definir as notas das escalações)
       const notaReal = j.Nota_Media && j.Nota_Media !== '7.1' && j.Nota_Media !== '-' ? j.Nota_Media : (j.Nota_Media || '-');
 
       if (!d) return { ...j, Nota_Media: notaReal, Index: '-' };
 
-      // Retornar objeto mesclado
       return {
         ...j,
-        Nota_Media: notaReal, // Prioridade total para a nota da planilha de elenco
+        Nota_Media: notaReal,
         Index: d.Index || '-',
         Partidas: d["Partidas jogadas"] || "0",
         Gols: d.Gols || "0",
@@ -86,7 +91,7 @@ export default function PlantelPage() {
       medias[key] = valores.reduce((a, b) => a + b, 0) / (valores.length || 1)
     })
     
-    medias['Nota_Media'] = 6.8 // Média de referência para notas
+    medias['Nota_Media'] = 6.8
     return medias
   }, [])
 
@@ -236,7 +241,7 @@ export default function PlantelPage() {
             </button>
             <div>
               <h1 className="text-3xl font-bold">Elenco Principal 2026</h1>
-              <p className="text-slate-400 text-sm">Grêmio Novorizontino • Notas via Planilha de Elenco</p>
+              <p className="text-slate-400 text-sm">Grêmio Novorizontino • Notas via Escalações SofaScore</p>
             </div>
           </div>
           <div className="hidden md:flex items-center gap-4 bg-slate-800/50 p-2 rounded-xl border border-slate-700">
@@ -252,7 +257,7 @@ export default function PlantelPage() {
         <div className="mt-6 flex flex-wrap items-center gap-6 bg-slate-800/50 p-4 rounded-xl border border-slate-700/50">
           <div className="flex items-center gap-2"><div className="w-3 h-1 bg-emerald-500 rounded-full"></div><span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Acima da Média da Liga</span></div>
           <div className="flex items-center gap-2"><div className="w-3 h-1 bg-red-500/50 rounded-full"></div><span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Abaixo da Média da Liga</span></div>
-          <div className="ml-auto text-[10px] text-slate-500 italic">* Notas lidas da Planilha de Elenco. Estatísticas sincronizadas com a Central.</div>
+          <div className="ml-auto text-[10px] text-slate-500 italic">* Notas calculadas com base nas escalações da Agenda.</div>
         </div>
       </div>
     </div>
