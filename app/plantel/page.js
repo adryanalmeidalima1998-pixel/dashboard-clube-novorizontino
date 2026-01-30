@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { elencoReal } from './dados_elenco'
 import { jogadores as todosJogadores } from '../central-dados/dados'
@@ -8,24 +8,17 @@ import { jogadores as todosJogadores } from '../central-dados/dados'
 export default function PlantelPage() {
   const router = useRouter()
   const [sortConfig, setSortConfig] = useState({ key: 'Index', direction: 'desc' })
-  const [notasEscalacao, setNotasEscalacao] = useState({})
   
+  // Métricas principais para o elenco (Removido Nota_Media)
   const metricasPrincipais = [
     'Index',
     'Partidas',
     'Gols',
-    'Nota_Media',
     'Acoes_Sucesso',
     'Passes_Precisos',
     'Dribles',
     'Desafios'
   ]
-
-  // Efeito para carregar notas da agenda futuramente ou via arquivo de cache
-  useEffect(() => {
-    // Por enquanto, as notas virão da planilha de elenco como base
-    // Mas a estrutura já está pronta para receber o mapeamento automático
-  }, [])
 
   const parseValue = (val) => {
     if (!val || val === '-' || val === 'nan') return 0
@@ -41,12 +34,13 @@ export default function PlantelPage() {
       .trim();
   }
 
-  // Sincronização Inteligente
+  // Sincronização de dados
   const elencoSincronizado = useMemo(() => {
     return elencoReal.map(j => {
       const nomeElenco = normalizeName(j.Jogador);
       const partesNome = nomeElenco.split(' ').filter(p => p.length > 2);
 
+      // Tentar encontrar dados mais completos na central se necessário
       let d = todosJogadores.find(cj => {
         const nomeCentral = normalizeName(cj.Jogador);
         if (nomeCentral === nomeElenco) return true;
@@ -55,21 +49,17 @@ export default function PlantelPage() {
         return false;
       });
 
-      // A nota será puxada da planilha de elenco por enquanto (onde o usuário pode definir as notas das escalações)
-      const notaReal = j.Nota_Media && j.Nota_Media !== '7.1' && j.Nota_Media !== '-' ? j.Nota_Media : (j.Nota_Media || '-');
-
-      if (!d) return { ...j, Nota_Media: notaReal, Index: '-' };
+      if (!d) return j;
 
       return {
         ...j,
-        Nota_Media: notaReal,
-        Index: d.Index || '-',
-        Partidas: d["Partidas jogadas"] || "0",
-        Gols: d.Gols || "0",
-        Acoes_Sucesso: d["Ações / com sucesso %"] || "0%",
-        Passes_Precisos: d["Passes precisos %"] || "0%",
-        Dribles: d["Dribles bem sucedidos"] || "0",
-        Desafios: d["Desafios vencidos, %"] || "0%"
+        Index: d.Index || j.Index || '-',
+        Partidas: d["Partidas jogadas"] || j.Partidas || "0",
+        Gols: d.Gols || j.Gols || "0",
+        Acoes_Sucesso: d["Ações / com sucesso %"] || j.Acoes_Sucesso || "0%",
+        Passes_Precisos: d["Passes precisos %"] || j.Passes_Precisos || "0%",
+        Dribles: d["Dribles bem sucedidos"] || j.Dribles || "0",
+        Desafios: d["Desafios vencidos, %"] || j.Desafios || "0%"
       }
     })
   }, [])
@@ -91,7 +81,6 @@ export default function PlantelPage() {
       medias[key] = valores.reduce((a, b) => a + b, 0) / (valores.length || 1)
     })
     
-    medias['Nota_Media'] = 6.8
     return medias
   }, [])
 
@@ -100,7 +89,6 @@ export default function PlantelPage() {
       'Index': 'Index',
       'Partidas': 'PJ',
       'Gols': 'Gols',
-      'Nota_Media': 'Nota',
       'Acoes_Sucesso': 'Ações %',
       'Passes_Precisos': 'Passes %',
       'Dribles': 'Dribles',
@@ -138,11 +126,11 @@ export default function PlantelPage() {
   }
 
   const getCategoria = (jogador) => {
-    const pos = (jogador.Posicao || jogador.Posicao_Original || '').toUpperCase();
+    const pos = (jogador.Posicao || '').toUpperCase();
     if (pos.includes('GK') || pos.includes('GOL')) return 'Goleiros';
-    if (pos.includes('DEF') || pos.includes('ZAG') || pos.includes('LAT') || pos.includes('LD') || pos.includes('LE') || pos.includes('DC') || pos.includes('DR') || pos.includes('DL') || pos.includes('CD')) return 'Defensores';
-    if (pos.includes('MEI') || pos.includes('VOL') || pos.includes('MC') || pos.includes('DM') || pos.includes('AM') || pos.includes('CAM') || pos.includes('CM') || pos.includes('MID')) return 'Meio-Campistas';
-    if (pos.includes('ATA') || pos.includes('PON') || pos.includes('CEN') || pos.includes('CF') || pos.includes('ST') || pos.includes('RW') || pos.includes('LW') || pos.includes('FORW')) return 'Atacantes';
+    if (pos.includes('DEF') || pos.includes('ZAG') || pos.includes('LAT') || pos.includes('LD') || pos.includes('LE') || pos.includes('DC') || pos.includes('DR') || pos.includes('DL') || pos.includes('CD') || pos.includes('RD')) return 'Defensores';
+    if (pos.includes('MEI') || pos.includes('VOL') || pos.includes('MC') || pos.includes('DM') || pos.includes('AM') || pos.includes('CAM') || pos.includes('CM') || pos.includes('MID') || pos.includes('RCDM')) return 'Meio-Campistas';
+    if (pos.includes('ATA') || pos.includes('PON') || pos.includes('CEN') || pos.includes('CF') || pos.includes('ST') || pos.includes('RW') || pos.includes('LW') || pos.includes('FORW') || pos.includes('RAM') || pos.includes('LAM')) return 'Atacantes';
     return 'Atacantes';
   }
 
@@ -192,7 +180,7 @@ export default function PlantelPage() {
                       </div>
                     </td>
                     <td className="p-4">
-                      <span className="bg-slate-900 px-2 py-1 rounded text-[10px] font-bold border border-slate-700 text-emerald-400">{j.Posicao || j.Posicao_Original || '-'}</span>
+                      <span className="bg-slate-900 px-2 py-1 rounded text-[10px] font-bold border border-slate-700 text-emerald-400">{j.Posicao || '-'}</span>
                     </td>
                     {metricasPrincipais.map(m => {
                       const val = parseValue(j[m])
@@ -202,7 +190,7 @@ export default function PlantelPage() {
                       return (
                         <td key={m} className="p-4">
                           <div className="flex flex-col items-center gap-1.5">
-                            <span className={`font-bold ${m === 'Nota_Media' ? 'text-yellow-400' : m === 'Index' ? 'text-emerald-400' : acimaMedia ? 'text-emerald-400' : 'text-slate-300'}`}>
+                            <span className={`font-bold ${m === 'Index' ? 'text-emerald-400' : acimaMedia ? 'text-emerald-400' : 'text-slate-300'}`}>
                               {j[m] === '0' || j[m] === '0%' || j[m] === '-' ? '-' : j[m]}
                             </span>
                             <div className="w-12 h-1 bg-slate-700 rounded-full overflow-hidden">
@@ -241,7 +229,7 @@ export default function PlantelPage() {
             </button>
             <div>
               <h1 className="text-3xl font-bold">Elenco Principal 2026</h1>
-              <p className="text-slate-400 text-sm">Grêmio Novorizontino • Notas via Escalações SofaScore</p>
+              <p className="text-slate-400 text-sm">Grêmio Novorizontino • Performance Técnica</p>
             </div>
           </div>
           <div className="hidden md:flex items-center gap-4 bg-slate-800/50 p-2 rounded-xl border border-slate-700">
@@ -257,7 +245,7 @@ export default function PlantelPage() {
         <div className="mt-6 flex flex-wrap items-center gap-6 bg-slate-800/50 p-4 rounded-xl border border-slate-700/50">
           <div className="flex items-center gap-2"><div className="w-3 h-1 bg-emerald-500 rounded-full"></div><span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Acima da Média da Liga</span></div>
           <div className="flex items-center gap-2"><div className="w-3 h-1 bg-red-500/50 rounded-full"></div><span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Abaixo da Média da Liga</span></div>
-          <div className="ml-auto text-[10px] text-slate-500 italic">* Notas calculadas com base nas escalações da Agenda.</div>
+          <div className="ml-auto text-[10px] text-slate-500 italic">* Dados sincronizados com a nova planilha de elenco e Central de Inteligência.</div>
         </div>
       </div>
     </div>
