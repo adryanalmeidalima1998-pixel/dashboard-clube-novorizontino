@@ -34,13 +34,13 @@ export default function PlantelPage() {
       .trim();
   }
 
-  // Sincronização TOTAL com a Central de Dados
+  // Sincronização Híbrida: Notas do Elenco + Estatísticas da Central
   const elencoSincronizado = useMemo(() => {
     return elencoReal.map(j => {
       const nomeElenco = normalizeName(j.Jogador);
       const partesNome = nomeElenco.split(' ').filter(p => p.length > 2);
 
-      // Encontrar o jogador na central de dados
+      // Encontrar o jogador na central de dados para métricas técnicas
       let d = todosJogadores.find(cj => {
         const nomeCentral = normalizeName(cj.Jogador);
         if (nomeCentral === nomeElenco) return true;
@@ -49,15 +49,18 @@ export default function PlantelPage() {
         return false;
       });
 
-      if (!d) return { ...j, Index: '-' };
+      // Nota vem SEMPRE da planilha de elenco (elencoReal)
+      const notaReal = j.Nota_Media && j.Nota_Media !== '7.1' && j.Nota_Media !== '-' ? j.Nota_Media : (j.Nota_Media || '-');
 
-      // Mapear métricas reais da central
+      if (!d) return { ...j, Nota_Media: notaReal, Index: '-' };
+
+      // Retornar objeto mesclado
       return {
         ...j,
+        Nota_Media: notaReal, // Prioridade total para a nota da planilha de elenco
         Index: d.Index || '-',
         Partidas: d["Partidas jogadas"] || "0",
         Gols: d.Gols || "0",
-        Nota_Media: d.Nota_Media || "7.1", // Usar nota real se disponível, senão fallback
         Acoes_Sucesso: d["Ações / com sucesso %"] || "0%",
         Passes_Precisos: d["Passes precisos %"] || "0%",
         Dribles: d["Dribles bem sucedidos"] || "0",
@@ -83,7 +86,7 @@ export default function PlantelPage() {
       medias[key] = valores.reduce((a, b) => a + b, 0) / (valores.length || 1)
     })
     
-    medias['Nota_Media'] = 6.8
+    medias['Nota_Media'] = 6.8 // Média de referência para notas
     return medias
   }, [])
 
@@ -233,7 +236,7 @@ export default function PlantelPage() {
             </button>
             <div>
               <h1 className="text-3xl font-bold">Elenco Principal 2026</h1>
-              <p className="text-slate-400 text-sm">Grêmio Novorizontino • Sincronização em Tempo Real</p>
+              <p className="text-slate-400 text-sm">Grêmio Novorizontino • Notas via Planilha de Elenco</p>
             </div>
           </div>
           <div className="hidden md:flex items-center gap-4 bg-slate-800/50 p-2 rounded-xl border border-slate-700">
@@ -249,7 +252,7 @@ export default function PlantelPage() {
         <div className="mt-6 flex flex-wrap items-center gap-6 bg-slate-800/50 p-4 rounded-xl border border-slate-700/50">
           <div className="flex items-center gap-2"><div className="w-3 h-1 bg-emerald-500 rounded-full"></div><span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Acima da Média da Liga</span></div>
           <div className="flex items-center gap-2"><div className="w-3 h-1 bg-red-500/50 rounded-full"></div><span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Abaixo da Média da Liga</span></div>
-          <div className="ml-auto text-[10px] text-slate-500 italic">* Todas as métricas e notas sincronizadas 100% com a Central de Dados e SofaScore.</div>
+          <div className="ml-auto text-[10px] text-slate-500 italic">* Notas lidas da Planilha de Elenco. Estatísticas sincronizadas com a Central.</div>
         </div>
       </div>
     </div>
