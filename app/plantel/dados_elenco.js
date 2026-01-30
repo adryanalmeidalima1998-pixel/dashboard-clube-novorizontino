@@ -13,7 +13,7 @@ export const elencoReal = [
     "Passes_Precisos": "83%",
     "Dribles": "0,3",
     "Desafios": "56%",
-    "Nota_Media": "-"
+    "Minutos": "296"
   },
   {
     "Numero": "77",
@@ -29,7 +29,7 @@ export const elencoReal = [
     "Passes_Precisos": "86%",
     "Dribles": "2,13",
     "Desafios": "86%",
-    "Nota_Media": "-"
+    "Minutos": "296"
   },
   {
     "Numero": "6",
@@ -45,7 +45,7 @@ export const elencoReal = [
     "Passes_Precisos": "85%",
     "Dribles": "1,25",
     "Desafios": "37%",
-    "Nota_Media": "-"
+    "Minutos": "287"
   },
   {
     "Numero": "11",
@@ -61,7 +61,7 @@ export const elencoReal = [
     "Passes_Precisos": "73%",
     "Dribles": "0,97",
     "Desafios": "25%",
-    "Nota_Media": "-"
+    "Minutos": "279"
   },
   {
     "Numero": "18",
@@ -77,7 +77,7 @@ export const elencoReal = [
     "Passes_Precisos": "88%",
     "Dribles": "1",
     "Desafios": "38%",
-    "Nota_Media": "-"
+    "Minutos": "271"
   },
   {
     "Numero": "10",
@@ -93,7 +93,7 @@ export const elencoReal = [
     "Passes_Precisos": "71%",
     "Dribles": "0,38",
     "Desafios": "21%",
-    "Nota_Media": "-"
+    "Minutos": "239"
   },
   {
     "Numero": "15",
@@ -109,7 +109,7 @@ export const elencoReal = [
     "Passes_Precisos": "83%",
     "Dribles": "3,03",
     "Desafios": "33%",
-    "Nota_Media": "-"
+    "Minutos": "238"
   },
   {
     "Numero": "25",
@@ -125,7 +125,7 @@ export const elencoReal = [
     "Passes_Precisos": "92%",
     "Dribles": "0,91",
     "Desafios": "83%",
-    "Nota_Media": "-"
+    "Minutos": "198"
   },
   {
     "Numero": "19",
@@ -141,7 +141,7 @@ export const elencoReal = [
     "Passes_Precisos": "70%",
     "Dribles": "1,39",
     "Desafios": "48%",
-    "Nota_Media": "-"
+    "Minutos": "194"
   },
   {
     "Numero": "14",
@@ -157,7 +157,7 @@ export const elencoReal = [
     "Passes_Precisos": "88%",
     "Dribles": "-",
     "Desafios": "50%",
-    "Nota_Media": "-"
+    "Minutos": "171"
   },
   {
     "Numero": "4",
@@ -173,7 +173,7 @@ export const elencoReal = [
     "Passes_Precisos": "88%",
     "Dribles": "0,72",
     "Desafios": "77%",
-    "Nota_Media": "-"
+    "Minutos": "125"
   },
   {
     "Numero": "26",
@@ -189,7 +189,7 @@ export const elencoReal = [
     "Passes_Precisos": "78%",
     "Dribles": "-",
     "Desafios": "63%",
-    "Nota_Media": "-"
+    "Minutos": "98"
   },
   {
     "Numero": "50",
@@ -205,7 +205,7 @@ export const elencoReal = [
     "Passes_Precisos": "88%",
     "Dribles": "1,41",
     "Desafios": "25%",
-    "Nota_Media": "-"
+    "Minutos": "64"
   },
   {
     "Numero": "41",
@@ -221,7 +221,7 @@ export const elencoReal = [
     "Passes_Precisos": "70%",
     "Dribles": "8,33",
     "Desafios": "64%",
-    "Nota_Media": "-"
+    "Minutos": "54"
   },
   {
     "Numero": "66",
@@ -237,7 +237,7 @@ export const elencoReal = [
     "Passes_Precisos": "60%",
     "Dribles": "1,8",
     "Desafios": "30%",
-    "Nota_Media": "-"
+    "Minutos": "50"
   },
   {
     "Numero": "30",
@@ -253,7 +253,7 @@ export const elencoReal = [
     "Passes_Precisos": "60%",
     "Dribles": "-",
     "Desafios": "22%",
-    "Nota_Media": "-"
+    "Minutos": "30"
   },
   {
     "Numero": "7",
@@ -269,7 +269,7 @@ export const elencoReal = [
     "Passes_Precisos": "63%",
     "Dribles": "-",
     "Desafios": "40%",
-    "Nota_Media": "-"
+    "Minutos": "23"
   },
   {
     "Numero": "17",
@@ -285,7 +285,7 @@ export const elencoReal = [
     "Passes_Precisos": "100%",
     "Dribles": "-",
     "Desafios": "33%",
-    "Nota_Media": "-"
+    "Minutos": "19"
   },
   {
     "Numero": "16",
@@ -301,7 +301,7 @@ export const elencoReal = [
     "Passes_Precisos": "75%",
     "Dribles": "5,62",
     "Desafios": "67%",
-    "Nota_Media": "-"
+    "Minutos": "16"
   },
   {
     "Numero": "5",
@@ -317,6 +317,6 @@ export const elencoReal = [
     "Passes_Precisos": "75%",
     "Dribles": "-",
     "Desafios": "-",
-    "Nota_Media": "-"
+    "Minutos": "4"
   }
 ];
