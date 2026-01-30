@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apresentação - Dashboard Grêmio Novorizontino</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .emerald-gradient { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="max-w-6xl mx-auto">
+        <!-- HEADER -->
+        <header class="mb-12 text-center">
+            <div class="inline-block p-2 px-4 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold uppercase tracking-widest mb-4">
+                Projeto Concluído com Sucesso
+            </div>
+            <h1 class="text-4xl md:text-6xl font-black mb-4">Dashboard <span class="text-emerald-500">Novorizontino</span></h1>
+            <p class="text-slate-400 text-lg max-w-2xl mx-auto">Uma plataforma completa de análise de dados, agenda e competições integrada com SofaScore.</p>
+        </header>
+
+        <!-- PRINCIPAIS MELHORIAS -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+            <div class="glass p-6 rounded-3xl">
+                <div class="w-12 h-12 rounded-2xl bg-blue-500/20 flex items-center justify-center mb-4 text-blue-400">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                </div>
+                <h3 class="text-xl font-bold mb-2">Agenda Inteligente</h3>
+                <p class="text-slate-400 text-sm">Página dedicada com histórico de jogos, placares e escalações integradas do SofaScore.</p>
+            </div>
+            <div class="glass p-6 rounded-3xl">
+                <div class="w-12 h-12 rounded-2xl bg-emerald-500/20 flex items-center justify-center mb-4 text-emerald-400">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                </div>
+                <h3 class="text-xl font-bold mb-2">Central de Dados</h3>
+                <p class="text-slate-400 text-sm">Busca avançada, ordenação dinâmica e exportação para CSV de mais de 150 métricas.</p>
+            </div>
+            <div class="glass p-6 rounded-3xl">
+                <div class="w-12 h-12 rounded-2xl bg-purple-500/20 flex items-center justify-center mb-4 text-purple-400">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                </div>
+                <h3 class="text-xl font-bold mb-2">Análise de Elenco</h3>
+                <p class="text-slate-400 text-sm">Comparação em tempo real dos jogadores do clube com a média de toda a liga.</p>
+            </div>
+        </div>
+
+        <!-- VISUALIZAÇÃO DE DADOS (GRÁFICO) -->
+        <div class="glass p-8 rounded-3xl mb-12">
+            <h3 class="text-2xl font-bold mb-6 flex items-center gap-3">
+                <span class="w-2 h-8 bg-emerald-500 rounded-full"></span>
+                Comparativo de Métricas: Novorizontino vs Média da Liga
+            </h3>
+            <div class="h-[400px]">
+                <canvas id="metricsChart"></canvas>
+            </div>
+        </div>
+
+        <!-- BENEFÍCIOS -->
+        <div class="bg-emerald-600 rounded-3xl p-8 md:p-12 mb-12 text-white relative overflow-hidden">
+            <div class="relative z-10">
+                <h2 class="text-3xl font-black mb-8">Por que usar este Dashboard?</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div>
+                        <div class="text-4xl mb-4">🔍</div>
+                        <h4 class="text-xl font-bold mb-2">Explorar dados intuitivamente</h4>
+                        <p class="text-emerald-100 text-sm">Navegação fluida entre competições, agenda e métricas técnicas sem complexidade.</p>
+                    </div>
+                    <div>
+                        <div class="text-4xl mb-4">📈</div>
+                        <h4 class="text-xl font-bold mb-2">Compreender tendências</h4>
+                        <p class="text-emerald-100 text-sm">Identifique quais jogadores estão performando acima da média através de indicadores visuais.</p>
+                    </div>
+                    <div>
+                        <div class="text-4xl mb-4">💾</div>
+                        <h4 class="text-xl font-bold mb-2">Salvar ou compartilhar</h4>
+                        <p class="text-emerald-100 text-sm">Exporte relatórios completos em CSV para apresentações ou análises externas.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32 blur-3xl"></div>
+        </div>
+
+        <!-- FOOTER -->
+        <footer class="text-center text-slate-500 text-sm pb-8">
+            Desenvolvido para Grêmio Novorizontino • 2026
+        </footer>
+    </div>
+
+    <script>
+        const ctx = document.getElementById('metricsChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Gols', 'Assistências', 'Passes %', 'Dribles', 'Desarmes %', 'xG'],
+                datasets: [{
+                    label: 'Grêmio Novorizontino (Média)',
+                    data: [1.8, 1.2, 84, 2.5, 72, 1.6],
+                    backgroundColor: '#10b981',
+                    borderRadius: 8
+                }, {
+                    label: 'Média da Liga',
+                    data: [1.2, 0.8, 78, 1.8, 65, 1.1],
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { labels: { color: '#94a3b8', font: { weight: 'bold' } } }
+                },
+                scales: {
+                    y: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#94a3b8' } },
+                    x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

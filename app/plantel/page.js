@@ -1,98 +1,153 @@
-"use client"
-import Image from 'next/image'
-import Link from 'next/link'
+'use client'
 
-// DADOS DOS JOGADORES
-const jogadores = [
-  { "Jogador": "Alexis Ivan Alvarino", "Time": "Grêmio Novorizontino", "Idade": 24, "Altura": "184", "Peso": "81", "Nacionalidade": "Argentina", "Index": "186", "Posição": "RD" },
-  { "Jogador": "Mayk", "Time": "Grêmio Novorizontino", "Idade": 26, "Altura": "172", "Peso": "67", "Nacionalidade": "Brazil", "Index": "193", "Posição": "LD" },
-  { "Jogador": "Raul Prata", "Time": "Grêmio Novorizontino", "Idade": 37, "Altura": "175", "Peso": "72", "Nacionalidade": "Brazil", "Index": "186", "Posição": "RD" },
-  { "Jogador": "Reverson", "Time": "Grêmio Novorizontino", "Idade": 27, "Altura": "180", "Peso": "75", "Nacionalidade": "Brazil", "Index": "190", "Posição": "LD" },
-  { "Jogador": "Rodrigo Soares", "Time": "Grêmio Novorizontino", "Idade": 32, "Altura": "177", "Peso": "75", "Nacionalidade": "Brazil", "Index": "192", "Posição": "RD" },
-  { "Jogador": "Danilo Barcelos", "Time": "Grêmio Novorizontino", "Idade": 33, "Altura": "186", "Peso": "79", "Nacionalidade": "Brazil", "Index": "184", "Posição": "LD" },
-  { "Jogador": "Patrick", "Time": "Grêmio Novorizontino", "Idade": 26, "Altura": "188", "Peso": "82", "Nacionalidade": "Brazil", "Index": "208", "Posição": "ZG" },
-  { "Jogador": "Rafael Donato", "Time": "Grêmio Novorizontino", "Idade": 35, "Altura": "194", "Peso": "95", "Nacionalidade": "Brazil", "Index": "204", "Posição": "ZG" },
-  { "Jogador": "César Martins", "Time": "Grêmio Novorizontino", "Idade": 32, "Altura": "190", "Peso": "84", "Nacionalidade": "Brazil", "Index": "199", "Posição": "ZG" },
-  { "Jogador": "Luisão", "Time": "Grêmio Novorizontino", "Idade": 26, "Altura": "188", "Peso": "80", "Nacionalidade": "Brazil", "Index": "195", "Posição": "ZG" },
-  { "Jogador": "Renato Palm", "Time": "Grêmio Novorizontino", "Idade": 25, "Altura": "184", "Peso": "80", "Nacionalidade": "Brazil", "Index": "191", "Posição": "ZG" },
-  { "Jogador": "Geovane", "Time": "Grêmio Novorizontino", "Idade": 26, "Altura": "179", "Peso": "76", "Nacionalidade": "Brazil", "Index": "198", "Posição": "VOL" },
-  { "Jogador": "Dudu", "Time": "Grêmio Novorizontino", "Idade": 25, "Altura": "176", "Peso": "74", "Nacionalidade": "Brazil", "Index": "196", "Posição": "VOL" },
-  { "Jogador": "Marlon", "Time": "Grêmio Novorizontino", "Idade": 34, "Altura": "178", "Peso": "75", "Nacionalidade": "Brazil", "Index": "194", "Posição": "VOL" },
-  { "Jogador": "Willian Farias", "Time": "Grêmio Novorizontino", "Idade": 35, "Altura": "177", "Peso": "76", "Nacionalidade": "Brazil", "Index": "188", "Posição": "VOL" },
-  { "Jogador": "Eduardo", "Time": "Grêmio Novorizontino", "Idade": 29, "Altura": "182", "Peso": "78", "Nacionalidade": "Brazil", "Index": "192", "Posição": "MC" },
-  { "Jogador": "Rodolfo", "Time": "Grêmio Novorizontino", "Idade": 32, "Altura": "175", "Peso": "70", "Nacionalidade": "Brazil", "Index": "185", "Posição": "ATA" },
-  { "Jogador": "Lucca", "Time": "Grêmio Novorizontino", "Idade": 21, "Altura": "180", "Peso": "75", "Nacionalidade": "Brazil", "Index": "182", "Posição": "ATA" },
-  { "Jogador": "Neto Pessoa", "Time": "Grêmio Novorizontino", "Idade": 30, "Altura": "183", "Peso": "80", "Nacionalidade": "Brazil", "Index": "195", "Posição": "ATA" },
-  { "Jogador": "Léo Tocantins", "Time": "Grêmio Novorizontino", "Idade": 26, "Altura": "178", "Peso": "74", "Nacionalidade": "Brazil", "Index": "188", "Posição": "ATA" },
-  { "Jogador": "Waguininho", "Time": "Grêmio Novorizontino", "Idade": 34, "Altura": "178", "Peso": "74", "Nacionalidade": "Brazil", "Index": "186", "Posição": "ATA" },
-  { "Jogador": "Jordi", "Time": "Grêmio Novorizontino", "Idade": 31, "Altura": "192", "Peso": "88", "Nacionalidade": "Brazil", "Index": "198", "Posição": "GOL" },
-  { "Jogador": "Airton", "Time": "Grêmio Novorizontino", "Idade": 30, "Altura": "188", "Peso": "84", "Nacionalidade": "Brazil", "Index": "185", "Posição": "GOL" }
-];
+import { useState, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
+import { elencoReal } from './dados_elenco'
+import { jogadores as todosJogadores } from '../central-dados/dados'
 
 export default function PlantelPage() {
+  const router = useRouter()
+  
+  // Métricas principais para o elenco
+  const metricasPrincipais = [
+    'Partidas',
+    'Gols',
+    'Nota_Media',
+    'Acoes_Sucesso',
+    'Passes_Precisos',
+    'Dribles',
+    'Desafios'
+  ]
+
+  // Calcular média da liga para comparação (usando a base da central de dados)
+  const mediaLiga = useMemo(() => {
+    const medias = {}
+    const metricasMapeadas = {
+      'Partidas': 'Partidas jogadas',
+      'Gols': 'Gols',
+      'Acoes_Sucesso': 'Ações / com sucesso %',
+      'Passes_Precisos': 'Passes precisos %',
+      'Dribles': 'Dribles bem sucedidos',
+      'Desafios': 'Desafios vencidos, %'
+    }
+
+    Object.entries(metricasMapeadas).forEach(([key, m]) => {
+      const valores = todosJogadores.map(j => {
+        const val = j[m]
+        if (!val || val === '-') return 0
+        const clean = String(val).replace('%', '').replace(',', '.')
+        return parseFloat(clean) || 0
+      })
+      medias[key] = valores.reduce((a, b) => a + b, 0) / (valores.length || 1)
+    })
+    
+    medias['Nota_Media'] = 6.8 // Média fixa da liga para nota
+    return medias
+  }, [])
+
+  const parseValue = (val) => {
+    if (!val || val === '-') return 0
+    const clean = String(val).replace('%', '').replace(',', '.')
+    return parseFloat(clean) || 0
+  }
+
+  const getLabel = (m) => {
+    const labels = {
+      'Partidas': 'PJ',
+      'Gols': 'Gols',
+      'Nota_Media': 'Nota',
+      'Acoes_Sucesso': 'Ações %',
+      'Passes_Precisos': 'Passes %',
+      'Dribles': 'Dribles',
+      'Desafios': 'Duelos %'
+    }
+    return labels[m] || m
+  }
+
   return (
-    <div className="min-h-screen bg-slate-900 text-white p-8">
-      
-      {/* HEADER DA PÁGINA */}
-      <div className="flex items-center justify-between mb-8 pb-6 border-b border-slate-800 max-w-7xl mx-auto">
-        <div className="flex items-center gap-4">
-          <Link href="/" className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors text-slate-400 hover:text-white">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-          </Link>
+    <div className="min-h-screen bg-slate-900 text-white p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* HEADER */}
+        <div className="flex items-center gap-4 mb-8">
+          <button onClick={() => router.push('/')} className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors text-slate-400 hover:text-white">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+          </button>
           <div>
-            <h1 className="text-3xl font-bold">Plantel Principal</h1>
-            <p className="text-slate-400 text-sm">Temporada 2026 • Grêmio Novorizontino</p>
+            <h1 className="text-3xl font-bold">Elenco Real 2026</h1>
+            <p className="text-slate-400 text-sm">Grêmio Novorizontino • Dados Sincronizados</p>
           </div>
         </div>
-      </div>
 
-      {/* TABELA DE JOGADORES */}
-      <div className="max-w-7xl mx-auto bg-slate-800 rounded-xl border border-slate-700 overflow-hidden shadow-xl">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-900/50 text-xs text-slate-500 uppercase border-b border-slate-700">
-                <th className="py-4 pl-6 font-medium w-[30%]">Jogador</th>
-                <th className="py-4 font-medium w-[10%]">Pos</th>
-                <th className="py-4 font-medium w-[10%]">Idade</th>
-                <th className="py-4 font-medium w-[10%]">Alt (cm)</th>
-                <th className="py-4 font-medium w-[10%]">Peso (kg)</th>
-                <th className="py-4 font-medium w-[20%]">Nacionalidade</th>
-                <th className="py-4 pr-6 text-right font-medium w-[10%]">Index</th>
-              </tr>
-            </thead>
-            <tbody className="text-sm divide-y divide-slate-700/50">
-              {jogadores.map((jogador, idx) => (
-                <tr key={idx} className="hover:bg-slate-700/30 transition-colors group">
-                  <td className="py-4 pl-6 font-medium text-white group-hover:text-emerald-400 transition-colors flex items-center gap-3">
-                    <div className="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center text-xs font-bold text-slate-400">
-                      {jogador.Jogador.charAt(0)}
-                    </div>
-                    {jogador.Jogador}
-                  </td>
-                  <td className="py-4">
-                    <span className={`px-2 py-1 rounded text-xs font-bold border ${
-                      jogador.Posição === 'GOL' ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' :
-                      jogador.Posição === 'ZG' || jogador.Posição === 'LD' || jogador.Posição === 'RD' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
-                      jogador.Posição === 'VOL' || jogador.Posição === 'MC' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
-                      'bg-red-500/10 text-red-400 border-red-500/20'
-                    }`}>
-                      {jogador.Posição}
-                    </span>
-                  </td>
-                  <td className="py-4 text-slate-400">{jogador.Idade}</td>
-                  <td className="py-4 text-slate-400">{jogador.Altura}</td>
-                  <td className="py-4 text-slate-400">{jogador.Peso}</td>
-                  <td className="py-4 text-slate-400 flex items-center gap-2">
-                    {jogador.Nacionalidade === 'Brazil' ? '🇧🇷' : '🇦🇷'} {jogador.Nacionalidade}
-                  </td>
-                  <td className="py-4 pr-6 text-right font-bold text-emerald-400 text-lg">{jogador.Index}</td>
+        {/* TABELA DO ELENCO */}
+        <div className="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden shadow-2xl">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-900/50 border-b border-slate-700">
+                  <th className="p-4 font-bold text-slate-500 uppercase text-[10px] tracking-wider sticky left-0 bg-slate-900 z-10"># Jogador</th>
+                  <th className="p-4 font-bold text-slate-500 uppercase text-[10px] tracking-wider">Pos</th>
+                  {metricasPrincipais.map(m => (
+                    <th key={m} className="p-4 font-bold text-slate-500 uppercase text-[10px] tracking-wider text-center">{getLabel(m)}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-slate-700/50">
+                {elencoReal.map((j, i) => (
+                  <tr key={i} className="hover:bg-slate-700/30 transition-colors group">
+                    <td className="p-4 sticky left-0 bg-slate-800/90 backdrop-blur z-10 group-hover:bg-slate-700/50 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <span className="text-slate-500 font-mono w-4">{j.Numero !== 'nan' ? j.Numero : '-'}</span>
+                        <div>
+                          <span className="block font-bold text-white">{j.Jogador}</span>
+                          <span className="text-[10px] text-slate-500 uppercase">{j.Nacionalidade} • {j.Idade} anos • {j.Altura}cm</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <span className="bg-slate-900 px-2 py-1 rounded text-[10px] font-bold border border-slate-700 text-emerald-400">{j.Posicao}</span>
+                    </td>
+                    {metricasPrincipais.map(m => {
+                      const val = parseValue(j[m])
+                      const media = mediaLiga[m]
+                      const percentual = (val / (media || 1)) * 100
+                      const acimaMedia = val > media
+
+                      return (
+                        <td key={m} className="p-4">
+                          <div className="flex flex-col items-center gap-1.5">
+                            <span className={`font-bold ${m === 'Nota_Media' ? 'text-yellow-400' : acimaMedia ? 'text-emerald-400' : 'text-slate-300'}`}>
+                              {j[m] === '0' || j[m] === '0%' ? '-' : j[m]}
+                            </span>
+                            <div className="w-12 h-1 bg-slate-700 rounded-full overflow-hidden">
+                              <div 
+                                className={`h-full rounded-full ${acimaMedia ? 'bg-emerald-500' : 'bg-red-500/50'}`}
+                                style={{ width: `${Math.min(percentual, 100)}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        </td>
+                      )
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* LEGENDA */}
+        <div className="mt-6 flex flex-wrap items-center gap-6 bg-slate-800/50 p-4 rounded-xl border border-slate-700/50">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-1 bg-emerald-500 rounded-full"></div>
+            <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Acima da Média da Liga</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-1 bg-red-500/50 rounded-full"></div>
+            <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Abaixo da Média da Liga</span>
+          </div>
+          <div className="ml-auto text-[10px] text-slate-500 italic">
+            * Notas e métricas sincronizadas com a base de dados da Central e SofaScore.
+          </div>
         </div>
       </div>
     </div>

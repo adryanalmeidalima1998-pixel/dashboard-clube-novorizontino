@@ -9,10 +9,14 @@ export default function CentralDados() {
   const [jogadores, setJogadores] = useState([])
   const [carregando, setCarregando] = useState(true)
   
-  // Filtros
+  // Busca e Filtros
+  const [busca, setBusca] = useState('')
   const [filtroTime, setFiltroTime] = useState('todos')
   const [filtroPosicao, setFiltroPosicao] = useState('todas')
   
+  // Ordenação
+  const [ordenacao, setOrdenacao] = useState({ coluna: 'Jogador', direcao: 'asc' })
+
   // Métricas selecionadas
   const [metricasSelecionadas, setMetricasSelecionadas] = useState([
     'Minutos jogados',
@@ -27,7 +31,6 @@ export default function CentralDados() {
 
   const [painelAberto, setPainelAberto] = useState(false)
 
-  // Categorias (mantidas iguais)
   const categorias = {
     'IDENTIFICAÇÃO': ['Jogador', 'Time', 'Idade', 'Altura', 'Peso', 'Nacionalidade', 'Posição'],
     'CONTEXTO / UTILIZAÇÃO': ['Index', 'Minutos jogados', 'Partidas jogadas', 'Escalações no time titular', 'Foi substituído', 'Substituindo'],
@@ -52,93 +55,72 @@ export default function CentralDados() {
     setCarregando(false)
   }, [])
 
+  const parseValue = (val) => {
+    if (val === undefined || val === null || val === '-' || val === '') return 0
+    if (typeof val === 'number') return val
+    const clean = String(val).replace('%', '').replace(',', '.')
+    const num = parseFloat(clean)
+    return isNaN(num) ? 0 : num
+  }
+
+  const handleOrdenacao = (coluna) => {
+    setOrdenacao(prev => ({
+      coluna,
+      direcao: prev.coluna === coluna && prev.direcao === 'desc' ? 'asc' : 'desc'
+    }))
+  }
+
+  // Média da Liga (Simulada para comparação)
+  const mediaLiga = useMemo(() => {
+    const medias = {}
+    metricasSelecionadas.forEach(m => {
+      const valores = jogadores.map(j => parseValue(j[m]))
+      medias[m] = valores.reduce((a, b) => a + b, 0) / (valores.length || 1)
+    })
+    return medias
+  }, [jogadores, metricasSelecionadas])
+
+  const jogadoresFiltrados = useMemo(() => {
+    let filtrados = jogadores.filter(j => {
+      const passaBusca = j.Jogador.toLowerCase().includes(busca.toLowerCase())
+      const passaTime = filtroTime === 'todos' || j.Time === filtroTime
+      const passaPosicao = filtroPosicao === 'todas' || j['Posição'] === filtroPosicao
+      return passaBusca && passaTime && passaPosicao
+    })
+
+    filtrados.sort((a, b) => {
+      const valA = parseValue(a[ordenacao.coluna])
+      const valB = parseValue(b[ordenacao.coluna])
+      if (typeof a[ordenacao.coluna] === 'string' && isNaN(parseFloat(a[ordenacao.coluna]))) {
+        return ordenacao.direcao === 'asc' 
+          ? String(a[ordenacao.coluna]).localeCompare(String(b[ordenacao.coluna]))
+          : String(b[ordenacao.coluna]).localeCompare(String(a[ordenacao.coluna]))
+      }
+      return ordenacao.direcao === 'asc' ? valA - valB : valB - valA
+    })
+
+    return filtrados
+  }, [jogadores, busca, filtroTime, filtroPosicao, ordenacao])
+
+  const exportarCSV = () => {
+    const headers = ['Jogador', 'Time', 'Posição', ...metricasSelecionadas.filter(m => !['Jogador', 'Time', 'Posição'].includes(m))]
+    const rows = jogadoresFiltrados.map(j => headers.map(h => j[h] || '-').join(','))
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows].join('\n')
+    const encodedUri = encodeURI(csvContent)
+    const link = document.createElement("a")
+    link.setAttribute("href", encodedUri)
+    link.setAttribute("download", "central_de_dados.csv")
+    document.body.appendChild(link)
+    link.click()
+  }
+
   const toggleMetrica = (metrica) => {
     if (['Jogador', 'Time', 'Posição'].includes(metrica)) return
     if (metricasSelecionadas.includes(metrica)) {
       setMetricasSelecionadas(metricasSelecionadas.filter(m => m !== metrica))
-    } else if (metricasSelecionadas.length < 8) {
+    } else if (metricasSelecionadas.length < 12) {
       setMetricasSelecionadas([...metricasSelecionadas, metrica])
     }
-  }
-
-  const jogadoresFiltrados = useMemo(() => {
-    return jogadores.filter(j => {
-      const passaTime = filtroTime === 'todos' || j.Time === filtroTime
-      const passaPosicao = filtroPosicao === 'todas' || j['Posição'] === filtroPosicao
-      return passaTime && passaPosicao
-    })
-  }, [jogadores, filtroTime, filtroPosicao])
-
-  // Função de parsing robusta
-  const parseValue = (val) => {
-    if (val === undefined || val === null || val === '-' || val === '') return -Infinity
-    if (typeof val === 'number') return val
-    
-    // Converte string para número (ex: "0,3" -> 0.3, "83%" -> 83)
-    const clean = String(val).replace('%', '').replace(',', '.')
-    const num = parseFloat(clean)
-    
-    return isNaN(num) ? -Infinity : num
-  }
-
-  // Cálculo dos Rankings
-  const rankings = useMemo(() => {
-    const ranks = {}
-    
-    metricasSelecionadas.forEach(metrica => {
-      if (['Jogador', 'Time', 'Posição'].includes(metrica)) return
-
-      // Pega todos os valores válidos
-      const valores = jogadoresFiltrados
-        .map(j => parseValue(j[metrica]))
-        .filter(v => v !== -Infinity)
-      
-      // Ordena e pega os Top 3 únicos
-      const valoresUnicos = [...new Set(valores)]
-        .sort((a, b) => b - a)
-        .slice(0, 3)
-      
-      ranks[metrica] = valoresUnicos
-    })
-    
-    console.log('Rankings calculados:', ranks) // Debug no console
-    return ranks
-  }, [jogadoresFiltrados, metricasSelecionadas])
-
-  // Função para renderizar o conteúdo da célula com medalha
-  const renderCellContent = (metrica, valor) => {
-    if (['Jogador', 'Time', 'Posição'].includes(metrica)) return valor
-    
-    const valNum = parseValue(valor)
-    if (valNum === -Infinity) return valor || '-'
-
-    const top3 = rankings[metrica]
-    if (!top3 || top3.length === 0) return valor
-
-    // Verifica se o valor atual é um dos top 3
-    if (valNum === top3[0]) {
-      return (
-        <span style={{ color: '#FFD700', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-          🥇 {valor}
-        </span>
-      )
-    }
-    if (valNum === top3[1]) {
-      return (
-        <span style={{ color: '#C0C0C0', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-          🥈 {valor}
-        </span>
-      )
-    }
-    if (valNum === top3[2]) {
-      return (
-        <span style={{ color: '#CD7F32', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-          🥉 {valor}
-        </span>
-      )
-    }
-    
-    return valor
   }
 
   const times = [...new Set(jogadores.map(j => j.Time))].filter(Boolean).sort()
@@ -150,38 +132,54 @@ export default function CentralDados() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white p-6">
       
       {/* HEADER */}
-      <div className="flex items-center gap-4 mb-6">
-        <button onClick={() => router.push('/')} className="flex items-center gap-2 text-gray-400 hover:text-white transition">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-          Voltar
-        </button>
-        <h1 className="text-3xl font-bold">Central de Dados</h1>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <div className="flex items-center gap-4">
+          <button onClick={() => router.push('/')} className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors text-slate-400 hover:text-white">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+          </button>
+          <h1 className="text-3xl font-bold">Central de Dados</h1>
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={exportarCSV} className="bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded-lg text-sm font-bold border border-slate-700 flex items-center gap-2 transition-colors">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+            Exportar CSV
+          </button>
+        </div>
       </div>
 
-      {/* FILTROS */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
+      {/* BUSCA E FILTROS */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+        <div className="bg-slate-800/60 rounded-xl p-4 lg:col-span-2">
+          <label className="text-xs text-slate-500 uppercase font-bold mb-2 block">Buscar Jogador</label>
+          <div className="relative">
+            <input 
+              type="text" 
+              placeholder="Nome do jogador..." 
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-10 py-2 text-sm focus:border-emerald-500 outline-none transition-all"
+            />
+            <svg className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+          </div>
+        </div>
         <div className="bg-slate-800/60 rounded-xl p-4">
-          <label className="text-sm text-gray-400 mb-2 block">Time</label>
-          <select value={filtroTime} onChange={(e) => setFiltroTime(e.target.value)} className="w-full bg-slate-700 rounded-lg px-4 py-2 text-sm">
+          <label className="text-xs text-slate-500 uppercase font-bold mb-2 block">Time</label>
+          <select value={filtroTime} onChange={(e) => setFiltroTime(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm outline-none focus:border-emerald-500">
             <option value="todos">Todos os times</option>
             {times.map(t => <option key={t} value={t}>{t}</option>)}
           </select>
         </div>
         <div className="bg-slate-800/60 rounded-xl p-4">
-          <label className="text-sm text-gray-400 mb-2 block">Posição</label>
-          <select value={filtroPosicao} onChange={(e) => setFiltroPosicao(e.target.value)} className="w-full bg-slate-700 rounded-lg px-4 py-2 text-sm">
+          <label className="text-xs text-slate-500 uppercase font-bold mb-2 block">Posição</label>
+          <select value={filtroPosicao} onChange={(e) => setFiltroPosicao(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm outline-none focus:border-emerald-500">
             <option value="todas">Todas as posições</option>
             {posicoes.map(p => <option key={p} value={p}>{p}</option>)}
           </select>
         </div>
         <div className="bg-slate-800/60 rounded-xl p-4">
-          <label className="text-sm text-gray-400 mb-2 block">Jogadores</label>
-          <div className="bg-slate-700 rounded-lg px-4 py-2 text-sm font-semibold">{jogadoresFiltrados.length} encontrados</div>
-        </div>
-        <div className="bg-slate-800/60 rounded-xl p-4">
-          <label className="text-sm text-gray-400 mb-2 block">Métricas</label>
-          <button onClick={() => setPainelAberto(!painelAberto)} className="w-full bg-emerald-600 hover:bg-emerald-500 rounded-lg px-4 py-2 text-sm font-semibold transition flex items-center justify-between">
-            <span>Selecionar ({metricasSelecionadas.length}/8)</span>
+          <label className="text-xs text-slate-500 uppercase font-bold mb-2 block">Métricas</label>
+          <button onClick={() => setPainelAberto(!painelAberto)} className="w-full bg-emerald-600 hover:bg-emerald-500 rounded-lg px-4 py-2 text-sm font-bold transition flex items-center justify-between">
+            <span>({metricasSelecionadas.length}/12)</span>
             <svg className={`w-4 h-4 transition-transform ${painelAberto ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
           </button>
         </div>
@@ -189,60 +187,106 @@ export default function CentralDados() {
 
       {/* PAINEL MÉTRICAS */}
       {painelAberto && (
-        <div className="bg-slate-800/90 backdrop-blur rounded-xl p-6 mb-6 border border-slate-700 max-h-96 overflow-y-auto">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold text-emerald-400">Selecione até 8 métricas</h3>
-            <button onClick={() => setMetricasSelecionadas(['Jogador', 'Time', 'Posição'])} className="text-xs text-gray-400 hover:text-white">Limpar seleção</button>
+        <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 mb-6 max-h-[500px] overflow-y-auto shadow-2xl">
+          <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-700">
+            <h3 className="font-bold text-emerald-400 uppercase text-sm tracking-wider">Selecione até 12 métricas</h3>
+            <button onClick={() => setMetricasSelecionadas(['Jogador', 'Time', 'Posição'])} className="text-xs text-slate-500 hover:text-white transition-colors">Limpar Tudo</button>
           </div>
-          {Object.entries(categorias).map(([cat, mets]) => (
-            <div key={cat} className="mb-4">
-              <h4 className="text-sm font-semibold text-gray-400 mb-2">{cat}</h4>
-              <div className="grid grid-cols-3 gap-2">
-                {mets.map(m => {
-                  const isId = ['Jogador', 'Time', 'Posição'].includes(m)
-                  const isSel = metricasSelecionadas.includes(m)
-                  const isDis = !isSel && metricasSelecionadas.length >= 8 && !isId
-                  return (
-                    <label key={m} className={`flex items-center gap-2 p-2 rounded cursor-pointer transition ${isId ? 'opacity-50' : isSel ? 'bg-emerald-600 text-white' : isDis ? 'opacity-50' : 'bg-slate-700/50 hover:bg-slate-600'}`}>
-                      <input type="checkbox" checked={isSel} onChange={() => toggleMetrica(m)} disabled={isId || isDis} className="w-4 h-4" />
-                      <span className="text-xs">{m}</span>
-                    </label>
-                  )
-                })}
+          <div className="space-y-8">
+            {Object.entries(categorias).map(([cat, mets]) => (
+              <div key={cat}>
+                <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">{cat}</h4>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                  {mets.map(m => {
+                    const isId = ['Jogador', 'Time', 'Posição'].includes(m)
+                    const isSel = metricasSelecionadas.includes(m)
+                    const isDis = !isSel && metricasSelecionadas.length >= 12 && !isId
+                    return (
+                      <label key={m} className={`flex items-center gap-3 p-2.5 rounded-lg cursor-pointer transition-all border ${isId ? 'opacity-30' : isSel ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-400' : isDis ? 'opacity-20 grayscale' : 'bg-slate-900 border-slate-700 hover:border-slate-500'}`}>
+                        <input type="checkbox" checked={isSel} onChange={() => toggleMetrica(m)} disabled={isId || isDis} className="w-4 h-4 rounded border-slate-700 text-emerald-500 focus:ring-emerald-500 bg-slate-900" />
+                        <span className="text-xs font-medium truncate">{m}</span>
+                      </label>
+                    )
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
 
       {/* TABELA */}
-      <div className="bg-slate-800/60 rounded-xl p-4 overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-slate-700">
-              <th className="text-left p-3 sticky left-0 bg-slate-800 z-10">Jogador</th>
-              <th className="text-left p-3">Time</th>
-              <th className="text-left p-3">Posição</th>
-              {metricasSelecionadas.filter(m => !['Jogador', 'Time', 'Posição'].includes(m)).map(m => (
-                <th key={m} className="text-center p-3">{m}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {jogadoresFiltrados.slice(0, 100).map((j, i) => (
-              <tr key={i} className="border-b border-slate-700/50 hover:bg-slate-700/30">
-                <td className="p-3 font-medium sticky left-0 bg-slate-800 z-10">{j.Jogador}</td>
-                <td className="p-3">{j.Time}</td>
-                <td className="p-3">{j['Posição']}</td>
+      <div className="bg-slate-800/40 border border-slate-700 rounded-xl overflow-hidden shadow-xl">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-900/80 border-b border-slate-700">
+                <th 
+                  onClick={() => handleOrdenacao('Jogador')}
+                  className="p-4 font-bold text-slate-400 uppercase text-[10px] tracking-wider sticky left-0 bg-slate-900 z-10 cursor-pointer hover:text-white transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    Jogador
+                    {ordenacao.coluna === 'Jogador' && (ordenacao.direcao === 'asc' ? '↑' : '↓')}
+                  </div>
+                </th>
+                <th className="p-4 font-bold text-slate-400 uppercase text-[10px] tracking-wider">Time</th>
+                <th className="p-4 font-bold text-slate-400 uppercase text-[10px] tracking-wider">Pos</th>
                 {metricasSelecionadas.filter(m => !['Jogador', 'Time', 'Posição'].includes(m)).map(m => (
-                  <td key={m} className="p-3 text-center">
-                    {renderCellContent(m, j[m])}
-                  </td>
+                  <th 
+                    key={m} 
+                    onClick={() => handleOrdenacao(m)}
+                    className="p-4 font-bold text-slate-400 uppercase text-[10px] tracking-wider text-center cursor-pointer hover:text-white transition-colors"
+                  >
+                    <div className="flex flex-col items-center gap-1">
+                      {m}
+                      <span className="text-[8px] text-slate-600">
+                        {ordenacao.coluna === m ? (ordenacao.direcao === 'asc' ? '↑' : '↓') : '↕'}
+                      </span>
+                    </div>
+                  </th>
                 ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-slate-700/50">
+              {jogadoresFiltrados.slice(0, 50).map((j, i) => (
+                <tr key={i} className="hover:bg-slate-700/20 transition-colors group">
+                  <td className="p-4 font-bold text-white sticky left-0 bg-slate-800/90 backdrop-blur group-hover:bg-slate-700/40 z-10 transition-colors">{j.Jogador}</td>
+                  <td className="p-4 text-slate-400 text-xs">{j.Time}</td>
+                  <td className="p-4">
+                    <span className="bg-slate-900 px-2 py-1 rounded text-[10px] font-bold border border-slate-700 text-slate-400">{j['Posição']}</span>
+                  </td>
+                  {metricasSelecionadas.filter(m => !['Jogador', 'Time', 'Posição'].includes(m)).map(m => {
+                    const val = parseValue(j[m])
+                    const media = mediaLiga[m] || 0
+                    const acimaMedia = val > media
+                    return (
+                      <td key={m} className="p-4 text-center">
+                        <div className="flex flex-col items-center gap-1">
+                          <span className={`font-bold ${acimaMedia ? 'text-emerald-400' : 'text-slate-300'}`}>
+                            {j[m] || '-'}
+                          </span>
+                          {j.Time === 'Grêmio Novorizontino' && (
+                            <div className={`h-1 w-8 rounded-full ${acimaMedia ? 'bg-emerald-500' : 'bg-red-500/50'}`} title={`Média da Liga: ${media.toFixed(2)}`}></div>
+                          )}
+                        </div>
+                      </td>
+                    )
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
+      <div className="mt-4 text-[10px] text-slate-500 flex items-center gap-4 px-2">
+        <div className="flex items-center gap-1.5">
+          <div className="w-2 h-2 bg-emerald-500 rounded-full"></div> Acima da média da liga
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-2 h-2 bg-red-500/50 rounded-full"></div> Abaixo da média da liga
+        </div>
       </div>
     </div>
   )

@@ -11,22 +11,35 @@ export default function CompeticaoPage() {
     'paulista': {
       nome: 'Paulistão 2026',
       logo: '/competitions/paulista/logo.png',
-      iframe: `<iframe id="sofa-standings-embed-57411-86993" src="https://widgets.sofascore.com/pt-BR/embed/tournament/57411/season/86993/standings/Paulista%2C%20Serie%20A1%202026?widgetTitle=Paulista%2C%20Serie%20A1%202026&showCompetitionLogo=true" style="height:963px!important;max-width:768px!important;width:100%!important;" frameborder="0" scrolling="no"></iframe>`
+      iframeTabela: `<iframe id="sofa-standings-embed-57411-86993" src="https://widgets.sofascore.com/pt-BR/embed/tournament/57411/season/86993/standings/Paulista%2C%20Serie%20A1%202026?widgetTitle=Paulista%2C%20Serie%20A1%202026&showCompetitionLogo=true" style="height:963px!important;max-width:768px!important;width:100%!important;" frameborder="0" scrolling="no"></iframe>`,
+      iframeSelecao: `<iframe id="sofa-totw-embed-372-86993-23741" width="100%" height="598" style="display:block;max-width:700px" src="https://widgets.sofascore.com/pt-BR/embed/unique-tournament/372/season/86993/round/23741/teamOfTheWeek?showCompetitionLogo=true&widgetTheme=light&widgetTitle=Paulista%20S%C3%A9rie%20A1" frameBorder="0" scrolling="no"></iframe>`,
+      artilheiros: [
+        { nome: 'Neto Pessoa', time: 'Novorizontino', gols: 5 },
+        { nome: 'Flaco López', time: 'Palmeiras', gols: 4 },
+        { nome: 'Yuri Alberto', time: 'Corinthians', gols: 3 },
+        { nome: 'Rodolfo', time: 'Novorizontino', gols: 3 },
+      ]
     },
     'serie-b': {
       nome: 'Série B',
       logo: '/competitions/serie-b/logo.png',
-      iframe: null
+      iframeTabela: null,
+      iframeSelecao: null,
+      artilheiros: []
     },
     'copa-brasil': {
       nome: 'Copa do Brasil',
       logo: '/competitions/copa-do-brasil/logo.png',
-      iframe: null
+      iframeTabela: null,
+      iframeSelecao: null,
+      artilheiros: []
     },
     'copa-sul-sudeste': {
       nome: 'Copa Sul-Sudeste',
       logo: '/competitions/copa-sul-sudeste/logo.png',
-      iframe: null
+      iframeTabela: null,
+      iframeSelecao: null,
+      artilheiros: []
     }
   }
 
@@ -63,21 +76,55 @@ export default function CompeticaoPage() {
         </div>
         <div>
           <h1 className="text-3xl font-bold">{competicao.nome}</h1>
-          <p className="text-gray-400">Classificação</p>
+          <p className="text-gray-400">Dados e Estatísticas</p>
         </div>
       </div>
 
-      {/* TABELA */}
-      <div className="bg-gray-800/50 backdrop-blur rounded-xl p-6 border border-gray-700">
-        {competicao.iframe ? (
-          <div dangerouslySetInnerHTML={{ __html: competicao.iframe }} />
-        ) : (
-          <div className="text-center py-12">
-            <p className="text-gray-400 mb-2">Competição ainda não iniciada</p>
-            <p className="text-sm text-gray-500">A tabela será exibida quando a competição começar</p>
+      {competicao.iframeTabela ? (
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          
+          {/* TABELA (Coluna maior) */}
+          <div className="xl:col-span-2 space-y-6">
+            <div className="bg-gray-800/50 backdrop-blur rounded-xl p-6 border border-gray-700">
+              <h2 className="text-emerald-400 font-bold text-sm uppercase mb-4">Classificação</h2>
+              <div dangerouslySetInnerHTML={{ __html: competicao.iframeTabela }} />
+            </div>
           </div>
-        )}
-      </div>
+
+          {/* COLUNA LATERAL (Seleção e Artilheiros) */}
+          <div className="space-y-6">
+            {/* SELEÇÃO DA RODADA */}
+            <div className="bg-gray-800/50 backdrop-blur rounded-xl p-6 border border-gray-700">
+              <h2 className="text-emerald-400 font-bold text-sm uppercase mb-4">Seleção da Rodada</h2>
+              <div dangerouslySetInnerHTML={{ __html: competicao.iframeSelecao }} />
+            </div>
+
+            {/* ARTILHEIROS */}
+            <div className="bg-gray-800/50 backdrop-blur rounded-xl p-6 border border-gray-700">
+              <h2 className="text-emerald-400 font-bold text-sm uppercase mb-4">Artilheiros</h2>
+              <div className="space-y-3">
+                {competicao.artilheiros.map((art, i) => (
+                  <div key={i} className="flex items-center justify-between p-3 bg-gray-900 rounded-lg border border-gray-700/50">
+                    <div>
+                      <span className="block text-sm font-bold">{art.nome}</span>
+                      <span className="text-[10px] text-gray-500 uppercase">{art.time}</span>
+                    </div>
+                    <div className="text-emerald-400 font-black text-xl">
+                      {art.gols}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+        </div>
+      ) : (
+        <div className="bg-gray-800/50 backdrop-blur rounded-xl p-12 border border-gray-700 text-center">
+          <p className="text-gray-400 mb-2">Competição ainda não iniciada</p>
+          <p className="text-sm text-gray-500">Os dados serão exibidos quando a competição começar</p>
+        </div>
+      )}
 
     </div>
   )
