@@ -3,7 +3,6 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import Papa from 'papaparse'
 
 export default function AgendaPage() {
   const router = useRouter()
@@ -20,34 +19,37 @@ export default function AgendaPage() {
         const response = await fetch(url)
         const csvText = await response.text()
         
-        // Usando PapaParse para processar o CSV corretamente ignorando vírgulas dentro de aspas
-        Papa.parse(csvText, {
-          header: true,
-          skipEmptyLines: true,
-          complete: (results) => {
-            const parsedJogos = results.data.map((data, index) => {
-              const isMandante = data['Mandante'] === 'Grêmio Novorizontino'
-              
-              return {
-                id: index,
-                data: data['Data'],
-                hora: data['Horário'],
-                mandante: data['Mandante'],
-                visitante: data['Visitante'],
-                placar: `${data['Gols Mandante'] || 0} - ${data['Gols Visitante'] || 0}`,
-                status: data['Resultado'] ? 'passado' : 'proximo',
-                campeonato: data['Competição'],
-                local: data['Local'] || (isMandante ? 'Jorjão' : 'Fora'),
-                escalaçaoIframe: data['código escalação'] || null,
-                golsMandante: data['Gols marcados mandante'] || "",
-                golsVisitante: data['Gols marcados VISITANTE'] || "",
-                logoMandante: isMandante ? LOGO_NOVORIZONTINO : (data['logo'] || ""),
-                logoVisitante: !isMandante ? LOGO_NOVORIZONTINO : (data['logo'] || "")
-              }
-            })
-            setJogos(parsedJogos)
+        const lines = csvText.split('\n').filter(line => line.trim() !== '')
+        const headers = lines[0].split(',')
+        
+        const parsedJogos = lines.slice(1).map((line, index) => {
+          const values = line.split(',')
+          const data = {}
+          headers.forEach((header, i) => {
+            data[header.trim()] = values[i]?.trim()
+          })
+
+          const isMandante = data['Mandante'] === 'Grêmio Novorizontino'
+          
+          return {
+            id: index,
+            data: data['Data'],
+            hora: data['Horário'],
+            mandante: data['Mandante'],
+            visitante: data['Visitante'],
+            placar: `${data['Gols Mandante'] || 0} - ${data['Gols Visitante'] || 0}`,
+            status: data['Resultado'] ? 'passado' : 'proximo',
+            campeonato: data['Competição'],
+            local: data['Local'] || (isMandante ? 'Jorjão' : 'Fora'),
+            escalaçaoIframe: data['código escalação'] || null,
+            golsMandante: data['Gols marcados mandante'] || "",
+            golsVisitante: data['Gols marcados VISITANTE'] || "",
+            logoMandante: isMandante ? LOGO_NOVORIZONTINO : (data['logo'] || ""),
+            logoVisitante: !isMandante ? LOGO_NOVORIZONTINO : (data['logo'] || "")
           }
         })
+
+        setJogos(parsedJogos)
       } catch (error) {
         console.error("Erro ao carregar agenda:", error)
       } finally {
@@ -57,19 +59,15 @@ export default function AgendaPage() {
     loadData()
   }, [])
 
+  // Função para limpar e renderizar o iframe com segurança
   const renderIframe = (iframeString) => {
     if (!iframeString) return null;
-    // Garante que o iframe ocupe o espaço correto e limpa possíveis erros de escape
+    // Remove aspas extras se houver e garante que o estilo seja compatível
     const cleanIframe = iframeString.replace(/style="[^"]*"/, 'style="width:100%; height:600px; border:none;"');
     return <div className="bg-white rounded-xl overflow-hidden min-h-[600px]" dangerouslySetInnerHTML={{ __html: cleanIframe }} />;
   }
 
-  if (loading) return (
-    <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-white gap-4">
-      <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-      <p className="text-slate-400 font-medium">Sincronizando com Google Sheets...</p>
-    </div>
-  )
+  if (loading) return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">Carregando Agenda...</div>
 
   return (
     <div className="min-h-screen bg-slate-900 text-white p-6">
@@ -82,11 +80,7 @@ export default function AgendaPage() {
         </div>
 
         <div className="space-y-4">
-          {jogos.length === 0 ? (
-            <div className="bg-slate-800 p-12 rounded-xl border border-slate-700 text-center text-slate-500">
-              Nenhum jogo encontrado na planilha.
-            </div>
-          ) : jogos.map((jogo) => (
+          {jogos.map((jogo) => (
             <div 
               key={jogo.id}
               onClick={() => setJogoSelecionado(jogo)}
@@ -101,22 +95,14 @@ export default function AgendaPage() {
                   <div className="h-12 w-px bg-slate-700 hidden md:block"></div>
                   <div className="flex items-center gap-4">
                     <div className="flex flex-col items-center gap-2 w-24">
-                      {jogo.logoMandante ? (
-                        <img src={jogo.logoMandante} alt={jogo.mandante} className="w-10 h-10 object-contain" onError={(e) => e.target.style.display='none'} />
-                      ) : (
-                        <div className="w-10 h-10 bg-slate-700 rounded-full flex items-center justify-center text-[10px] font-bold">ADV</div>
-                      )}
+                      <img src={jogo.logoMandante} alt={jogo.mandante} className="w-10 h-10 object-contain" onError={(e) => e.target.src = 'https://via.placeholder.com/40?text=TEAM'} />
                       <span className="font-bold text-[10px] text-center line-clamp-1">{jogo.mandante}</span>
                     </div>
                     <div className="px-3 py-1 bg-slate-900 rounded text-xs font-bold text-slate-400">
                       {jogo.status === 'passado' ? jogo.placar : 'vs'}
                     </div>
                     <div className="flex flex-col items-center gap-2 w-24">
-                      {jogo.logoVisitante ? (
-                        <img src={jogo.logoVisitante} alt={jogo.visitante} className="w-10 h-10 object-contain" onError={(e) => e.target.style.display='none'} />
-                      ) : (
-                        <div className="w-10 h-10 bg-slate-700 rounded-full flex items-center justify-center text-[10px] font-bold">ADV</div>
-                      )}
+                      <img src={jogo.logoVisitante} alt={jogo.visitante} className="w-10 h-10 object-contain" onError={(e) => e.target.src = 'https://via.placeholder.com/40?text=TEAM'} />
                       <span className="font-bold text-[10px] text-center line-clamp-1">{jogo.visitante}</span>
                     </div>
                   </div>
@@ -147,18 +133,19 @@ export default function AgendaPage() {
               <div className="p-6">
                 <div className="flex items-center justify-center gap-8 mb-8 bg-slate-900/50 p-6 rounded-xl border border-slate-700">
                   <div className="text-center flex flex-col items-center">
-                    <img src={jogoSelecionado.logoMandante} alt={jogoSelecionado.mandante} className="w-16 h-16 object-contain mb-2" onError={(e) => e.target.style.display='none'} />
+                    <img src={jogoSelecionado.logoMandante} alt={jogoSelecionado.mandante} className="w-16 h-16 object-contain mb-2" />
                     <span className="font-bold block text-sm">{jogoSelecionado.mandante}</span>
                   </div>
                   <div className="text-3xl font-black text-emerald-400">
                     {jogoSelecionado.status === 'passado' ? jogoSelecionado.placar : 'VS'}
                   </div>
                   <div className="text-center flex flex-col items-center">
-                    <img src={jogoSelecionado.logoVisitante} alt={jogoSelecionado.visitante} className="w-16 h-16 object-contain mb-2" onError={(e) => e.target.style.display='none'} />
+                    <img src={jogoSelecionado.logoVisitante} alt={jogoSelecionado.visitante} className="w-16 h-16 object-contain mb-2" />
                     <span className="font-bold block text-sm">{jogoSelecionado.visitante}</span>
                   </div>
                 </div>
 
+                {/* GOLS SINALIZADOS POR TIME */}
                 <div className="grid grid-cols-2 gap-4 mb-8">
                   <div className="space-y-2">
                     <h4 className="text-[10px] font-bold text-slate-500 uppercase">Gols {jogoSelecionado.mandante}</h4>
