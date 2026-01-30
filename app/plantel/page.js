@@ -68,7 +68,6 @@ export default function PlantelPage() {
         let aVal = a[sortConfig.key]
         let bVal = b[sortConfig.key]
 
-        // Tratar valores numéricos
         if (metricasPrincipais.includes(sortConfig.key) || sortConfig.key === 'Idade' || sortConfig.key === 'Altura') {
           aVal = parseValue(aVal)
           bVal = parseValue(bVal)
@@ -90,38 +89,34 @@ export default function PlantelPage() {
     setSortConfig({ key, direction })
   }
 
-  // Agrupar jogadores por posição (Mapeamento flexível)
-  const categorias = [
-    {
-      titulo: 'Goleiros',
-      matches: ['Goleiro', 'GOL', 'GK']
-    },
-    {
-      titulo: 'Defensores',
-      matches: ['Zagueiro', 'Lateral', 'DEF', 'LD', 'LE', 'DC', 'DR', 'DL', 'RCD', 'LCD', 'CD', 'Defender']
-    },
-    {
-      titulo: 'Meio-Campistas',
-      matches: ['Meio-Campo', 'Volante', 'MEI', 'MC', 'DM', 'AM', 'CAM', 'LCM', 'RCM', 'LCDM', 'RCDM', 'Midfielder']
-    },
-    {
-      titulo: 'Atacantes',
-      matches: ['Atacante', 'Ponta', 'Centroavante', 'CF', 'ST', 'RW', 'LW', 'RAM', 'LAM', 'LCAM', 'RCAM', 'Forward']
-    }
-  ]
-
-  const renderTabelaPosicao = (categoria) => {
-    const { titulo, matches } = categoria
+  // Lógica de Categorização Robusta
+  const getCategoria = (jogador) => {
+    const pos = (jogador.Posicao || jogador.Posicao_Original || '').toUpperCase();
     
-    // Filtrar jogadores que pertencem a esta categoria
-    const jogadoresPosicao = elencoReal.filter(j => {
-      const pos = (j.Posicao || j.Posicao_Original || '').toUpperCase()
-      return matches.some(m => pos.includes(m.toUpperCase()))
-    })
+    // Goleiros
+    if (pos.includes('GK') || pos.includes('GOL')) return 'Goleiros';
+    
+    // Defensores
+    if (pos.includes('DEF') || pos.includes('ZAG') || pos.includes('LAT') || 
+        pos.includes('LD') || pos.includes('LE') || pos.includes('DC') || 
+        pos.includes('DR') || pos.includes('DL') || pos.includes('CD')) return 'Defensores';
+    
+    // Meio-Campistas
+    if (pos.includes('MEI') || pos.includes('VOL') || pos.includes('MC') || 
+        pos.includes('DM') || pos.includes('AM') || pos.includes('CAM') || 
+        pos.includes('CM') || pos.includes('MID')) return 'Meio-Campistas';
+    
+    // Atacantes
+    if (pos.includes('ATA') || pos.includes('PON') || pos.includes('CEN') || 
+        pos.includes('CF') || pos.includes('ST') || pos.includes('RW') || 
+        pos.includes('LW') || pos.includes('FORW')) return 'Atacantes';
+    
+    return 'Atacantes'; // Fallback para atacantes se não identificar
+  }
 
-    if (jogadoresPosicao.length === 0) return null
-
-    const jogadoresOrdenados = sortedJogadores(jogadoresPosicao)
+  const renderTabelaPosicao = (titulo, jogadores) => {
+    if (jogadores.length === 0) return null
+    const jogadoresOrdenados = sortedJogadores(jogadores)
 
     return (
       <div className="mb-12" key={titulo}>
@@ -129,7 +124,7 @@ export default function PlantelPage() {
           <div className="w-1 h-6 bg-emerald-500 rounded-full"></div>
           <h2 className="text-xl font-bold text-white uppercase tracking-wider">{titulo}</h2>
           <span className="bg-slate-800 px-2 py-0.5 rounded text-[10px] text-slate-400 border border-slate-700">
-            {jogadoresPosicao.length} Atletas
+            {jogadores.length} Atletas
           </span>
         </div>
         
@@ -138,26 +133,13 @@ export default function PlantelPage() {
             <table className="w-full text-sm text-left border-collapse">
               <thead>
                 <tr className="bg-slate-900/50 border-b border-slate-700">
-                  <th 
-                    onClick={() => requestSort('Jogador')}
-                    className="p-4 font-bold text-slate-500 uppercase text-[10px] tracking-wider sticky left-0 bg-slate-900 z-10 cursor-pointer hover:text-white transition-colors"
-                  >
-                    <div className="flex items-center gap-2">
-                      # Jogador
-                      {sortConfig.key === 'Jogador' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                    </div>
+                  <th onClick={() => requestSort('Jogador')} className="p-4 font-bold text-slate-500 uppercase text-[10px] tracking-wider sticky left-0 bg-slate-900 z-10 cursor-pointer hover:text-white transition-colors">
+                    <div className="flex items-center gap-2"># Jogador {sortConfig.key === 'Jogador' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</div>
                   </th>
                   <th className="p-4 font-bold text-slate-500 uppercase text-[10px] tracking-wider">Pos</th>
                   {metricasPrincipais.map(m => (
-                    <th 
-                      key={m} 
-                      onClick={() => requestSort(m)}
-                      className="p-4 font-bold text-slate-500 uppercase text-[10px] tracking-wider text-center cursor-pointer hover:text-white transition-colors"
-                    >
-                      <div className="flex flex-col items-center gap-1">
-                        {getLabel(m)}
-                        {sortConfig.key === m && <span className="text-emerald-400">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>}
-                      </div>
+                    <th key={m} onClick={() => requestSort(m)} className="p-4 font-bold text-slate-500 uppercase text-[10px] tracking-wider text-center cursor-pointer hover:text-white transition-colors">
+                      <div className="flex flex-col items-center gap-1">{getLabel(m)} {sortConfig.key === m && <span className="text-emerald-400">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>}</div>
                     </th>
                   ))}
                 </tr>
@@ -167,7 +149,7 @@ export default function PlantelPage() {
                   <tr key={i} className="hover:bg-slate-700/30 transition-colors group">
                     <td className="p-4 sticky left-0 bg-slate-800/90 backdrop-blur z-10 group-hover:bg-slate-700/50 transition-colors">
                       <div className="flex items-center gap-3">
-                        <span className="text-slate-500 font-mono w-4">{j.Numero !== 'nan' && j.Numero ? j.Numero : '-'}</span>
+                        <span className="text-slate-500 font-mono w-4">{j.Numero && j.Numero !== 'nan' ? j.Numero : '-'}</span>
                         <div>
                           <span className="block font-bold text-white">{j.Jogador}</span>
                           <span className="text-[10px] text-slate-500 uppercase">{j.Nacionalidade} • {j.Idade} anos • {j.Altura}cm</span>
@@ -182,7 +164,6 @@ export default function PlantelPage() {
                       const media = mediaLiga[m]
                       const percentual = (val / (media || 1)) * 100
                       const acimaMedia = val > media
-
                       return (
                         <td key={m} className="p-4">
                           <div className="flex flex-col items-center gap-1.5">
@@ -190,10 +171,7 @@ export default function PlantelPage() {
                               {j[m] === '0' || j[m] === '0%' || j[m] === '-' ? '-' : j[m]}
                             </span>
                             <div className="w-12 h-1 bg-slate-700 rounded-full overflow-hidden">
-                              <div 
-                                className={`h-full rounded-full ${acimaMedia ? 'bg-emerald-500' : 'bg-red-500/50'}`}
-                                style={{ width: `${Math.min(percentual, 100)}%` }}
-                              ></div>
+                              <div className={`h-full rounded-full ${acimaMedia ? 'bg-emerald-500' : 'bg-red-500/50'}`} style={{ width: `${Math.min(percentual, 100)}%` }}></div>
                             </div>
                           </div>
                         </td>
@@ -209,10 +187,19 @@ export default function PlantelPage() {
     )
   }
 
+  // Agrupar jogadores
+  const grupos = useMemo(() => {
+    const g = { 'Goleiros': [], 'Defensores': [], 'Meio-Campistas': [], 'Atacantes': [] };
+    elencoReal.forEach(j => {
+      const cat = getCategoria(j);
+      g[cat].push(j);
+    });
+    return g;
+  }, []);
+
   return (
     <div className="min-h-screen bg-slate-900 text-white p-6">
       <div className="max-w-7xl mx-auto">
-        {/* HEADER */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
             <button onClick={() => router.push('/')} className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors text-slate-400 hover:text-white">
@@ -231,22 +218,12 @@ export default function PlantelPage() {
           </div>
         </div>
 
-        {/* TABELAS POR POSIÇÃO */}
-        {categorias.map(cat => renderTabelaPosicao(cat))}
+        {Object.entries(grupos).map(([titulo, jogadores]) => renderTabelaPosicao(titulo, jogadores))}
 
-        {/* LEGENDA */}
         <div className="mt-6 flex flex-wrap items-center gap-6 bg-slate-800/50 p-4 rounded-xl border border-slate-700/50">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-1 bg-emerald-500 rounded-full"></div>
-            <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Acima da Média da Liga</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-1 bg-red-500/50 rounded-full"></div>
-            <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Abaixo da Média da Liga</span>
-          </div>
-          <div className="ml-auto text-[10px] text-slate-500 italic">
-            * Clique nos cabeçalhos das colunas para ordenar os jogadores por métrica.
-          </div>
+          <div className="flex items-center gap-2"><div className="w-3 h-1 bg-emerald-500 rounded-full"></div><span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Acima da Média da Liga</span></div>
+          <div className="flex items-center gap-2"><div className="w-3 h-1 bg-red-500/50 rounded-full"></div><span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Abaixo da Média da Liga</span></div>
+          <div className="ml-auto text-[10px] text-slate-500 italic">* Clique nos cabeçalhos das colunas para ordenar os jogadores por métrica.</div>
         </div>
       </div>
     </div>
