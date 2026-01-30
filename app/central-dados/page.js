@@ -8,6 +8,7 @@ export default function CentralDados() {
   const router = useRouter()
   const [jogadores, setJogadores] = useState([])
   const [carregando, setCarregando] = useState(true)
+  const [erro, setErro] = useState(null)
   
   // Busca e Filtros
   const [busca, setBusca] = useState('')
@@ -42,16 +43,19 @@ export default function CentralDados() {
           header: true,
           skipEmptyLines: true,
           complete: (results) => {
-            setJogadores(results.data.filter(j => j.Jogador && j.Jogador.trim()))
+            const dados = results.data.filter(j => j.Jogador && j.Jogador.trim())
+            setJogadores(dados)
             setCarregando(false)
           },
           error: (error) => {
             console.error('Erro ao parsear CSV:', error)
+            setErro('Erro ao carregar dados do CSV')
             setCarregando(false)
           }
         })
       } catch (error) {
         console.error('Erro ao carregar dados:', error)
+        setErro('Erro ao conectar com a planilha')
         setCarregando(false)
       }
     }
@@ -130,7 +134,22 @@ export default function CentralDados() {
   const times = [...new Set(jogadores.map(j => j.Time))].filter(Boolean).sort()
   const posicoes = [...new Set(jogadores.map(j => j.Posição))].filter(Boolean).sort()
 
-  if (carregando) return <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center"><span className="text-lg">Carregando dados da Central...</span></div>
+  if (carregando) return (
+    <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mx-auto mb-4"></div>
+        <span className="text-lg">Carregando dados da Central...</span>
+      </div>
+    </div>
+  )
+
+  if (erro) return (
+    <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center">
+      <div className="text-center">
+        <span className="text-lg text-red-500">{erro}</span>
+      </div>
+    </div>
+  )
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white p-6">
@@ -143,16 +162,10 @@ export default function CentralDados() {
           </button>
           <h1 className="text-3xl font-bold">Central de Dados</h1>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => router.push('/central-dados/graficos')} className="bg-emerald-600 hover:bg-emerald-500 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors shadow-lg shadow-emerald-900/20">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
-            Gráficos Avançados
-          </button>
-          <button onClick={exportarCSV} className="bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded-lg text-sm font-bold border border-slate-700 flex items-center gap-2 transition-colors">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-            Exportar CSV
-          </button>
-        </div>
+        <button onClick={exportarCSV} className="bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded-lg text-sm font-bold border border-slate-700 flex items-center gap-2 transition-colors">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+          Exportar CSV
+        </button>
       </div>
 
       {/* BUSCA E FILTROS */}
@@ -211,22 +224,22 @@ export default function CentralDados() {
           <table className="w-full text-sm">
             <thead className="bg-slate-900/50 border-b border-slate-700">
               <tr>
-                <th className="p-4 text-left font-bold text-slate-400 uppercase text-[10px] cursor-pointer hover:text-white" onClick={() => handleOrdenacao('Jogador')}>
+                <th className="p-4 text-left font-bold text-slate-400 uppercase text-[10px] cursor-pointer hover:text-white transition-colors sticky left-0 bg-slate-900 z-10" onClick={() => handleOrdenacao('Jogador')}>
                   Jogador {ordenacao.coluna === 'Jogador' && (ordenacao.direcao === 'asc' ? '↑' : '↓')}
                 </th>
                 <th className="p-4 text-left font-bold text-slate-400 uppercase text-[10px]">Time</th>
                 <th className="p-4 text-left font-bold text-slate-400 uppercase text-[10px]">Posição</th>
                 {metricasSelecionadas.map(m => (
-                  <th key={m} className="p-4 text-center font-bold text-slate-400 uppercase text-[10px] cursor-pointer hover:text-white" onClick={() => handleOrdenacao(m)}>
+                  <th key={m} className="p-4 text-center font-bold text-slate-400 uppercase text-[10px] cursor-pointer hover:text-white transition-colors" onClick={() => handleOrdenacao(m)}>
                     {m} {ordenacao.coluna === m && (ordenacao.direcao === 'asc' ? '↑' : '↓')}
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-700/50">
-              {jogadoresFiltrados.slice(0, 50).map((j, i) => (
-                <tr key={i} className="hover:bg-slate-700/30 transition-colors">
-                  <td className="p-4 font-bold text-white">{j.Jogador}</td>
+              {jogadoresFiltrados.slice(0, 100).map((j, i) => (
+                <tr key={i} className="hover:bg-slate-700/30 transition-colors group">
+                  <td className="p-4 font-bold text-white sticky left-0 bg-slate-800 group-hover:bg-slate-700/50 z-10">{j.Jogador}</td>
                   <td className="p-4 text-slate-300">{j.Time}</td>
                   <td className="p-4"><span className="bg-slate-900 px-2 py-1 rounded text-[10px] font-bold border border-slate-700 text-emerald-400">{j.Posição}</span></td>
                   {metricasSelecionadas.map(m => {
@@ -235,7 +248,7 @@ export default function CentralDados() {
                     const acimaMedia = val >= media
                     return (
                       <td key={m} className="p-4 text-center">
-                        <span className={`font-bold ${acimaMedia ? 'text-emerald-400' : 'text-slate-300'}`}>
+                        <span className={`font-bold ${acimaMedia && val > 0 ? 'text-emerald-400' : 'text-slate-300'}`}>
                           {j[m] || '-'}
                         </span>
                       </td>
@@ -249,7 +262,7 @@ export default function CentralDados() {
       </div>
 
       <div className="mt-4 text-center text-slate-400 text-sm">
-        Mostrando {Math.min(50, jogadoresFiltrados.length)} de {jogadoresFiltrados.length} jogadores
+        Mostrando {Math.min(100, jogadoresFiltrados.length)} de {jogadoresFiltrados.length} jogadores • Total de {jogadores.length} na base de dados
       </div>
     </div>
   )
