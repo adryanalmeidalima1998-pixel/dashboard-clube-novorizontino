@@ -9,7 +9,6 @@ export default function PlantelPage() {
   const router = useRouter()
   const [sortConfig, setSortConfig] = useState({ key: 'Index', direction: 'desc' })
   
-  // Métricas principais para o elenco (incluindo Index)
   const metricasPrincipais = [
     'Index',
     'Partidas',
@@ -27,14 +26,40 @@ export default function PlantelPage() {
     return parseFloat(clean) || 0
   }
 
-  // Mapear Index da Central de Dados para o Elenco Real
+  // Função para normalizar nomes (remover acentos, converter para minúsculas)
+  const normalizeName = (name) => {
+    if (!name) return '';
+    return name.toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim();
+  }
+
+  // Mapear Index com lógica de busca inteligente
   const elencoComIndex = useMemo(() => {
     return elencoReal.map(j => {
-      // Tentar encontrar o jogador na base de dados (busca por nome aproximado ou exato)
-      const dadosCentral = todosJogadores.find(cj => 
-        cj.Jogador.toLowerCase().includes(j.Jogador.toLowerCase()) || 
-        j.Jogador.toLowerCase().includes(cj.Jogador.toLowerCase())
-      )
+      const nomeElenco = normalizeName(j.Jogador);
+      const partesNome = nomeElenco.split(' ').filter(p => p.length > 2);
+
+      // Tentar encontrar o jogador na central de dados
+      let dadosCentral = todosJogadores.find(cj => {
+        const nomeCentral = normalizeName(cj.Jogador);
+        
+        // 1. Busca exata (normalizada)
+        if (nomeCentral === nomeElenco) return true;
+        
+        // 2. Um contém o outro
+        if (nomeCentral.includes(nomeElenco) || nomeElenco.includes(nomeCentral)) return true;
+        
+        // 3. Busca por partes significativas do nome (ex: "Alexis" e "Alvarino")
+        if (partesNome.length >= 2) {
+          const todasPartesPresentes = partesNome.every(p => nomeCentral.includes(p));
+          if (todasPartesPresentes) return true;
+        }
+
+        return false;
+      });
+
       return {
         ...j,
         Index: dadosCentral ? dadosCentral.Index : '-'
@@ -42,7 +67,6 @@ export default function PlantelPage() {
     })
   }, [])
 
-  // Calcular média da liga para comparação
   const mediaLiga = useMemo(() => {
     const medias = {}
     const metricasMapeadas = {
@@ -78,7 +102,6 @@ export default function PlantelPage() {
     return labels[m] || m
   }
 
-  // Função para ordenar os jogadores
   const sortedJogadores = (jogadores) => {
     const sortableItems = [...jogadores]
     if (sortConfig.key !== null) {
@@ -107,7 +130,6 @@ export default function PlantelPage() {
     setSortConfig({ key, direction })
   }
 
-  // Lógica de Categorização Robusta
   const getCategoria = (jogador) => {
     const pos = (jogador.Posicao || jogador.Posicao_Original || '').toUpperCase();
     if (pos.includes('GK') || pos.includes('GOL')) return 'Goleiros';
@@ -193,7 +215,6 @@ export default function PlantelPage() {
     )
   }
 
-  // Agrupar jogadores
   const grupos = useMemo(() => {
     const g = { 'Goleiros': [], 'Defensores': [], 'Meio-Campistas': [], 'Atacantes': [] };
     elencoComIndex.forEach(j => {
@@ -229,7 +250,7 @@ export default function PlantelPage() {
         <div className="mt-6 flex flex-wrap items-center gap-6 bg-slate-800/50 p-4 rounded-xl border border-slate-700/50">
           <div className="flex items-center gap-2"><div className="w-3 h-1 bg-emerald-500 rounded-full"></div><span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Acima da Média da Liga</span></div>
           <div className="flex items-center gap-2"><div className="w-3 h-1 bg-red-500/50 rounded-full"></div><span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Abaixo da Média da Liga</span></div>
-          <div className="ml-auto text-[10px] text-slate-500 italic">* Dados de Index integrados da Central de Inteligência.</div>
+          <div className="ml-auto text-[10px] text-slate-500 italic">* Dados de Index integrados via busca inteligente por nome e setor.</div>
         </div>
       </div>
     </div>
