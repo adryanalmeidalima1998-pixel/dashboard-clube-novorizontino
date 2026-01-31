@@ -402,7 +402,10 @@ export default function GraficosPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-2">Selecionar Jogadores (até 5)</label>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block text-xs font-bold text-slate-300">Selecionar Jogadores (até 5)</label>
+                  <button onClick={() => setJogadoresSelecionadosRadar([])} className="text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-slate-300 hover:text-white transition-colors">Desmarcar Todos</button>
+                </div>
                 <div className="max-h-32 overflow-y-auto bg-slate-900 border border-slate-700 rounded-lg p-3 space-y-2">
                   {jogadoresFiltradosRadar.map(j => (
                     <label key={j.Jogador} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-800 p-1 rounded">
@@ -425,7 +428,10 @@ export default function GraficosPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-2">Selecionar Métricas (até 5)</label>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block text-xs font-bold text-slate-300">Selecionar Métricas (até 5)</label>
+                  <button onClick={() => setMetricasRadar([])} className="text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-slate-300 hover:text-white transition-colors">Desmarcar Todos</button>
+                </div>
                 <div className="max-h-32 overflow-y-auto bg-slate-900 border border-slate-700 rounded-lg p-3 space-y-2">
                   {todasAsMetricas.map(m => (
                     <label key={m} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-800 p-1 rounded">
@@ -494,7 +500,10 @@ export default function GraficosPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-2">Selecionar Jogadores (deixe vazio para mostrar todos)</label>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block text-xs font-bold text-slate-300">Selecionar Jogadores (deixe vazio para mostrar todos)</label>
+                  <button onClick={() => setJogadoresSelecionadosDispersa([])} className="text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-slate-300 hover:text-white transition-colors">Desmarcar Todos</button>
+                </div>
                 <div className="max-h-32 overflow-y-auto bg-slate-900 border border-slate-700 rounded-lg p-3 space-y-2">
                   {jogadoresFiltradosDispersa.map(j => (
                     <label key={j.Jogador} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-800 p-1 rounded">
