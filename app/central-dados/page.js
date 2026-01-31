@@ -8,6 +8,7 @@ export default function CentralDados() {
   const router = useRouter()
   const [jogadores, setJogadores] = useState([])
   const [todasAsColunas, setTodasAsColunas] = useState([])
+  const [categoriasMetricas, setCategoriasMetricas] = useState({})
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState(null)
   
@@ -19,7 +20,7 @@ export default function CentralDados() {
   // Ordenação
   const [ordenacao, setOrdenacao] = useState({ coluna: 'Jogador', direcao: 'asc' })
 
-  // Métricas selecionadas - começa com as principais
+  // Métricas selecionadas
   const [metricasSelecionadas, setMetricasSelecionadas] = useState([
     'Index',
     'Minutos jogados',
@@ -29,6 +30,7 @@ export default function CentralDados() {
   ])
 
   const [painelAberto, setPainelAberto] = useState(false)
+  const [abaAtiva, setAbaAtiva] = useState('Ataque')
 
   // Carregar dados do CSV
   useEffect(() => {
@@ -48,6 +50,10 @@ export default function CentralDados() {
             if (dados.length > 0) {
               const colunas = Object.keys(dados[0]).filter(col => col && col.trim())
               setTodasAsColunas(colunas)
+              
+              // Categorizar as métricas
+              const categorias = categorizarMetricas(colunas)
+              setCategoriasMetricas(categorias)
             }
             
             setCarregando(false)
@@ -68,6 +74,63 @@ export default function CentralDados() {
     carregarDados()
   }, [])
 
+  // Função para categorizar métricas
+  const categorizarMetricas = (colunas) => {
+    const categorias = {
+      'Ataque': [],
+      'Defesa': [],
+      'Passes & Criação': [],
+      'Posse & Controle': [],
+      'Físico & Duelos': [],
+      'Geral': []
+    }
+
+    const palavrasChaveAtaque = ['Gol', 'Assistência', 'Chance', 'Chute', 'Finalização', 'Xg', 'xA', 'Tiro', 'Header', 'Poste', 'Entradas no terço final']
+    const palavrasChaveDefesa = ['Desarme', 'Interceptação', 'Rebote', 'Falha', 'Erro', 'Cartão', 'Falta', 'Defesa', 'Disputa defensiva', 'Disputa na defesa']
+    const palavrasChavePasses = ['Passe', 'Cruzamento', 'Passe chave', 'Passe progressivo', 'Passe longo', 'Passe super longo', 'Passe para', 'Precisão']
+    const palavrasChavePosse = ['Drible', 'Controle', 'Bola', 'Posse', 'Impedimento', 'Perda']
+    const palavrasChaveFisico = ['Duelo', 'Disputa', 'Disputa aérea', 'Desafio', 'Minutos']
+
+    colunas.forEach(metrica => {
+      if (['?', 'Jogador', 'Time', 'Posição', 'Idade', 'Altura', 'Peso', 'Nacionalidade'].includes(metrica)) {
+        return
+      }
+
+      let categorizado = false
+
+      if (palavrasChaveAtaque.some(palavra => metrica.includes(palavra))) {
+        categorias['Ataque'].push(metrica)
+        categorizado = true
+      }
+      else if (palavrasChaveDefesa.some(palavra => metrica.includes(palavra))) {
+        categorias['Defesa'].push(metrica)
+        categorizado = true
+      }
+      else if (palavrasChavePasses.some(palavra => metrica.includes(palavra))) {
+        categorias['Passes & Criação'].push(metrica)
+        categorizado = true
+      }
+      else if (palavrasChavePosse.some(palavra => metrica.includes(palavra))) {
+        categorias['Posse & Controle'].push(metrica)
+        categorizado = true
+      }
+      else if (palavrasChaveFisico.some(palavra => metrica.includes(palavra))) {
+        categorias['Físico & Duelos'].push(metrica)
+        categorizado = true
+      }
+
+      if (!categorizado) {
+        categorias['Geral'].push(metrica)
+      }
+    })
+
+    if (colunas.includes('Index')) {
+      categorias['Geral'].unshift('Index')
+    }
+
+    return categorias
+  }
+
   const parseValue = (val) => {
     if (val === undefined || val === null || val === '-' || val === '') return 0
     if (typeof val === 'number') return val
@@ -83,7 +146,6 @@ export default function CentralDados() {
     }))
   }
 
-  // Média da Liga
   const mediaLiga = useMemo(() => {
     const medias = {}
     metricasSelecionadas.forEach(m => {
@@ -136,8 +198,20 @@ export default function CentralDados() {
     }
   }
 
+  const selecionarCategoria = (categoria) => {
+    const metricasCategoria = categoriasMetricas[categoria] || []
+    const novasMetricas = [...new Set([...metricasSelecionadas, ...metricasCategoria])]
+    setMetricasSelecionadas(novasMetricas)
+  }
+
+  const deselecionarCategoria = (categoria) => {
+    const metricasCategoria = categoriasMetricas[categoria] || []
+    const novasMetricas = metricasSelecionadas.filter(m => !metricasCategoria.includes(m))
+    setMetricasSelecionadas(novasMetricas)
+  }
+
   const selecionarTodas = () => {
-    const todasExcetoBasicas = todasAsColunas.filter(c => !['?', 'Jogador', 'Time', 'Posição'].includes(c))
+    const todasExcetoBasicas = todasAsColunas.filter(c => !['?', 'Jogador', 'Time', 'Posição', 'Idade', 'Altura', 'Peso', 'Nacionalidade'].includes(c))
     setMetricasSelecionadas(todasExcetoBasicas)
   }
 
@@ -164,6 +238,8 @@ export default function CentralDados() {
       </div>
     </div>
   )
+
+  const abas = Object.keys(categoriasMetricas)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white p-6">
@@ -215,11 +291,11 @@ export default function CentralDados() {
         </button>
       </div>
 
-      {/* PAINEL DE MÉTRICAS */}
+      {/* PAINEL DE MÉTRICAS COM ABAS */}
       {painelAberto && (
         <div className="bg-slate-800 rounded-lg p-6 mb-6 border border-slate-700">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-bold">Todas as Métricas Disponíveis ({todasAsColunas.length})</h3>
+            <h3 className="text-lg font-bold">Métricas por Categoria</h3>
             <div className="flex gap-2">
               <button onClick={selecionarTodas} className="bg-emerald-600 hover:bg-emerald-500 px-3 py-1 rounded text-sm font-bold transition-colors">
                 Selecionar Todas
@@ -230,22 +306,57 @@ export default function CentralDados() {
             </div>
           </div>
           
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-96 overflow-y-auto">
-            {todasAsColunas.filter(c => !['?'].includes(c)).map(m => (
-              <label key={m} className="flex items-center gap-2 cursor-pointer hover:bg-slate-700/50 p-2 rounded transition-colors">
-                <input 
-                  type="checkbox" 
-                  checked={metricasSelecionadas.includes(m)}
-                  onChange={() => toggleMetrica(m)}
-                  className="w-4 h-4 rounded border-slate-600 text-emerald-600 cursor-pointer"
-                />
-                <span className="text-sm">{m}</span>
-              </label>
+          {/* ABAS DE CATEGORIAS */}
+          <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
+            {abas.map(aba => (
+              <button 
+                key={aba}
+                onClick={() => setAbaAtiva(aba)}
+                className={`px-4 py-2 rounded-lg font-bold whitespace-nowrap transition-colors ${
+                  abaAtiva === aba 
+                    ? 'bg-emerald-600 text-white' 
+                    : 'bg-slate-700 hover:bg-slate-600 text-slate-300'
+                }`}
+              >
+                {aba} ({categoriasMetricas[aba]?.length || 0})
+              </button>
             ))}
+          </div>
+
+          {/* CONTEÚDO DA ABA */}
+          <div className="mb-4">
+            <div className="flex gap-2 mb-3">
+              <button 
+                onClick={() => selecionarCategoria(abaAtiva)}
+                className="bg-emerald-700 hover:bg-emerald-600 px-3 py-1 rounded text-sm font-bold transition-colors"
+              >
+                + Selecionar {abaAtiva}
+              </button>
+              <button 
+                onClick={() => deselecionarCategoria(abaAtiva)}
+                className="bg-red-700 hover:bg-red-600 px-3 py-1 rounded text-sm font-bold transition-colors"
+              >
+                - Remover {abaAtiva}
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-64 overflow-y-auto">
+              {(categoriasMetricas[abaAtiva] || []).map(m => (
+                <label key={m} className="flex items-center gap-2 cursor-pointer hover:bg-slate-700/50 p-2 rounded transition-colors">
+                  <input 
+                    type="checkbox" 
+                    checked={metricasSelecionadas.includes(m)}
+                    onChange={() => toggleMetrica(m)}
+                    className="w-4 h-4 rounded border-slate-600 text-emerald-600 cursor-pointer"
+                  />
+                  <span className="text-sm">{m}</span>
+                </label>
+              ))}
+            </div>
           </div>
           
           <div className="mt-4 text-sm text-slate-400">
-            Selecionadas: {metricasSelecionadas.length} de {todasAsColunas.filter(c => !['?'].includes(c)).length} métricas
+            Selecionadas: {metricasSelecionadas.length} de {todasAsColunas.filter(c => !['?', 'Jogador', 'Time', 'Posição', 'Idade', 'Altura', 'Peso', 'Nacionalidade'].includes(c)).length} métricas
           </div>
         </div>
       )}
