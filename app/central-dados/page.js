@@ -411,6 +411,9 @@ export default function CentralDados() {
               <button onClick={selecionarTodas} className="bg-emerald-600 hover:bg-emerald-500 px-3 py-1 rounded text-sm font-bold transition-colors">
                 Selecionar Todas
               </button>
+              <button onClick={() => setMetricasSelecionadas([])} className="bg-red-700 hover:bg-red-600 px-3 py-1 rounded text-sm font-bold transition-colors">
+                Desmarcar Todas
+              </button>
               <button onClick={limparTodas} className="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-sm font-bold transition-colors">
                 Limpar
               </button>
