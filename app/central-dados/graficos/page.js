@@ -251,6 +251,9 @@ export default function GraficosPage() {
         borderColor: '#10b981',
         borderWidth: 1,
         padding: 10
+      },
+      datalabels: {
+        display: false
       }
     },
     scales: {
