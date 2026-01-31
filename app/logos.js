@@ -14,8 +14,8 @@ export const LOGOS = {
   'Botafogo SP': '/club/logos/botafogo-sp.png', // Variação sem hífen
   'EC Primavera': '/club/logos/primavera.png',
   'Primavera': '/club/logos/primavera.png', // Variação curta
-  'São Bernardo': '/club/logos/sao-bernardo.png',
-  'São Bernardo FC': '/club/logos/sao-bernardo.png',
+  'São Bernardo': '/club/logos/são-bernardo.png',
+  'São Bernardo FC': '/club/logos/são-bernardo.png',
   
   // Adicione mais times conforme necessário:
   // 'Nome do Time': '/club/logos/nome-do-arquivo.png',
