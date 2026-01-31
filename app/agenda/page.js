@@ -10,7 +10,23 @@ export default function AgendaPage() {
   const [loading, setLoading] = useState(true)
   const [jogoSelecionado, setJogoSelecionado] = useState(null)
 
-  const LOGO_NOVORIZONTINO = "https://www.sofascore.com/static/images/team-logo/football/41555.png"
+  const LOGO_NOVORIZONTINO = "/club/escudonovorizontino.png"
+  const DEFAULT_LOGO = "https://www.sofascore.com/static/images/team-logo/football/default.png"
+
+  // Função para transformar o nome do time em um nome de arquivo amigável (slug)
+  const getLogoPath = (nomeTime) => {
+    if (!nomeTime || nomeTime === 'Grêmio Novorizontino') return null;
+    
+    const slug = nomeTime
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "") // Remove acentos
+      .replace(/[^a-z0-9]/g, "-")      // Substitui caracteres especiais por hifen
+      .replace(/-+/g, "-")             // Remove hifens duplicados
+      .replace(/^-|-$/g, "");          // Remove hifens no início ou fim
+    
+    return `/club/logos/${slug}.png`;
+  }
 
   useEffect(() => {
     async function loadData() {
@@ -19,7 +35,6 @@ export default function AgendaPage() {
         const response = await fetch(url)
         const csvText = await response.text()
         
-        // Função para parsear CSV lidando com campos entre aspas (como os iframes)
         const parseCSV = (text) => {
           const rows = [];
           let currentRow = [];
@@ -70,6 +85,10 @@ export default function AgendaPage() {
           });
 
           const isMandante = data['Mandante'] === 'Grêmio Novorizontino';
+          const adversario = isMandante ? data['Visitante'] : data['Mandante'];
+          
+          // Tenta a logo local baseada no nome do adversário
+          const localLogo = getLogoPath(adversario);
           
           return {
             id: index,
@@ -84,8 +103,8 @@ export default function AgendaPage() {
             escalaçaoIframe: data['código escalação'] || null,
             golsMandante: data['Gols marcados mandante'] || "",
             golsVisitante: data['Gols marcados VISITANTE'] || "",
-            logoMandante: isMandante ? LOGO_NOVORIZONTINO : (data['logo'] || "https://www.sofascore.com/static/images/team-logo/football/default.png"),
-            logoVisitante: !isMandante ? LOGO_NOVORIZONTINO : (data['logo'] || "https://www.sofascore.com/static/images/team-logo/football/default.png")
+            logoMandante: isMandante ? LOGO_NOVORIZONTINO : (localLogo || data['logo'] || DEFAULT_LOGO),
+            logoVisitante: !isMandante ? LOGO_NOVORIZONTINO : (localLogo || data['logo'] || DEFAULT_LOGO)
           };
         });
 
@@ -101,18 +120,24 @@ export default function AgendaPage() {
 
   const renderIframe = (iframeString) => {
     if (!iframeString || iframeString.trim() === "") return null;
-    
-    // Tenta extrair apenas a parte do iframe se houver lixo em volta
     const iframeMatch = iframeString.match(/<iframe.*<\/iframe>/i);
     let finalIframe = iframeMatch ? iframeMatch[0] : iframeString;
-
-    // Garante que o iframe tenha o estilo correto para o modal
     finalIframe = finalIframe.replace(/style="[^"]*"/i, 'style="width:100%; height:600px; border:none;"');
     if (!finalIframe.includes('style=')) {
       finalIframe = finalIframe.replace('<iframe', '<iframe style="width:100%; height:600px; border:none;"');
     }
-
     return <div className="bg-white rounded-xl overflow-hidden min-h-[600px]" dangerouslySetInnerHTML={{ __html: finalIframe }} />;
+  }
+
+  // Função para lidar com erro de imagem e tentar o fallback (link da planilha ou padrão)
+  const handleImageError = (e, fallbackUrl) => {
+    if (e.target.src.includes('/club/logos/')) {
+      // Se a imagem local falhou, tenta a logo da planilha ou a padrão
+      e.target.src = fallbackUrl || DEFAULT_LOGO;
+    } else {
+      // Se tudo falhar, usa a padrão
+      e.target.src = DEFAULT_LOGO;
+    }
   }
 
   if (loading) return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">Carregando Agenda...</div>
@@ -143,14 +168,24 @@ export default function AgendaPage() {
                   <div className="h-12 w-px bg-slate-700 hidden md:block"></div>
                   <div className="flex items-center gap-4">
                     <div className="flex flex-col items-center gap-2 w-24">
-                      <img src={jogo.logoMandante} alt={jogo.mandante} className="w-10 h-10 object-contain" onError={(e) => e.target.src = 'https://www.sofascore.com/static/images/team-logo/football/default.png'} />
+                      <img 
+                        src={jogo.logoMandante} 
+                        alt={jogo.mandante} 
+                        className="w-10 h-10 object-contain" 
+                        onError={(e) => handleImageError(e, null)} 
+                      />
                       <span className="font-bold text-[10px] text-center line-clamp-1">{jogo.mandante}</span>
                     </div>
                     <div className="px-3 py-1 bg-slate-900 rounded text-xs font-bold text-slate-400">
                       {jogo.status === 'passado' ? jogo.placar : 'vs'}
                     </div>
                     <div className="flex flex-col items-center gap-2 w-24">
-                      <img src={jogo.logoVisitante} alt={jogo.visitante} className="w-10 h-10 object-contain" onError={(e) => e.target.src = 'https://www.sofascore.com/static/images/team-logo/football/default.png'} />
+                      <img 
+                        src={jogo.logoVisitante} 
+                        alt={jogo.visitante} 
+                        className="w-10 h-10 object-contain" 
+                        onError={(e) => handleImageError(e, null)} 
+                      />
                       <span className="font-bold text-[10px] text-center line-clamp-1">{jogo.visitante}</span>
                     </div>
                   </div>
@@ -181,14 +216,24 @@ export default function AgendaPage() {
               <div className="p-6">
                 <div className="flex items-center justify-center gap-8 mb-8 bg-slate-900/50 p-6 rounded-xl border border-slate-700">
                   <div className="text-center flex flex-col items-center">
-                    <img src={jogoSelecionado.logoMandante} alt={jogoSelecionado.mandante} className="w-16 h-16 object-contain mb-2" />
+                    <img 
+                      src={jogoSelecionado.logoMandante} 
+                      alt={jogoSelecionado.mandante} 
+                      className="w-16 h-16 object-contain mb-2" 
+                      onError={(e) => handleImageError(e, null)}
+                    />
                     <span className="font-bold block text-sm">{jogoSelecionado.mandante}</span>
                   </div>
                   <div className="text-3xl font-black text-emerald-400">
                     {jogoSelecionado.status === 'passado' ? jogoSelecionado.placar : 'VS'}
                   </div>
                   <div className="text-center flex flex-col items-center">
-                    <img src={jogoSelecionado.logoVisitante} alt={jogoSelecionado.visitante} className="w-16 h-16 object-contain mb-2" />
+                    <img 
+                      src={jogoSelecionado.logoVisitante} 
+                      alt={jogoSelecionado.visitante} 
+                      className="w-16 h-16 object-contain mb-2" 
+                      onError={(e) => handleImageError(e, null)}
+                    />
                     <span className="font-bold block text-sm">{jogoSelecionado.visitante}</span>
                   </div>
                 </div>
