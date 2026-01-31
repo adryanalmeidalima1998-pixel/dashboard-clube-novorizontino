@@ -1,32 +1,14 @@
-
 'use client'
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { getLogo, DEFAULT_LOGO } from '../logos'
 
 export default function AgendaPage() {
   const router = useRouter()
   const [jogos, setJogos] = useState([])
   const [loading, setLoading] = useState(true)
   const [jogoSelecionado, setJogoSelecionado] = useState(null)
-
-  const LOGO_NOVORIZONTINO = "/club/escudonovorizontino.png"
-  const DEFAULT_LOGO = "https://www.sofascore.com/static/images/team-logo/football/default.png"
-
-  // Função para transformar o nome do time em um nome de arquivo amigável (slug)
-  const getLogoPath = (nomeTime) => {
-    if (!nomeTime || nomeTime === 'Grêmio Novorizontino') return null;
-    
-    const slug = nomeTime
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "") // Remove acentos
-      .replace(/[^a-z0-9]/g, "-")      // Substitui caracteres especiais por hifen
-      .replace(/-+/g, "-")             // Remove hifens duplicados
-      .replace(/^-|-$/g, "");          // Remove hifens no início ou fim
-    
-    return `/club/logos/${slug}.png`;
-  }
 
   useEffect(() => {
     async function loadData() {
@@ -85,10 +67,6 @@ export default function AgendaPage() {
           });
 
           const isMandante = data['Mandante'] === 'Grêmio Novorizontino';
-          const adversario = isMandante ? data['Visitante'] : data['Mandante'];
-          
-          // Tenta a logo local baseada no nome do adversário
-          const localLogo = getLogoPath(adversario);
           
           return {
             id: index,
@@ -103,8 +81,9 @@ export default function AgendaPage() {
             escalaçaoIframe: data['código escalação'] || null,
             golsMandante: data['Gols marcados mandante'] || "",
             golsVisitante: data['Gols marcados VISITANTE'] || "",
-            logoMandante: isMandante ? LOGO_NOVORIZONTINO : (localLogo || data['logo'] || DEFAULT_LOGO),
-            logoVisitante: !isMandante ? LOGO_NOVORIZONTINO : (localLogo || data['logo'] || DEFAULT_LOGO)
+            // Usa o mapeamento centralizado para obter as logos
+            logoMandante: getLogo(data['Mandante']),
+            logoVisitante: getLogo(data['Visitante'])
           };
         });
 
@@ -129,15 +108,9 @@ export default function AgendaPage() {
     return <div className="bg-white rounded-xl overflow-hidden min-h-[600px]" dangerouslySetInnerHTML={{ __html: finalIframe }} />;
   }
 
-  // Função para lidar com erro de imagem e tentar o fallback (link da planilha ou padrão)
-  const handleImageError = (e, fallbackUrl) => {
-    if (e.target.src.includes('/club/logos/')) {
-      // Se a imagem local falhou, tenta a logo da planilha ou a padrão
-      e.target.src = fallbackUrl || DEFAULT_LOGO;
-    } else {
-      // Se tudo falhar, usa a padrão
-      e.target.src = DEFAULT_LOGO;
-    }
+  // Função para lidar com erro de imagem
+  const handleImageError = (e) => {
+    e.target.src = DEFAULT_LOGO;
   }
 
   if (loading) return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">Carregando Agenda...</div>
@@ -172,7 +145,7 @@ export default function AgendaPage() {
                         src={jogo.logoMandante} 
                         alt={jogo.mandante} 
                         className="w-10 h-10 object-contain" 
-                        onError={(e) => handleImageError(e, null)} 
+                        onError={handleImageError} 
                       />
                       <span className="font-bold text-[10px] text-center line-clamp-1">{jogo.mandante}</span>
                     </div>
@@ -184,7 +157,7 @@ export default function AgendaPage() {
                         src={jogo.logoVisitante} 
                         alt={jogo.visitante} 
                         className="w-10 h-10 object-contain" 
-                        onError={(e) => handleImageError(e, null)} 
+                        onError={handleImageError} 
                       />
                       <span className="font-bold text-[10px] text-center line-clamp-1">{jogo.visitante}</span>
                     </div>
@@ -220,7 +193,7 @@ export default function AgendaPage() {
                       src={jogoSelecionado.logoMandante} 
                       alt={jogoSelecionado.mandante} 
                       className="w-16 h-16 object-contain mb-2" 
-                      onError={(e) => handleImageError(e, null)}
+                      onError={handleImageError}
                     />
                     <span className="font-bold block text-sm">{jogoSelecionado.mandante}</span>
                   </div>
@@ -232,7 +205,7 @@ export default function AgendaPage() {
                       src={jogoSelecionado.logoVisitante} 
                       alt={jogoSelecionado.visitante} 
                       className="w-16 h-16 object-contain mb-2" 
-                      onError={(e) => handleImageError(e, null)}
+                      onError={handleImageError}
                     />
                     <span className="font-bold block text-sm">{jogoSelecionado.visitante}</span>
                   </div>
