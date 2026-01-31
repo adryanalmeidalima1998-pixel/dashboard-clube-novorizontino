@@ -108,6 +108,24 @@ export default function GraficosPage() {
     }
   }
 
+  // Normalizar métrica para escala 0.0-2.0 baseado na média do elenco
+  const normalizarMetrica = (valor, metrica) => {
+    const valores = jogadores
+      .map(j => parseValue(j[metrica]))
+      .filter(v => v > 0)
+    
+    if (valores.length === 0) return 1.0
+    
+    const media = valores.reduce((a, b) => a + b, 0) / valores.length
+    
+    if (media === 0) return 1.0
+    
+    // Normalizar para 0.0-2.0 onde 1.0 é a média
+    const normalizado = (valor / media)
+    // Limitar a 2.0 no máximo
+    return Math.min(normalizado, 2.0)
+  }
+
   // Obter lista de times e posições únicas
   const times = useMemo(() => {
     const unique = ['Todos', ...new Set(jogadores.map(j => j.Time).filter(Boolean))]
@@ -145,7 +163,7 @@ export default function GraficosPage() {
     })
   }, [jogadores, filtroPosicaoDispersa])
 
-  // Dados para o Gráfico de Radar
+  // Dados para o Gráfico de Radar (COM NORMALIZAÇÃO)
   const radarData = useMemo(() => {
     if (jogadoresSelecionadosRadar.length === 0 || metricasRadar.length === 0) return null
 
@@ -156,7 +174,7 @@ export default function GraficosPage() {
 
         return {
           label: jogador.Jogador,
-          data: metricasRadar.map(metrica => parseValue(jogador[metrica])),
+          data: metricasRadar.map(metrica => normalizarMetrica(parseValue(jogador[metrica]), metrica)),
           borderColor: CORES_JOGADORES[idx % CORES_JOGADORES.length],
           backgroundColor: CORES_JOGADORES[idx % CORES_JOGADORES.length] + '20',
           borderWidth: 2,
@@ -238,11 +256,16 @@ export default function GraficosPage() {
     scales: {
       r: {
         beginAtZero: true,
-        max: 100,
+        max: 2.0,
+        min: 0,
         ticks: {
           color: '#94a3b8',
           font: { size: 10 },
-          stepSize: 20
+          stepSize: 0.5,
+          callback: function(value) {
+            if (value === 1.0) return 'Média (1.0)'
+            return value.toFixed(1)
+          }
         },
         grid: {
           color: 'rgba(148, 163, 184, 0.1)'
@@ -343,14 +366,15 @@ export default function GraficosPage() {
           </button>
           <div>
             <h1 className="text-3xl font-bold">Análise Gráfica Avançada</h1>
-            <p className="text-slate-400 text-sm">Gráficos de Radar e Dispersão com Filtros Inteligentes</p>
+            <p className="text-slate-400 text-sm">Gráficos de Radar (Normalizado 0.0-2.0) e Dispersão com Filtros Inteligentes</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* GRÁFICO DE RADAR */}
           <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700">
-            <h2 className="text-lg font-bold text-white mb-4">Perfil do Jogador (Radar 360°)</h2>
+            <h2 className="text-lg font-bold text-white mb-2">Perfil do Jogador (Radar 360°)</h2>
+            <p className="text-xs text-slate-400 mb-4">Escala normalizada: 1.0 = Média do Elenco | Máximo: 2.0</p>
             
             {/* Filtros Radar */}
             <div className="space-y-4 mb-6">
