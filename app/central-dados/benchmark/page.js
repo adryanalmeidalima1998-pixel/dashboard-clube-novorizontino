@@ -15,9 +15,13 @@ export default function BenchmarkPage() {
   const [todasAsMetricas, setTodasAsMetricas] = useState([])
   const [categoriasMetricas, setCategoriasMetricas] = useState({})
   const [abaAtiva, setAbaAtiva] = useState('Ataque')
+  const [ligaSelecionada, setLigaSelecionada] = useState('Todas')
+  const [temporadaSelecionada, setTemporadaSelecionada] = useState('Todas')
   
   // Dados calculados
   const [mediasLiga, setMediasLiga] = useState({})
+  const [ligas, setLigas] = useState([])
+  const [temporadas, setTemporadas] = useState([])
 
   // Carregar dados do CSV
   useEffect(() => {
@@ -35,15 +39,21 @@ export default function BenchmarkPage() {
               setJogadores(dados)
               
               if (dados.length > 0) {
+                // Extrair ligas e temporadas únicas
+                const ligasUnicas = ['Todas', ...new Set(dados.map(j => j.Liga).filter(Boolean))]
+                const temporadasUnicas = ['Todas', ...new Set(dados.map(j => j.Temporada).filter(Boolean))]
+                setLigas(ligasUnicas)
+                setTemporadas(temporadasUnicas)
+                
                 const colunas = Object.keys(dados[0]).filter(col => 
-                  col && col.trim() && !['Jogador', 'Time', 'Posição', 'Número', 'Idade', 'Altura', 'Peso', 'Nacionalidade', '?'].includes(col)
+                  col && col.trim() && !['Jogador', 'Time', 'Posição', 'Número', 'Idade', 'Altura', 'Peso', 'Nacionalidade', '?', 'Liga', 'Temporada'].includes(col)
                 )
                 setTodasAsMetricas(colunas)
                 const categorias = categorizarMetricas(colunas)
                 setCategoriasMetricas(categorias)
                 
                 // Calcular médias por posição
-                calcularMedias(dados, colunas)
+                calcularMedias(dados, colunas, 'Todas', 'Todas')
                 
                 // Selecionar primeiro jogador por padrão
                 if (dados.length > 0) {
@@ -73,6 +83,16 @@ export default function BenchmarkPage() {
 
     carregarDados()
   }, [])
+
+  // Recalcular médias quando filtros mudam
+  useEffect(() => {
+    if (jogadores.length > 0) {
+      const colunas = Object.keys(jogadores[0]).filter(col => 
+        col && col.trim() && !['Jogador', 'Time', 'Posição', 'Número', 'Idade', 'Altura', 'Peso', 'Nacionalidade', '?', 'Liga', 'Temporada'].includes(col)
+      )
+      calcularMedias(jogadores, colunas, ligaSelecionada, temporadaSelecionada)
+    }
+  }, [ligaSelecionada, temporadaSelecionada, jogadores])
 
   const parseValue = (val) => {
     if (!val || val === '-' || val === 'nan' || val === '') return 0
@@ -123,13 +143,22 @@ export default function BenchmarkPage() {
     return categorias
   }
 
-  const calcularMedias = (dados, metricas) => {
-    const posicoes = [...new Set(dados.map(j => j.Posição).filter(Boolean))]
+  const calcularMedias = (dados, metricas, liga, temporada) => {
+    // Filtrar dados com base em Liga e Temporada
+    let dadosFiltrados = dados
+    if (liga !== 'Todas') {
+      dadosFiltrados = dadosFiltrados.filter(j => j.Liga === liga)
+    }
+    if (temporada !== 'Todas') {
+      dadosFiltrados = dadosFiltrados.filter(j => j.Temporada === temporada)
+    }
+
+    const posicoes = [...new Set(dadosFiltrados.map(j => j.Posição).filter(Boolean))]
     const medias = {}
 
     posicoes.forEach(posicao => {
       medias[posicao] = {}
-      const jogadoresPosicao = dados.filter(j => j.Posição === posicao)
+      const jogadoresPosicao = dadosFiltrados.filter(j => j.Posição === posicao)
 
       metricas.forEach(metrica => {
         const valores = jogadoresPosicao
@@ -198,7 +227,31 @@ export default function BenchmarkPage() {
           </button>
           <div>
             <h1 className="text-3xl font-bold">Benchmark: Comparação com a Liga</h1>
-            <p className="text-slate-400 text-sm">Análise de performance por posição</p>
+            <p className="text-slate-400 text-sm">Análise de performance por posição, liga e temporada</p>
+          </div>
+        </div>
+
+        {/* FILTROS DE LIGA E TEMPORADA */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+          <div>
+            <label className="block text-xs font-bold text-slate-300 mb-2">Liga</label>
+            <select 
+              value={ligaSelecionada}
+              onChange={(e) => setLigaSelecionada(e.target.value)}
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:border-emerald-500 focus:outline-none"
+            >
+              {ligas.map(l => <option key={l} value={l}>{l}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-300 mb-2">Temporada</label>
+            <select 
+              value={temporadaSelecionada}
+              onChange={(e) => setTemporadaSelecionada(e.target.value)}
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:border-emerald-500 focus:outline-none"
+            >
+              {temporadas.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
           </div>
         </div>
 
@@ -232,9 +285,11 @@ export default function BenchmarkPage() {
               <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700">
                 <div className="mb-6">
                   <h2 className="text-2xl font-bold text-white mb-2">{jogadorAtual.Jogador}</h2>
-                  <div className="flex gap-4 text-sm">
+                  <div className="flex gap-4 text-sm flex-wrap">
                     <span className="text-slate-400">Posição: <span className="text-emerald-400 font-bold">{jogadorAtual.Posição}</span></span>
                     <span className="text-slate-400">Time: <span className="text-emerald-400 font-bold">{jogadorAtual.Time}</span></span>
+                    {jogadorAtual.Liga && <span className="text-slate-400">Liga: <span className="text-blue-400 font-bold">{jogadorAtual.Liga}</span></span>}
+                    {jogadorAtual.Temporada && <span className="text-slate-400">Temporada: <span className="text-blue-400 font-bold">{jogadorAtual.Temporada}</span></span>}
                   </div>
                 </div>
 
@@ -305,14 +360,14 @@ export default function BenchmarkPage() {
                 <div className="w-4 h-4 bg-emerald-500 rounded"></div>
                 <span className="font-bold">Acima da Média</span>
               </div>
-              <p className="text-sm text-slate-400">O jogador performa melhor que a média de sua posição na liga</p>
+              <p className="text-sm text-slate-400">O jogador performa melhor que a média de sua posição na liga/temporada selecionada</p>
             </div>
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-4 h-4 bg-red-600 rounded"></div>
                 <span className="font-bold">Abaixo da Média</span>
               </div>
-              <p className="text-sm text-slate-400">O jogador performa pior que a média de sua posição na liga</p>
+              <p className="text-sm text-slate-400">O jogador performa pior que a média de sua posição na liga/temporada selecionada</p>
             </div>
             <div>
               <div className="flex items-center gap-2 mb-2">
