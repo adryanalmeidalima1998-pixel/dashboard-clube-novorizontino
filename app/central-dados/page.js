@@ -395,6 +395,12 @@ export default function CentralDados() {
           {posicoes.map(p => <option key={p} value={p}>{p}</option>)}
         </select>
         <button 
+          onClick={() => router.push('/central-dados/benchmark')}
+          className="bg-blue-600 hover:bg-blue-500 border border-blue-500 rounded-lg px-4 py-2 text-white font-bold transition-colors shadow-lg shadow-blue-900/20"
+        >
+          📊 Benchmark
+        </button>
+        <button 
           onClick={() => setPainelAberto(!painelAberto)}
           className="bg-emerald-600 hover:bg-emerald-500 border border-emerald-500 rounded-lg px-4 py-2 text-white font-bold transition-colors shadow-lg shadow-emerald-900/20"
         >
