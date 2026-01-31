@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Chart as ChartJS, RadarController, RadarElement, PointElement, LineElement, Filler, Tooltip, Legend, ScatterController, CategoryScale, LinearScale } from 'chart.js'
+import { Chart as ChartJS, Tooltip, Legend, Filler } from 'chart.js'
 import { Radar, Scatter } from 'react-chartjs-2'
 import Papa from 'papaparse'
 
-ChartJS.register(RadarController, RadarElement, PointElement, LineElement, Filler, Tooltip, Legend, ScatterController, CategoryScale, LinearScale)
+ChartJS.register(Tooltip, Legend, Filler)
 
 export default function GraficosPage() {
   const router = useRouter()
