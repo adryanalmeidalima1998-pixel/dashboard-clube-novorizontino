@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Chart as ChartJS, Tooltip, Legend, Filler } from 'chart.js'
+import { Chart as ChartJS, Tooltip, Legend, Filler, LinearScale, CategoryScale } from 'chart.js'
 import { Radar, Scatter } from 'react-chartjs-2'
 import Papa from 'papaparse'
 
-ChartJS.register(Tooltip, Legend, Filler)
+// Registrar todos os componentes necessários
+ChartJS.register(Tooltip, Legend, Filler, LinearScale, CategoryScale)
 
 export default function GraficosPage() {
   const router = useRouter()
@@ -28,12 +29,18 @@ export default function GraficosPage() {
           header: true,
           skipEmptyLines: true,
           complete: (results) => {
-            const dados = results.data.filter(j => j.Jogador && j.Jogador.trim())
-            setJogadores(dados)
-            if (dados.length > 0) {
-              setJogadorSelecionado(dados[0].Jogador)
+            try {
+              const dados = results.data.filter(j => j.Jogador && j.Jogador.trim())
+              setJogadores(dados)
+              if (dados.length > 0) {
+                setJogadorSelecionado(dados[0].Jogador)
+              }
+              setCarregando(false)
+            } catch (e) {
+              console.error('Erro ao processar dados:', e)
+              setErro('Erro ao processar dados do CSV')
+              setCarregando(false)
             }
-            setCarregando(false)
           },
           error: (error) => {
             console.error('Erro ao parsear CSV:', error)
@@ -52,62 +59,81 @@ export default function GraficosPage() {
   }, [])
 
   const parseValue = (val) => {
-    if (!val || val === '-' || val === 'nan') return 0
-    const clean = String(val).replace('%', '').replace(',', '.')
-    return parseFloat(clean) || 0
+    if (!val || val === '-' || val === 'nan' || val === '') return 0
+    try {
+      const clean = String(val).replace('%', '').replace(',', '.')
+      const num = parseFloat(clean)
+      return isNaN(num) ? 0 : num
+    } catch {
+      return 0
+    }
   }
 
   // Dados para o Gráfico de Radar
-  const jogadorAtual = jogadores.find(j => j.Jogador === jogadorSelecionado)
+  const jogadorAtual = useMemo(() => {
+    return jogadores.find(j => j.Jogador === jogadorSelecionado)
+  }, [jogadores, jogadorSelecionado])
   
   const radarData = useMemo(() => {
     if (!jogadorAtual) return null
 
-    return {
-      labels: ['Gols', 'Passes %', 'Dribles', 'Desafios %', 'Interceptações'],
-      datasets: [
-        {
-          label: jogadorAtual.Jogador,
-          data: [
-            parseValue(jogadorAtual.Gols),
-            parseValue(jogadorAtual['Passes precisos %']),
-            parseValue(jogadorAtual.Dribles),
-            parseValue(jogadorAtual['Desafios vencidos, %']),
-            parseValue(jogadorAtual.Interceptações)
-          ],
-          borderColor: '#10b981',
-          backgroundColor: 'rgba(16, 185, 129, 0.1)',
-          borderWidth: 2,
-          pointBackgroundColor: '#10b981',
-          pointBorderColor: '#fff',
-          pointBorderWidth: 2,
-          pointRadius: 5,
-          pointHoverRadius: 7
-        }
-      ]
+    try {
+      return {
+        labels: ['Gols', 'Passes %', 'Dribles', 'Desafios %', 'Interceptações'],
+        datasets: [
+          {
+            label: jogadorAtual.Jogador,
+            data: [
+              parseValue(jogadorAtual.Gols),
+              parseValue(jogadorAtual['Passes precisos %']),
+              parseValue(jogadorAtual.Dribles),
+              parseValue(jogadorAtual['Desafios vencidos, %']),
+              parseValue(jogadorAtual.Interceptações)
+            ],
+            borderColor: '#10b981',
+            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            borderWidth: 2,
+            pointBackgroundColor: '#10b981',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2,
+            pointRadius: 5,
+            pointHoverRadius: 7
+          }
+        ]
+      }
+    } catch (e) {
+      console.error('Erro ao gerar dados do radar:', e)
+      return null
     }
   }, [jogadorAtual])
 
   // Dados para o Gráfico de Dispersão
   const scatterData = useMemo(() => {
-    const pontos = jogadores.map(j => ({
-      x: parseValue(j[metricaX]),
-      y: parseValue(j[metricaY]),
-      jogador: j.Jogador
-    })).filter(p => p.x >= 0 && p.y >= 0)
+    try {
+      const pontos = jogadores
+        .map(j => ({
+          x: parseValue(j[metricaX]),
+          y: parseValue(j[metricaY]),
+          jogador: j.Jogador
+        }))
+        .filter(p => p.x >= 0 && p.y >= 0 && p.jogador)
 
-    return {
-      datasets: [
-        {
-          label: `${metricaX} vs ${metricaY}`,
-          data: pontos,
-          backgroundColor: 'rgba(16, 185, 129, 0.6)',
-          borderColor: '#10b981',
-          borderWidth: 1,
-          pointRadius: 6,
-          pointHoverRadius: 8
-        }
-      ]
+      return {
+        datasets: [
+          {
+            label: `${metricaX} vs ${metricaY}`,
+            data: pontos,
+            backgroundColor: 'rgba(16, 185, 129, 0.6)',
+            borderColor: '#10b981',
+            borderWidth: 1,
+            pointRadius: 6,
+            pointHoverRadius: 8
+          }
+        ]
+      }
+    } catch (e) {
+      console.error('Erro ao gerar dados de dispersão:', e)
+      return { datasets: [] }
     }
   }, [jogadores, metricaX, metricaY])
 
@@ -168,7 +194,11 @@ export default function GraficosPage() {
         borderWidth: 1,
         callbacks: {
           label: function(context) {
-            return `${context.raw.jogador}: (${context.raw.x.toFixed(2)}, ${context.raw.y.toFixed(2)})`
+            try {
+              return `${context.raw.jogador}: (${context.raw.x.toFixed(2)}, ${context.raw.y.toFixed(2)})`
+            } catch {
+              return 'Dados indisponíveis'
+            }
           }
         }
       }
@@ -254,7 +284,7 @@ export default function GraficosPage() {
 
             <h2 className="text-lg font-bold text-white mb-4">Perfil do Jogador (Radar 360°)</h2>
             <div className="bg-slate-900 rounded-xl p-4 border border-slate-700 min-h-96">
-              {radarData && <Radar data={radarData} options={radarOptions} />}
+              {radarData ? <Radar data={radarData} options={radarOptions} /> : <div className="text-slate-400">Carregando gráfico...</div>}
             </div>
             <p className="text-xs text-slate-400 mt-4">Visualize as principais métricas de performance do jogador selecionado em um gráfico de radar 360°. Quanto mais próximo da borda, melhor o desempenho.</p>
           </div>
@@ -304,7 +334,7 @@ export default function GraficosPage() {
 
             <h2 className="text-lg font-bold text-white mb-4">Comparativo de Elenco (Dispersão)</h2>
             <div className="bg-slate-900 rounded-xl p-4 border border-slate-700 min-h-96">
-              {scatterData && <Scatter data={scatterData} options={scatterOptions} />}
+              {scatterData?.datasets?.length > 0 ? <Scatter data={scatterData} options={scatterOptions} /> : <div className="text-slate-400">Carregando gráfico...</div>}
             </div>
             <p className="text-xs text-slate-400 mt-4">Cruze duas métricas para identificar correlações e outliers no desempenho do elenco. Cada ponto representa um jogador.</p>
           </div>
