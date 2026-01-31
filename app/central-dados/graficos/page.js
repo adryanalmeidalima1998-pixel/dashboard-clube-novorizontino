@@ -19,7 +19,6 @@ import {
 import { Radar, Scatter } from 'react-chartjs-2'
 import Papa from 'papaparse'
 
-// Registrar TODOS os componentes necessários
 ChartJS.register(
   RadarController,
   ScatterController,
@@ -34,14 +33,28 @@ ChartJS.register(
   Legend
 )
 
+const CORES_JOGADORES = [
+  '#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6',
+  '#ec4899', '#14b8a6', '#f97316', '#06b6d4', '#84cc16'
+]
+
 export default function GraficosPage() {
   const router = useRouter()
   const [jogadores, setJogadores] = useState([])
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState(null)
-  const [jogadorSelecionado, setJogadorSelecionado] = useState('')
-  const [metricaX, setMetricaX] = useState('Minutos jogados')
-  const [metricaY, setMetricaY] = useState('Gols')
+  
+  // Filtros Radar
+  const [filtroTimeRadar, setFiltroTimeRadar] = useState('Todos')
+  const [filtroPosicaoRadar, setFiltroPosicaoRadar] = useState('Todos')
+  const [jogadoresSelecionadosRadar, setJogadoresSelecionadosRadar] = useState([])
+  const [metricasRadar, setMetricasRadar] = useState(['Gols', 'Passes precisos %', 'Dribles', 'Desafios vencidos, %', 'Interceptações'])
+  
+  // Filtros Dispersão
+  const [filtroPosicaoDispersa, setFiltroPosicaoDispersa] = useState('Todos')
+  const [jogadoresSelecionadosDispersa, setJogadoresSelecionadosDispersa] = useState([])
+  const [metricaXDispersa, setMetricaXDispersa] = useState('Minutos jogados')
+  const [metricaYDispersa, setMetricaYDispersa] = useState('Gols')
 
   // Carregar dados do CSV
   useEffect(() => {
@@ -58,7 +71,8 @@ export default function GraficosPage() {
               const dados = results.data.filter(j => j.Jogador && j.Jogador.trim())
               setJogadores(dados)
               if (dados.length > 0) {
-                setJogadorSelecionado(dados[0].Jogador)
+                setJogadoresSelecionadosRadar([dados[0].Jogador])
+                setJogadoresSelecionadosDispersa([dados[0].Jogador])
               }
               setCarregando(false)
             } catch (e) {
@@ -94,65 +108,102 @@ export default function GraficosPage() {
     }
   }
 
+  // Obter lista de times e posições únicas
+  const times = useMemo(() => {
+    const unique = ['Todos', ...new Set(jogadores.map(j => j.Time).filter(Boolean))]
+    return unique
+  }, [jogadores])
+
+  const posicoes = useMemo(() => {
+    const unique = ['Todos', ...new Set(jogadores.map(j => j.Posição).filter(Boolean))]
+    return unique
+  }, [jogadores])
+
+  // Obter lista de todas as métricas disponíveis
+  const todasAsMetricas = useMemo(() => {
+    if (jogadores.length === 0) return []
+    const metricas = Object.keys(jogadores[0]).filter(k => 
+      k !== 'Jogador' && k !== 'Time' && k !== 'Posição' && k !== 'Número'
+    )
+    return metricas.sort()
+  }, [jogadores])
+
+  // Filtrar jogadores para Radar
+  const jogadoresFiltradosRadar = useMemo(() => {
+    return jogadores.filter(j => {
+      const filtroTime = filtroTimeRadar === 'Todos' || j.Time === filtroTimeRadar
+      const filtroPosicao = filtroPosicaoRadar === 'Todos' || j.Posição === filtroPosicaoRadar
+      return filtroTime && filtroPosicao
+    })
+  }, [jogadores, filtroTimeRadar, filtroPosicaoRadar])
+
+  // Filtrar jogadores para Dispersão
+  const jogadoresFiltradosDispersa = useMemo(() => {
+    return jogadores.filter(j => {
+      const filtroPosicao = filtroPosicaoDispersa === 'Todos' || j.Posição === filtroPosicaoDispersa
+      return filtroPosicao
+    })
+  }, [jogadores, filtroPosicaoDispersa])
+
   // Dados para o Gráfico de Radar
-  const jogadorAtual = useMemo(() => {
-    return jogadores.find(j => j.Jogador === jogadorSelecionado)
-  }, [jogadores, jogadorSelecionado])
-  
   const radarData = useMemo(() => {
-    if (!jogadorAtual) return null
+    if (jogadoresSelecionadosRadar.length === 0 || metricasRadar.length === 0) return null
 
     try {
+      const datasets = jogadoresSelecionadosRadar.map((nomeJogador, idx) => {
+        const jogador = jogadores.find(j => j.Jogador === nomeJogador)
+        if (!jogador) return null
+
+        return {
+          label: jogador.Jogador,
+          data: metricasRadar.map(metrica => parseValue(jogador[metrica])),
+          borderColor: CORES_JOGADORES[idx % CORES_JOGADORES.length],
+          backgroundColor: CORES_JOGADORES[idx % CORES_JOGADORES.length] + '20',
+          borderWidth: 2,
+          pointBackgroundColor: CORES_JOGADORES[idx % CORES_JOGADORES.length],
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
+          pointRadius: 4,
+          pointHoverRadius: 6
+        }
+      }).filter(Boolean)
+
       return {
-        labels: ['Gols', 'Passes %', 'Dribles', 'Desafios %', 'Interceptações'],
-        datasets: [
-          {
-            label: jogadorAtual.Jogador,
-            data: [
-              parseValue(jogadorAtual.Gols),
-              parseValue(jogadorAtual['Passes precisos %']),
-              parseValue(jogadorAtual.Dribles),
-              parseValue(jogadorAtual['Desafios vencidos, %']),
-              parseValue(jogadorAtual.Interceptações)
-            ],
-            borderColor: '#10b981',
-            backgroundColor: 'rgba(16, 185, 129, 0.1)',
-            borderWidth: 2,
-            pointBackgroundColor: '#10b981',
-            pointBorderColor: '#fff',
-            pointBorderWidth: 2,
-            pointRadius: 5,
-            pointHoverRadius: 7
-          }
-        ]
+        labels: metricasRadar,
+        datasets
       }
     } catch (e) {
       console.error('Erro ao gerar dados do radar:', e)
       return null
     }
-  }, [jogadorAtual])
+  }, [jogadores, jogadoresSelecionadosRadar, metricasRadar])
 
   // Dados para o Gráfico de Dispersão
   const scatterData = useMemo(() => {
     try {
-      const pontos = jogadores
-        .map(j => ({
-          x: parseValue(j[metricaX]),
-          y: parseValue(j[metricaY]),
-          jogador: j.Jogador
+      const jogadoresParaMostrar = jogadoresSelecionadosDispersa.length > 0 
+        ? jogadores.filter(j => jogadoresSelecionadosDispersa.includes(j.Jogador))
+        : jogadoresFiltradosDispersa
+
+      const pontos = jogadoresParaMostrar
+        .map((j, idx) => ({
+          x: parseValue(j[metricaXDispersa]),
+          y: parseValue(j[metricaYDispersa]),
+          jogador: j.Jogador,
+          cor: CORES_JOGADORES[idx % CORES_JOGADORES.length]
         }))
         .filter(p => p.x >= 0 && p.y >= 0 && p.jogador)
 
       return {
         datasets: [
           {
-            label: `${metricaX} vs ${metricaY}`,
+            label: `${metricaXDispersa} vs ${metricaYDispersa}`,
             data: pontos,
-            backgroundColor: 'rgba(16, 185, 129, 0.6)',
-            borderColor: '#10b981',
-            borderWidth: 1,
-            pointRadius: 6,
-            pointHoverRadius: 8
+            backgroundColor: pontos.map(p => p.cor + 'cc'),
+            borderColor: pontos.map(p => p.cor),
+            borderWidth: 2,
+            pointRadius: 7,
+            pointHoverRadius: 9
           }
         ]
       }
@@ -160,7 +211,7 @@ export default function GraficosPage() {
       console.error('Erro ao gerar dados de dispersão:', e)
       return { datasets: [] }
     }
-  }, [jogadores, metricaX, metricaY])
+  }, [jogadores, jogadoresSelecionadosDispersa, jogadoresFiltradosDispersa, metricaXDispersa, metricaYDispersa])
 
   const radarOptions = {
     responsive: true,
@@ -168,17 +219,20 @@ export default function GraficosPage() {
     plugins: {
       legend: {
         display: true,
+        position: 'bottom',
         labels: {
           color: '#e2e8f0',
-          font: { size: 12 }
+          font: { size: 12 },
+          padding: 15
         }
       },
       tooltip: {
-        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+        backgroundColor: 'rgba(15, 23, 42, 0.95)',
         titleColor: '#fff',
         bodyColor: '#e2e8f0',
         borderColor: '#10b981',
-        borderWidth: 1
+        borderWidth: 1,
+        padding: 10
       }
     },
     scales: {
@@ -187,14 +241,15 @@ export default function GraficosPage() {
         max: 100,
         ticks: {
           color: '#94a3b8',
-          font: { size: 11 }
+          font: { size: 10 },
+          stepSize: 20
         },
         grid: {
           color: 'rgba(148, 163, 184, 0.1)'
         },
         pointLabels: {
           color: '#cbd5e1',
-          font: { size: 12, weight: 'bold' }
+          font: { size: 11, weight: 'bold' }
         }
       }
     }
@@ -212,11 +267,12 @@ export default function GraficosPage() {
         }
       },
       tooltip: {
-        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+        backgroundColor: 'rgba(15, 23, 42, 0.95)',
         titleColor: '#fff',
         bodyColor: '#e2e8f0',
         borderColor: '#10b981',
         borderWidth: 1,
+        padding: 10,
         callbacks: {
           label: function(context) {
             try {
@@ -233,7 +289,7 @@ export default function GraficosPage() {
         type: 'linear',
         title: {
           display: true,
-          text: metricaX,
+          text: metricaXDispersa,
           color: '#cbd5e1',
           font: { size: 12, weight: 'bold' }
         },
@@ -247,7 +303,7 @@ export default function GraficosPage() {
       y: {
         title: {
           display: true,
-          text: metricaY,
+          text: metricaYDispersa,
           color: '#cbd5e1',
           font: { size: 12, weight: 'bold' }
         },
@@ -287,95 +343,158 @@ export default function GraficosPage() {
           </button>
           <div>
             <h1 className="text-3xl font-bold">Análise Gráfica Avançada</h1>
-            <p className="text-slate-400 text-sm">Gráficos de Radar e Dispersão em Tempo Real</p>
+            <p className="text-slate-400 text-sm">Gráficos de Radar e Dispersão com Filtros Inteligentes</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* GRÁFICO DE RADAR */}
           <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700">
-            <div className="mb-6">
-              <label className="block text-sm font-bold text-slate-300 mb-2">Selecionar Jogador</label>
-              <select 
-                value={jogadorSelecionado} 
-                onChange={(e) => setJogadorSelecionado(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:border-emerald-500 focus:outline-none"
-              >
-                {jogadores.map(j => (
-                  <option key={j.Jogador} value={j.Jogador}>{j.Jogador}</option>
-                ))}
-              </select>
+            <h2 className="text-lg font-bold text-white mb-4">Perfil do Jogador (Radar 360°)</h2>
+            
+            {/* Filtros Radar */}
+            <div className="space-y-4 mb-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">Time</label>
+                  <select 
+                    value={filtroTimeRadar} 
+                    onChange={(e) => setFiltroTimeRadar(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none"
+                  >
+                    {times.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">Posição</label>
+                  <select 
+                    value={filtroPosicaoRadar} 
+                    onChange={(e) => setFiltroPosicaoRadar(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none"
+                  >
+                    {posicoes.map(p => <option key={p} value={p}>{p}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-2">Selecionar Jogadores (até 5)</label>
+                <div className="max-h-32 overflow-y-auto bg-slate-900 border border-slate-700 rounded-lg p-3 space-y-2">
+                  {jogadoresFiltradosRadar.map(j => (
+                    <label key={j.Jogador} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-800 p-1 rounded">
+                      <input 
+                        type="checkbox" 
+                        checked={jogadoresSelecionadosRadar.includes(j.Jogador)}
+                        onChange={(e) => {
+                          if (e.target.checked && jogadoresSelecionadosRadar.length < 5) {
+                            setJogadoresSelecionadosRadar([...jogadoresSelecionadosRadar, j.Jogador])
+                          } else if (!e.target.checked) {
+                            setJogadoresSelecionadosRadar(jogadoresSelecionadosRadar.filter(jog => jog !== j.Jogador))
+                          }
+                        }}
+                        className="w-4 h-4 cursor-pointer"
+                      />
+                      <span>{j.Jogador} ({j.Posição})</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-2">Selecionar Métricas (até 5)</label>
+                <div className="max-h-32 overflow-y-auto bg-slate-900 border border-slate-700 rounded-lg p-3 space-y-2">
+                  {todasAsMetricas.map(m => (
+                    <label key={m} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-800 p-1 rounded">
+                      <input 
+                        type="checkbox" 
+                        checked={metricasRadar.includes(m)}
+                        onChange={(e) => {
+                          if (e.target.checked && metricasRadar.length < 5) {
+                            setMetricasRadar([...metricasRadar, m])
+                          } else if (!e.target.checked) {
+                            setMetricasRadar(metricasRadar.filter(met => met !== m))
+                          }
+                        }}
+                        className="w-4 h-4 cursor-pointer"
+                      />
+                      <span>{m}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
             </div>
 
-            <h2 className="text-lg font-bold text-white mb-4">Perfil do Jogador (Radar 360°)</h2>
             <div className="bg-slate-900 rounded-xl p-4 border border-slate-700 min-h-96">
-              {radarData ? <Radar data={radarData} options={radarOptions} /> : <div className="text-slate-400">Carregando gráfico...</div>}
+              {radarData && jogadoresSelecionadosRadar.length > 0 ? <Radar data={radarData} options={radarOptions} /> : <div className="text-slate-400 text-center py-20">Selecione jogadores e métricas</div>}
             </div>
-            <p className="text-xs text-slate-400 mt-4">Visualize as principais métricas de performance do jogador selecionado em um gráfico de radar 360°. Quanto mais próximo da borda, melhor o desempenho.</p>
           </div>
 
           {/* GRÁFICO DE DISPERSÃO */}
           <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700">
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <div>
-                <label className="block text-sm font-bold text-slate-300 mb-2">Eixo X (Métrica)</label>
-                <select 
-                  value={metricaX} 
-                  onChange={(e) => setMetricaX(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:border-emerald-500 focus:outline-none text-sm"
-                >
-                  <option>Minutos jogados</option>
-                  <option>Gols</option>
-                  <option>Assistências</option>
-                  <option>Passes precisos %</option>
-                  <option>Dribles</option>
-                  <option>Desafios vencidos, %</option>
-                  <option>Interceptações</option>
-                  <option>Chances de gol</option>
-                  <option>Chutes</option>
-                  <option>Index</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-slate-300 mb-2">Eixo Y (Métrica)</label>
-                <select 
-                  value={metricaY} 
-                  onChange={(e) => setMetricaY(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:border-emerald-500 focus:outline-none text-sm"
-                >
-                  <option>Minutos jogados</option>
-                  <option>Gols</option>
-                  <option>Assistências</option>
-                  <option>Passes precisos %</option>
-                  <option>Dribles</option>
-                  <option>Desafios vencidos, %</option>
-                  <option>Interceptações</option>
-                  <option>Chances de gol</option>
-                  <option>Chutes</option>
-                  <option>Index</option>
-                </select>
-              </div>
-            </div>
-
             <h2 className="text-lg font-bold text-white mb-4">Comparativo de Elenco (Dispersão)</h2>
-            <div className="bg-slate-900 rounded-xl p-4 border border-slate-700 min-h-96">
-              {scatterData?.datasets?.length > 0 ? <Scatter data={scatterData} options={scatterOptions} /> : <div className="text-slate-400">Carregando gráfico...</div>}
-            </div>
-            <p className="text-xs text-slate-400 mt-4">Cruze duas métricas para identificar correlações e outliers no desempenho do elenco. Cada ponto representa um jogador.</p>
-          </div>
-        </div>
+            
+            {/* Filtros Dispersão */}
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1">Posição</label>
+                <select 
+                  value={filtroPosicaoDispersa} 
+                  onChange={(e) => setFiltroPosicaoDispersa(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none"
+                >
+                  {posicoes.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </div>
 
-        {/* INFORMAÇÕES ADICIONAIS */}
-        <div className="mt-8 bg-slate-800 rounded-2xl p-6 border border-slate-700">
-          <h3 className="text-lg font-bold text-white mb-4">📊 Como usar os gráficos</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h4 className="font-bold text-emerald-400 mb-2">Gráfico de Radar</h4>
-              <p className="text-sm text-slate-300">Ideal para entender o perfil técnico completo de um jogador. Quanto mais próximo da borda, melhor em cada métrica. Use para comparar posições ou identificar pontos fortes e fracos.</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">Eixo X</label>
+                  <select 
+                    value={metricaXDispersa} 
+                    onChange={(e) => setMetricaXDispersa(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none"
+                  >
+                    {todasAsMetricas.map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">Eixo Y</label>
+                  <select 
+                    value={metricaYDispersa} 
+                    onChange={(e) => setMetricaYDispersa(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none"
+                  >
+                    {todasAsMetricas.map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-2">Selecionar Jogadores (deixe vazio para mostrar todos)</label>
+                <div className="max-h-32 overflow-y-auto bg-slate-900 border border-slate-700 rounded-lg p-3 space-y-2">
+                  {jogadoresFiltradosDispersa.map(j => (
+                    <label key={j.Jogador} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-800 p-1 rounded">
+                      <input 
+                        type="checkbox" 
+                        checked={jogadoresSelecionadosDispersa.includes(j.Jogador)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setJogadoresSelecionadosDispersa([...jogadoresSelecionadosDispersa, j.Jogador])
+                          } else {
+                            setJogadoresSelecionadosDispersa(jogadoresSelecionadosDispersa.filter(jog => jog !== j.Jogador))
+                          }
+                        }}
+                        className="w-4 h-4 cursor-pointer"
+                      />
+                      <span>{j.Jogador} ({j.Posição})</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
             </div>
-            <div>
-              <h4 className="font-bold text-emerald-400 mb-2">Gráfico de Dispersão</h4>
-              <p className="text-sm text-slate-300">Perfeito para scouting. Cruzar "Minutos Jogados" vs "Gols" mostra quem é mais eficiente. Jogadores no canto superior direito são os melhores em ambas as métricas.</p>
+
+            <div className="bg-slate-900 rounded-xl p-4 border border-slate-700 min-h-96">
+              {scatterData?.datasets?.length > 0 ? <Scatter data={scatterData} options={scatterOptions} /> : <div className="text-slate-400 text-center py-20">Nenhum dado disponível</div>}
             </div>
           </div>
         </div>
