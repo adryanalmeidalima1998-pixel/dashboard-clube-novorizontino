@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useParams, useRouter } from 'next/navigation'
@@ -23,14 +22,12 @@ export default function CompeticaoPage() {
         const csvText = await response.text()
         
         const lines = csvText.split('\n').filter(line => line.trim() !== '')
-        const headers = lines[0].split(',')
-        
         const parsed = lines.slice(1).map(line => {
           const values = line.split(',')
           return {
             nome: values[1]?.trim(),
             gols: parseInt(values[2]?.trim()) || 0,
-            time: 'Competição' // Placeholder ou extrair se houver na planilha
+            time: 'Competição'
           }
         }).sort((a, b) => b.gols - a.gols)
 
@@ -58,63 +55,98 @@ export default function CompeticaoPage() {
 
   const competicao = competicoes[params.id]
 
-  if (!competicao) return <div className="min-h-screen bg-gray-900 text-white p-6">Competição não encontrada</div>
+  if (!competicao) return (
+    <div className="min-h-screen bg-[#0a0c10] text-white flex items-center justify-center">
+      <div className="text-center">
+        <h1 className="text-2xl font-black italic uppercase text-red-500">Competição não encontrada</h1>
+        <button onClick={() => router.push('/')} className="mt-4 text-emerald-500 font-bold uppercase text-xs tracking-widest">Voltar ao Início</button>
+      </div>
+    </div>
+  )
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white p-6">
-      <button onClick={() => router.push('/')} className="mb-6 flex items-center gap-2 text-gray-400 hover:text-white transition">
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-        Voltar
-      </button>
-
-      <div className="flex items-center gap-4 mb-8">
-        <div className="w-20 h-20 bg-white rounded-lg flex items-center justify-center p-3">
-          <Image src={competicao.logo} alt={competicao.nome} width={60} height={60} className="object-contain" />
-        </div>
-        <div>
-          <h1 className="text-3xl font-bold">{competicao.nome}</h1>
-          <p className="text-gray-400">Dados e Estatísticas em Tempo Real</p>
-        </div>
-      </div>
-
-      {competicao.iframeTabela ? (
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          <div className="xl:col-span-2 space-y-6">
-            <div className="bg-gray-800/50 backdrop-blur rounded-xl p-6 border border-gray-700">
-              <h2 className="text-emerald-400 font-bold text-sm uppercase mb-4">Classificação</h2>
-              <div dangerouslySetInnerHTML={{ __html: competicao.iframeTabela }} />
-            </div>
-          </div>
-
-          <div className="space-y-6">
-            <div className="bg-gray-800/50 backdrop-blur rounded-xl p-6 border border-gray-700">
-              <h2 className="text-emerald-400 font-bold text-sm uppercase mb-4">Seleção da Rodada</h2>
-              <div dangerouslySetInnerHTML={{ __html: competicao.iframeSelecao }} />
-            </div>
-
-            <div className="bg-gray-800/50 backdrop-blur rounded-xl p-6 border border-gray-700">
-              <h2 className="text-emerald-400 font-bold text-sm uppercase mb-4">Artilheiros Reais (Planilha)</h2>
-              {loading ? <p className="text-sm text-slate-500">Carregando artilheiros...</p> : (
-                <div className="space-y-3">
-                  {artilheiros.map((art, i) => (
-                    <div key={i} className="flex items-center justify-between p-3 bg-gray-900 rounded-lg border border-gray-700/50">
-                      <div>
-                        <span className="block text-sm font-bold">{art.nome}</span>
-                        <span className="text-[10px] text-gray-500 uppercase">Gols Marcados</span>
-                      </div>
-                      <div className="text-emerald-400 font-black text-xl">{art.gols}</div>
-                    </div>
-                  ))}
+    <div className="min-h-screen bg-[#0a0c10] text-white p-4 md:p-8 font-sans">
+      <div className="max-w-7xl mx-auto">
+        
+        {/* HEADER ESTILO PERFORMANCE */}
+        <div className="flex flex-col md:flex-row items-center justify-between mb-12 gap-8">
+          <div className="flex items-center gap-6">
+            <button onClick={() => router.push('/')} className="p-4 bg-slate-900/80 hover:bg-emerald-500/20 rounded-2xl border border-slate-800 transition-all group">
+              <svg className="w-6 h-6 text-slate-500 group-hover:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+            </button>
+            <div className="flex items-center gap-6">
+              <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center p-4 shadow-2xl">
+                <Image src={competicao.logo} alt={competicao.nome} width={60} height={60} className="object-contain" />
+              </div>
+              <div>
+                <h1 className="text-4xl md:text-5xl font-black italic tracking-tighter uppercase leading-none bg-gradient-to-r from-white via-white to-slate-500 bg-clip-text text-transparent">
+                  {competicao.nome}
+                </h1>
+                <div className="flex items-center gap-2 mt-2">
+                  <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                  <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Dados e Estatísticas em Tempo Real</p>
                 </div>
-              )}
+              </div>
             </div>
           </div>
         </div>
-      ) : (
-        <div className="bg-gray-800/50 backdrop-blur rounded-xl p-12 border border-gray-700 text-center">
-          <p className="text-gray-400">Competição ainda não iniciada</p>
-        </div>
-      )}
+
+        {competicao.iframeTabela ? (
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+            <div className="xl:col-span-2 space-y-8">
+              <div className="bg-slate-900/40 backdrop-blur-md rounded-[2.5rem] p-8 border border-slate-800/50 shadow-2xl">
+                <div className="flex items-center gap-3 mb-8">
+                  <div className="w-1.5 h-6 bg-emerald-500 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.5)]"></div>
+                  <h2 className="text-slate-400 font-black text-[10px] uppercase tracking-[0.2em]">Classificação Oficial</h2>
+                </div>
+                <div className="rounded-3xl overflow-hidden bg-white/5 p-1" dangerouslySetInnerHTML={{ __html: competicao.iframeTabela }} />
+              </div>
+            </div>
+
+            <div className="space-y-8">
+              <div className="bg-slate-900/40 backdrop-blur-md rounded-[2.5rem] p-8 border border-slate-800/50 shadow-2xl">
+                <div className="flex items-center gap-3 mb-8">
+                  <div className="w-1.5 h-6 bg-emerald-500 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.5)]"></div>
+                  <h2 className="text-slate-400 font-black text-[10px] uppercase tracking-[0.2em]">Seleção da Rodada</h2>
+                </div>
+                <div className="rounded-3xl overflow-hidden bg-white/5 p-1" dangerouslySetInnerHTML={{ __html: competicao.iframeSelecao }} />
+              </div>
+
+              <div className="bg-slate-900/40 backdrop-blur-md rounded-[2.5rem] p-8 border border-slate-800/50 shadow-2xl">
+                <div className="flex items-center gap-3 mb-8">
+                  <div className="w-1.5 h-6 bg-emerald-500 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.5)]"></div>
+                  <h2 className="text-slate-400 font-black text-[10px] uppercase tracking-[0.2em]">Artilharia Real</h2>
+                </div>
+                {loading ? (
+                  <div className="flex flex-col items-center py-10 gap-4">
+                    <div className="w-8 h-8 border-2 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
+                    <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Sincronizando...</span>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {artilheiros.map((art, i) => (
+                      <div key={i} className="flex items-center justify-between p-5 bg-slate-950/80 rounded-2xl border border-slate-800 group hover:border-emerald-500/30 transition-all">
+                        <div>
+                          <span className="block text-base font-black italic uppercase text-white group-hover:text-emerald-400 transition-colors">{art.nome}</span>
+                          <span className="text-[9px] text-slate-600 font-black uppercase tracking-widest">Gols Marcados</span>
+                        </div>
+                        <div className="text-emerald-500 font-black text-3xl italic">{art.gols}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-slate-900/40 backdrop-blur-md rounded-[3rem] p-20 border border-slate-800/50 text-center shadow-2xl">
+            <div className="w-20 h-20 bg-slate-950 rounded-full flex items-center justify-center mx-auto mb-6 border border-slate-800">
+              <svg className="w-10 h-10 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            </div>
+            <p className="text-slate-500 font-black italic uppercase tracking-widest">Competição ainda não iniciada</p>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

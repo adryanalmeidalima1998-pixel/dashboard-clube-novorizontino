@@ -269,261 +269,207 @@ export default function CentralDados() {
   const posicoes = [...new Set(jogadores.map(j => j.Posição))].filter(Boolean).sort()
 
   if (carregando) return (
-    <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center">
+    <div className="min-h-screen bg-[#0a0c10] text-white flex items-center justify-center">
       <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mx-auto mb-4"></div>
-        <span className="text-lg">Carregando dados da Central...</span>
+        <div className="relative w-20 h-20 mx-auto mb-6">
+          <div className="absolute inset-0 border-4 border-emerald-500/20 rounded-full"></div>
+          <div className="absolute inset-0 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+        <span className="text-slate-400 font-black tracking-widest uppercase text-xs animate-pulse italic">Sincronizando Big Data...</span>
       </div>
     </div>
   )
 
   if (erro) return (
-    <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center">
-      <div className="text-center">
-        <span className="text-lg text-red-500">{erro}</span>
+    <div className="min-h-screen bg-[#0a0c10] text-white flex items-center justify-center">
+      <div className="bg-red-500/10 border border-red-500/50 p-8 rounded-3xl text-center max-w-md">
+        <svg className="w-12 h-12 text-red-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+        <span className="text-lg font-black italic uppercase text-red-500">{erro}</span>
       </div>
     </div>
   )
 
-  const abas = Object.keys(categoriasMetricas)
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white p-6">
-      
-      {/* HEADER */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-        <div className="flex items-center gap-4">
-          <button onClick={() => router.push('/')} className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors text-slate-400 hover:text-white">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-          </button>
-          <h1 className="text-3xl font-bold">Central de Dados</h1>
-        </div>
-        <div className="flex gap-2">
-          <button onClick={() => router.push('/central-dados/graficos')} className="bg-emerald-600 hover:bg-emerald-500 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors shadow-lg shadow-emerald-900/20">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
-            Gráficos Avançados
-          </button>
-          <button onClick={exportarCSV} className="bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded-lg text-sm font-bold border border-slate-700 flex items-center gap-2 transition-colors">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-            Exportar CSV
-          </button>
-          <button onClick={() => setMostrarTemplates(!mostrarTemplates)} className="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors shadow-lg shadow-blue-900/20">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" /></svg>
-            Templates ({templates.length})
-          </button>
-        </div>
-      </div>
-
-      {/* PAINEL DE TEMPLATES */}
-      {mostrarTemplates && (
-        <div className="bg-slate-800 rounded-lg p-6 mb-6 border border-blue-700">
-          <h3 className="text-lg font-bold mb-4">Meus Templates de Análise</h3>
-          
-          <div className="mb-6">
-            <div className="flex gap-2 mb-2">
-              <input 
-                type="text" 
-                placeholder="Nome do novo template (ex: Análise de Zagueiros)" 
-                value={nomeNovoTemplate}
-                onChange={(e) => setNomeNovoTemplate(e.target.value)}
-                className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:border-blue-500 focus:outline-none"
-              />
-              <button 
-                onClick={salvarTemplate}
-                className="bg-blue-600 hover:bg-blue-500 px-6 py-2 rounded-lg font-bold transition-colors"
-              >
-                Salvar Template
-              </button>
-            </div>
-            <p className="text-xs text-slate-400">O template atual ({metricasSelecionadas.length} métricas) será salvo com este nome</p>
-          </div>
-
-          {templates.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {templates.map(template => (
-                <div key={template.id} className="bg-slate-900 border border-slate-700 rounded-lg p-4 hover:border-blue-500 transition-colors">
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <h4 className="font-bold text-white">{template.nome}</h4>
-                      <p className="text-xs text-slate-400">{template.metricas.length} métricas</p>
-                    </div>
-                    <button 
-                      onClick={() => excluirTemplate(template.id)}
-                      className="text-red-500 hover:text-red-400 transition-colors"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                    </button>
-                  </div>
-                  <button 
-                    onClick={() => carregarTemplate(template)}
-                    className="w-full bg-blue-600 hover:bg-blue-500 px-3 py-2 rounded text-sm font-bold transition-colors mt-2"
-                  >
-                    Carregar
-                  </button>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-slate-400 text-center py-8">Nenhum template salvo ainda. Selecione suas métricas e clique em "Salvar Template"!</p>
-          )}
-        </div>
-      )}
-
-      {/* BUSCA E FILTROS */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <input 
-          type="text" 
-          placeholder="Buscar jogador..." 
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-          className="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none"
-        />
-        <select 
-          value={filtroTime}
-          onChange={(e) => setFiltroTime(e.target.value)}
-          className="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:border-emerald-500 focus:outline-none"
-        >
-          <option value="todos">Todos os Times</option>
-          {times.map(t => <option key={t} value={t}>{t}</option>)}
-        </select>
-        <select 
-          value={filtroPosicao}
-          onChange={(e) => setFiltroPosicao(e.target.value)}
-          className="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:border-emerald-500 focus:outline-none"
-        >
-          <option value="todas">Todas as Posições</option>
-          {posicoes.map(p => <option key={p} value={p}>{p}</option>)}
-        </select>
-        <button 
-          onClick={() => router.push('/central-dados/benchmark')}
-          className="bg-blue-600 hover:bg-blue-500 border border-blue-500 rounded-lg px-4 py-2 text-white font-bold transition-colors shadow-lg shadow-blue-900/20"
-        >
-          📊 Benchmark
-        </button>
-        <button 
-          onClick={() => setPainelAberto(!painelAberto)}
-          className="bg-emerald-600 hover:bg-emerald-500 border border-emerald-500 rounded-lg px-4 py-2 text-white font-bold transition-colors shadow-lg shadow-emerald-900/20"
-        >
-          {painelAberto ? '✓ Fechar Métricas' : '+ Selecionar Métricas'}
-        </button>
-      </div>
-
-      {/* PAINEL DE MÉTRICAS COM ABAS */}
-      {painelAberto && (
-        <div className="bg-slate-800 rounded-lg p-6 mb-6 border border-slate-700">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-bold">Métricas por Categoria</h3>
-            <div className="flex gap-2">
-              <button onClick={selecionarTodas} className="bg-emerald-600 hover:bg-emerald-500 px-3 py-1 rounded text-sm font-bold transition-colors">
-                Selecionar Todas
-              </button>
-              <button onClick={() => setMetricasSelecionadas([])} className="bg-red-700 hover:bg-red-600 px-3 py-1 rounded text-sm font-bold transition-colors">
-                Desmarcar Todas
-              </button>
-              <button onClick={limparTodas} className="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-sm font-bold transition-colors">
-                Limpar
-              </button>
+    <div className="min-h-screen bg-[#0a0c10] text-white p-4 md:p-8 font-sans">
+      <div className="max-w-[1600px] mx-auto">
+        
+        {/* HEADER ESTILO PERFORMANCE */}
+        <div className="flex flex-col lg:flex-row items-center justify-between mb-12 gap-8">
+          <div className="flex items-center gap-6">
+            <button onClick={() => router.push('/')} className="p-4 bg-slate-900/80 hover:bg-emerald-500/20 rounded-2xl border border-slate-800 transition-all group">
+              <svg className="w-6 h-6 text-slate-500 group-hover:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+            </button>
+            <div>
+              <h1 className="text-4xl md:text-5xl font-black italic tracking-tighter uppercase leading-none bg-gradient-to-r from-white via-white to-slate-500 bg-clip-text text-transparent">
+                Central de <span className="text-emerald-500">Inteligência</span>
+              </h1>
+              <div className="flex items-center gap-2 mt-2">
+                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Análise de Performance em Tempo Real</p>
+              </div>
             </div>
           </div>
-          
-          <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
-            {abas.map(aba => (
-              <button 
-                key={aba}
-                onClick={() => setAbaAtiva(aba)}
-                className={`px-4 py-2 rounded-lg font-bold whitespace-nowrap transition-colors ${
-                  abaAtiva === aba 
-                    ? 'bg-emerald-600 text-white' 
-                    : 'bg-slate-700 hover:bg-slate-600 text-slate-300'
-                }`}
-              >
-                {aba} ({categoriasMetricas[aba]?.length || 0})
-              </button>
-            ))}
-          </div>
 
-          <div className="mb-4">
-            <div className="flex gap-2 mb-3">
-              <button 
-                onClick={() => selecionarCategoria(abaAtiva)}
-                className="bg-emerald-700 hover:bg-emerald-600 px-3 py-1 rounded text-sm font-bold transition-colors"
-              >
-                + Selecionar {abaAtiva}
-              </button>
-              <button 
-                onClick={() => deselecionarCategoria(abaAtiva)}
-                className="bg-red-700 hover:bg-red-600 px-3 py-1 rounded text-sm font-bold transition-colors"
-              >
-                - Remover {abaAtiva}
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-64 overflow-y-auto">
-              {(categoriasMetricas[abaAtiva] || []).map(m => (
-                <label key={m} className="flex items-center gap-2 cursor-pointer hover:bg-slate-700/50 p-2 rounded transition-colors">
-                  <input 
-                    type="checkbox" 
-                    checked={metricasSelecionadas.includes(m)}
-                    onChange={() => toggleMetrica(m)}
-                    className="w-4 h-4 rounded border-slate-600 text-emerald-600 cursor-pointer"
-                  />
-                  <span className="text-sm">{m}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-          
-          <div className="mt-4 text-sm text-slate-400">
-            Selecionadas: {metricasSelecionadas.length} de {todasAsColunas.filter(c => !['?', 'Jogador', 'Time', 'Posição', 'Idade', 'Altura', 'Peso', 'Nacionalidade'].includes(c)).length} métricas
+          <div className="flex flex-wrap items-center gap-4">
+            <button onClick={() => setPainelAberto(!painelAberto)} className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-6 py-3 rounded-2xl font-black italic uppercase text-xs transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
+              Configurar Métricas
+            </button>
+            <button onClick={exportarCSV} className="bg-slate-900 hover:bg-slate-800 text-white px-6 py-3 rounded-2xl font-black italic uppercase text-xs transition-all border border-slate-800 flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+              Exportar CSV
+            </button>
           </div>
         </div>
-      )}
 
-      {/* TABELA */}
-      <div className="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden shadow-2xl">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-900/50 border-b border-slate-700 sticky top-0">
-              <tr>
-                <th className="p-4 text-left font-bold text-slate-400 uppercase text-[10px] cursor-pointer hover:text-white transition-colors sticky left-0 bg-slate-900 z-20" onClick={() => handleOrdenacao('Jogador')}>
-                  Jogador {ordenacao.coluna === 'Jogador' && (ordenacao.direcao === 'asc' ? '↑' : '↓')}
-                </th>
-                <th className="p-4 text-left font-bold text-slate-400 uppercase text-[10px] sticky left-32 bg-slate-900 z-20">Time</th>
-                <th className="p-4 text-left font-bold text-slate-400 uppercase text-[10px] sticky left-48 bg-slate-900 z-20">Posição</th>
-                {metricasSelecionadas.map(m => (
-                  <th key={m} className="p-4 text-center font-bold text-slate-400 uppercase text-[10px] cursor-pointer hover:text-white transition-colors whitespace-nowrap" onClick={() => handleOrdenacao(m)}>
-                    {m} {ordenacao.coluna === m && (ordenacao.direcao === 'asc' ? '↑' : '↓')}
+        {/* FILTROS RÁPIDOS */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <div className="relative group">
+            <input 
+              type="text" 
+              placeholder="BUSCAR ATLETA..." 
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              className="w-full bg-slate-900/50 border border-slate-800 rounded-2xl px-6 py-4 text-sm font-bold uppercase tracking-widest focus:outline-none focus:border-emerald-500/50 transition-all group-hover:bg-slate-900"
+            />
+            <svg className="w-5 h-5 text-slate-600 absolute right-6 top-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+          </div>
+          <select 
+            value={filtroTime}
+            onChange={(e) => setFiltroTime(e.target.value)}
+            className="bg-slate-900/50 border border-slate-800 rounded-2xl px-6 py-4 text-sm font-bold uppercase tracking-widest focus:outline-none focus:border-emerald-500/50 transition-all appearance-none cursor-pointer"
+          >
+            <option value="todos">TODOS OS TIMES</option>
+            {times.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
+          </select>
+          <select 
+            value={filtroPosicao}
+            onChange={(e) => setFiltroPosicao(e.target.value)}
+            className="bg-slate-900/50 border border-slate-800 rounded-2xl px-6 py-4 text-sm font-bold uppercase tracking-widest focus:outline-none focus:border-emerald-500/50 transition-all appearance-none cursor-pointer"
+          >
+            <option value="todas">TODAS AS POSIÇÕES</option>
+            {posicoes.map(p => <option key={p} value={p}>{p.toUpperCase()}</option>)}
+          </select>
+        </div>
+
+        {/* TABELA DE DADOS */}
+        <div className="bg-slate-900/30 backdrop-blur-md rounded-[2.5rem] border border-slate-800/50 overflow-hidden shadow-2xl">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-950/80 border-b border-slate-800/50">
+                  <th onClick={() => handleOrdenacao('Jogador')} className="p-6 font-black text-slate-500 uppercase text-[10px] tracking-widest cursor-pointer hover:text-white transition-colors sticky left-0 bg-slate-950 z-10">
+                    ATLETA {ordenacao.coluna === 'Jogador' && (ordenacao.direcao === 'asc' ? '▲' : '▼')}
                   </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-700/50">
-              {jogadoresFiltrados.slice(0, 150).map((j, i) => (
-                <tr key={i} className="hover:bg-slate-700/30 transition-colors group">
-                  <td className="p-4 font-bold text-white sticky left-0 bg-slate-800 group-hover:bg-slate-700/50 z-10">{j.Jogador}</td>
-                  <td className="p-4 text-slate-300 sticky left-32 bg-slate-800 group-hover:bg-slate-700/50 z-10">{j.Time}</td>
-                  <td className="p-4 sticky left-48 bg-slate-800 group-hover:bg-slate-700/50 z-10"><span className="bg-slate-900 px-2 py-1 rounded text-[10px] font-bold border border-slate-700 text-emerald-400">{j.Posição}</span></td>
-                  {metricasSelecionadas.map(m => {
-                    const val = parseValue(j[m])
-                    const media = mediaLiga[m]
-                    const acimaMedia = val >= media
-                    return (
-                      <td key={m} className="p-4 text-center whitespace-nowrap">
-                        <span className={`font-bold text-sm ${acimaMedia && val > 0 ? 'text-emerald-400' : 'text-slate-300'}`}>
-                          {j[m] || '-'}
-                        </span>
-                      </td>
-                    )
-                  })}
+                  <th className="p-6 font-black text-slate-500 uppercase text-[10px] tracking-widest text-center">TIME / POS</th>
+                  {metricasSelecionadas.map(m => (
+                    <th key={m} onClick={() => handleOrdenacao(m)} className="p-6 font-black text-slate-500 uppercase text-[10px] tracking-widest text-center cursor-pointer hover:text-white transition-colors">
+                      <div className="flex flex-col items-center gap-1">
+                        {m.toUpperCase()}
+                        {ordenacao.coluna === m && <span className="text-emerald-400 text-[8px]">{ordenacao.direcao === 'asc' ? '▲' : '▼'}</span>}
+                      </div>
+                    </th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-slate-800/30">
+                {jogadoresFiltrados.map((j, idx) => (
+                  <tr key={idx} className="hover:bg-emerald-500/[0.02] transition-all group">
+                    <td className="p-6 sticky left-0 bg-[#0d1016] z-10 group-hover:bg-slate-900/90 transition-colors">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center border border-slate-800 font-black italic text-slate-600 group-hover:text-emerald-500 transition-colors">
+                          {j.Jogador.charAt(0)}
+                        </div>
+                        <div>
+                          <span className="block font-black text-base text-white group-hover:text-emerald-400 transition-colors leading-tight">{j.Jogador}</span>
+                          <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{j.Nacionalidade || 'BRA'} • {j.Idade} ANOS</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-6 text-center">
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{j.Time}</span>
+                        <span className="bg-slate-950 px-2 py-1 rounded-lg text-[9px] font-black border border-slate-800 text-emerald-500 shadow-inner">{j.Posição}</span>
+                      </div>
+                    </td>
+                    {metricasSelecionadas.map(m => {
+                      const val = parseValue(j[m])
+                      const media = mediaLiga[m]
+                      const percent = (val / (media || 1)) * 100
+                      const isGood = val >= media
+                      return (
+                        <td key={m} className="p-6">
+                          <div className="flex flex-col items-center gap-2">
+                            <span className={`text-base font-black ${isGood ? 'text-emerald-400' : 'text-slate-500'}`}>
+                              {j[m] || '-'}
+                            </span>
+                            <div className="w-12 h-1 bg-slate-800 rounded-full overflow-hidden">
+                              <div className={`h-full rounded-full transition-all duration-1000 ${isGood ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]' : 'bg-red-500/30'}`} style={{ width: `${Math.min(percent, 100)}%` }}></div>
+                            </div>
+                          </div>
+                        </td>
+                      )
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
 
-      <div className="mt-4 text-center text-slate-400 text-sm">
-        Mostrando {Math.min(150, jogadoresFiltrados.length)} de {jogadoresFiltrados.length} jogadores • Total de {jogadores.length} na base de dados • {metricasSelecionadas.length} métricas visíveis
+        {/* PAINEL DE CONFIGURAÇÃO (MODAL) */}
+        {painelAberto && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8">
+            <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-xl" onClick={() => setPainelAberto(false)}></div>
+            <div className="relative bg-[#0d1016] w-full max-w-5xl max-h-[90vh] rounded-[3rem] border border-slate-800 shadow-2xl overflow-hidden flex flex-col">
+              <div className="p-8 border-b border-slate-800 flex items-center justify-between">
+                <div>
+                  <h2 className="text-3xl font-black italic uppercase tracking-tighter">Configurar <span className="text-emerald-500">Métricas</span></h2>
+                  <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-1">Selecione os indicadores para análise</p>
+                </div>
+                <button onClick={() => setPainelAberto(false)} className="p-4 bg-slate-900 hover:bg-red-500/20 rounded-2xl border border-slate-800 transition-all group">
+                  <svg className="w-6 h-6 text-slate-500 group-hover:text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
+
+              <div className="flex-grow overflow-y-auto p-8">
+                <div className="flex gap-4 mb-8 overflow-x-auto pb-2">
+                  {Object.keys(categoriasMetricas).map(cat => (
+                    <button 
+                      key={cat}
+                      onClick={() => setAbaAtiva(cat)}
+                      className={`px-6 py-3 rounded-2xl font-black italic uppercase text-[10px] tracking-widest transition-all whitespace-nowrap border ${abaAtiva === cat ? 'bg-emerald-500 text-slate-950 border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)]' : 'bg-slate-900 text-slate-500 border-slate-800 hover:border-slate-700'}`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {categoriasMetricas[abaAtiva]?.map(m => (
+                    <button 
+                      key={m}
+                      onClick={() => toggleMetrica(m)}
+                      className={`p-4 rounded-2xl text-left transition-all border flex items-center justify-between group ${metricasSelecionadas.includes(m) ? 'bg-emerald-500/10 border-emerald-500/50' : 'bg-slate-900/50 border-slate-800 hover:border-slate-700'}`}
+                    >
+                      <span className={`text-[10px] font-black uppercase tracking-tight leading-tight ${metricasSelecionadas.includes(m) ? 'text-emerald-400' : 'text-slate-500'}`}>{m}</span>
+                      {metricasSelecionadas.includes(m) && <div className="w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="p-8 border-t border-slate-800 bg-slate-950/50 flex flex-wrap items-center justify-between gap-4">
+                <div className="flex gap-3">
+                  <button onClick={selecionarTodas} className="text-[10px] font-black uppercase tracking-widest text-emerald-500 hover:text-emerald-400 transition-colors">Selecionar Todas</button>
+                  <button onClick={limparTodas} className="text-[10px] font-black uppercase tracking-widest text-red-500 hover:text-red-400 transition-colors">Limpar Seleção</button>
+                </div>
+                <button onClick={() => setPainelAberto(false)} className="bg-emerald-500 text-slate-950 px-10 py-4 rounded-2xl font-black italic uppercase text-xs shadow-xl hover:scale-105 transition-all">Aplicar Filtros</button>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   )
