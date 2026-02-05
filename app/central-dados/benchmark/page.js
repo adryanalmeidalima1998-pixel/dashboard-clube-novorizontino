@@ -228,28 +228,33 @@ export default function BenchmarkPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {categoriasMetricas[abaAtiva]?.map(metrica => {
-                    const val = parseValue(jogadorAtual[metrica])
-                    const media = (mediasLiga[posicaoReferencia] && mediasLiga[posicaoReferencia][metrica]) || 0
-                    const variacao = calcularVariacao(val, media)
-                    const isPositive = variacao >= 0
+                    const valorAtleta = parseValue(jogadorAtual[metrica])
+                    const mediaPosicao = mediasLiga[posicaoReferencia]?.[metrica] || 0
+                    const variacao = calcularVariacao(valorAtleta, mediaPosicao)
+                    
                     return (
                       <div key={metrica} className="bg-slate-950/50 p-6 rounded-3xl border border-slate-800/50 group hover:border-emerald-500/20 transition-all">
                         <div className="flex justify-between items-start mb-4">
-                          <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest max-w-[150px] leading-tight">{metrica}</span>
-                          <div className={`px-3 py-1 rounded-lg text-[10px] font-black italic ${isPositive ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
-                            {isPositive ? '+' : ''}{variacao.toFixed(1)}%
+                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{metrica}</span>
+                          <span className={`text-[10px] font-black italic ${variacao >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                            {variacao >= 0 ? '+' : ''}{variacao.toFixed(1)}%
+                          </span>
+                        </div>
+                        
+                        <div className="flex items-end justify-between gap-4 mb-2">
+                          <div className="flex-grow">
+                            <div className="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden">
+                              <div 
+                                className={`h-full rounded-full transition-all duration-1000 ${variacao >= 0 ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]'}`}
+                                style={{ width: `${Math.min(Math.max((valorAtleta / (mediaPosicao * 2 || 1)) * 100, 5), 100)}%` }}
+                              ></div>
+                            </div>
                           </div>
                         </div>
-                        <div className="flex items-end justify-between gap-4">
-                          <div className="flex-grow">
-                            <div className="flex justify-between text-[9px] font-black uppercase tracking-widest text-slate-600 mb-2">
-                              <span>Atleta: {val.toFixed(2)}</span>
-                              <span>Média ({posicaoReferencia}): {media.toFixed(2)}</span>
-                            </div>
-                            <div className="h-2 bg-slate-900 rounded-full overflow-hidden flex">
-                              <div className={`h-full transition-all duration-1000 ${isPositive ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'bg-red-500/50'}`} style={{ width: `${Math.min(Math.max((val / (media || 1)) * 50, 5), 100)}%` }}></div>
-                            </div>
-                          </div>
+                        
+                        <div className="flex justify-between text-[9px] font-bold uppercase tracking-widest">
+                          <span className="text-white">Atleta: {valorAtleta.toFixed(2)}</span>
+                          <span className="text-slate-600">Média ({posicaoReferencia}): {mediaPosicao.toFixed(2)}</span>
                         </div>
                       </div>
                     )
@@ -257,13 +262,24 @@ export default function BenchmarkPage() {
                 </div>
               </div>
             ) : (
-              <div className="h-full flex items-center justify-center bg-slate-900/20 rounded-[3rem] border border-dashed border-slate-800 min-h-[400px]">
-                <p className="text-slate-600 font-black italic uppercase tracking-widest">Selecione um atleta para iniciar a análise</p>
+              <div className="bg-slate-900/40 backdrop-blur-md rounded-[3rem] p-20 border border-slate-800/50 text-center">
+                <div className="w-20 h-20 bg-slate-950 rounded-full flex items-center justify-center border border-slate-800 mx-auto mb-6">
+                  <svg className="w-10 h-10 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                </div>
+                <h3 className="text-2xl font-black italic uppercase tracking-tighter text-slate-500">Selecione um Atleta</h3>
+                <p className="text-slate-600 text-[10px] font-bold uppercase tracking-widest mt-2">Utilize os filtros laterais para encontrar o perfil desejado</p>
               </div>
             )}
           </div>
         </div>
       </div>
+      
+      <style jsx global>{`
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #10b981; }
+      `}</style>
     </div>
   )
 }
