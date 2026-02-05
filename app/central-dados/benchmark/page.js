@@ -39,9 +39,14 @@ export default function BenchmarkPage() {
               const dados = results.data.filter(j => j.Jogador && j.Jogador.trim())
               setJogadores(dados)
               if (dados.length > 0) {
-                setTimes(['Todas', ...new Set(dados.map(j => j.Time).filter(Boolean))].sort())
-                setPosicoes(['Todas', ...new Set(dados.map(j => j.Posição).filter(Boolean))].sort())
-                setTodasPosicoes([...new Set(dados.map(j => j.Posição).filter(Boolean))].sort())
+                // Extrair times e posições únicos para os filtros
+                const timesUnicos = ['Todas', ...new Set(dados.map(j => j.Time).filter(Boolean))].sort()
+                const posicoesUnicas = ['Todas', ...new Set(dados.map(j => j.Posição).filter(Boolean))].sort()
+                const todasPos = [...new Set(dados.map(j => j.Posição).filter(Boolean))].sort()
+                
+                setTimes(timesUnicos)
+                setPosicoes(posicoesUnicas)
+                setTodasPosicoes(todasPos)
                 
                 const colunas = Object.keys(dados[0]).filter(col => col && col.trim() && !['Jogador', 'Time', 'Posição', 'Número', 'Idade', 'Altura', 'Peso', 'Nacionalidade', '?', 'Liga', 'Temporada'].includes(col))
                 setCategoriasMetricas(categorizarMetricas(colunas))
@@ -114,18 +119,23 @@ export default function BenchmarkPage() {
     setMediasLiga(medias)
   }
 
+  // Lógica de filtragem corrigida e simplificada
   const jogadoresFiltrados = useMemo(() => {
     return jogadores.filter(j => {
-      const passaBusca = j.Jogador.toLowerCase().includes(busca.toLowerCase())
-      const passaTime = filtroTime === 'Todas' || j.Time === filtroTime
-      const passaPosicao = filtroPosicao === 'Todas' || j.Posição === filtroPosicao
+      const nome = j.Jogador || ''
+      const time = j.Time || ''
+      const posicao = j.Posição || ''
+      
+      const passaBusca = nome.toLowerCase().includes(busca.toLowerCase())
+      const passaTime = filtroTime === 'Todas' || time === filtroTime
+      const passaPosicao = filtroPosicao === 'Todas' || posicao === filtroPosicao
+      
       return passaBusca && passaTime && passaPosicao
     })
   }, [jogadores, busca, filtroTime, filtroPosicao])
 
   const jogadorAtual = useMemo(() => {
-    const j = jogadores.find(j => j.Jogador === jogadorSelecionado)
-    return j
+    return jogadores.find(j => j.Jogador === jogadorSelecionado)
   }, [jogadores, jogadorSelecionado])
 
   const calcularVariacao = (valor, media) => media === 0 ? 0 : ((valor - media) / media) * 100
@@ -170,10 +180,18 @@ export default function BenchmarkPage() {
                   onChange={(e) => setBusca(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black uppercase tracking-widest focus:border-emerald-500/50 outline-none"
                 />
-                <select value={filtroTime} onChange={(e) => setFiltroTime(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black uppercase tracking-widest focus:border-emerald-500/50">
+                <select 
+                  value={filtroTime} 
+                  onChange={(e) => setFiltroTime(e.target.value)} 
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black uppercase tracking-widest focus:border-emerald-500/50 outline-none cursor-pointer"
+                >
                   {times.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
                 </select>
-                <select value={filtroPosicao} onChange={(e) => setFiltroPosicao(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black uppercase tracking-widest focus:border-emerald-500/50">
+                <select 
+                  value={filtroPosicao} 
+                  onChange={(e) => setFiltroPosicao(e.target.value)} 
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black uppercase tracking-widest focus:border-emerald-500/50 outline-none cursor-pointer"
+                >
                   {posicoes.map(p => <option key={p} value={p}>{p.toUpperCase()}</option>)}
                 </select>
               </div>
@@ -182,12 +200,22 @@ export default function BenchmarkPage() {
             <div className="bg-slate-900/40 backdrop-blur-md rounded-[2.5rem] p-6 border border-slate-800/50 shadow-2xl">
               <h2 className="text-slate-400 font-black text-[10px] uppercase tracking-[0.2em] mb-6">Atletas ({jogadoresFiltrados.length})</h2>
               <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-                {jogadoresFiltrados.map(j => (
-                  <button key={j.Jogador} onClick={() => { setJogadorSelecionado(j.Jogador); setPosicaoReferencia(j.Posição); }} className={`w-full text-left p-4 rounded-2xl transition-all border ${jogadorSelecionado === j.Jogador ? 'bg-emerald-500 border-emerald-500 text-slate-950 shadow-[0_0_15px_rgba(16,185,129,0.3)]' : 'bg-slate-950 border-slate-800 hover:border-slate-700 text-slate-400'}`}>
-                    <div className="font-black italic uppercase text-xs tracking-tighter">{j.Jogador}</div>
-                    <div className={`text-[9px] font-bold uppercase tracking-widest mt-1 ${jogadorSelecionado === j.Jogador ? 'text-slate-900' : 'text-slate-600'}`}>{j.Time} • {j.Posição}</div>
-                  </button>
-                ))}
+                {jogadoresFiltrados.length > 0 ? (
+                  jogadoresFiltrados.map(j => (
+                    <button 
+                      key={j.Jogador} 
+                      onClick={() => { setJogadorSelecionado(j.Jogador); setPosicaoReferencia(j.Posição); }} 
+                      className={`w-full text-left p-4 rounded-2xl transition-all border ${jogadorSelecionado === j.Jogador ? 'bg-emerald-500 border-emerald-500 text-slate-950 shadow-[0_0_15px_rgba(16,185,129,0.3)]' : 'bg-slate-950 border-slate-800 hover:border-slate-700 text-slate-400'}`}
+                    >
+                      <div className="font-black italic uppercase text-xs tracking-tighter">{j.Jogador}</div>
+                      <div className={`text-[9px] font-bold uppercase tracking-widest mt-1 ${jogadorSelecionado === j.Jogador ? 'text-slate-900' : 'text-slate-600'}`}>{j.Time} • {j.Posição}</div>
+                    </button>
+                  ))
+                ) : (
+                  <div className="text-center py-10">
+                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-700 italic">Nenhum atleta encontrado</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -211,16 +239,16 @@ export default function BenchmarkPage() {
                     <select 
                       value={posicaoReferencia || ''} 
                       onChange={(e) => setPosicaoReferencia(e.target.value)}
-                      className="bg-slate-900 border border-slate-800 text-emerald-500 font-black italic uppercase text-sm rounded-xl px-4 py-2 focus:outline-none focus:border-emerald-500/50 w-full text-center"
+                      className="bg-slate-900 border border-slate-800 text-emerald-500 font-black italic uppercase text-sm rounded-xl px-4 py-2 focus:outline-none focus:border-emerald-500/50 w-full text-center cursor-pointer"
                     >
                       {todasPosicoes.map(p => <option key={p} value={p}>{p.toUpperCase()}</option>)}
                     </select>
                   </div>
                 </div>
 
-                <div className="flex gap-4 mb-10 overflow-x-auto pb-2">
+                <div className="flex gap-4 mb-10 overflow-x-auto pb-2 custom-scrollbar">
                   {Object.keys(categoriasMetricas).map(cat => (
-                    <button key={cat} onClick={() => setAbaAtiva(cat)} className={`px-6 py-3 rounded-2xl font-black italic uppercase text-[10px] tracking-widest transition-all border ${abaAtiva === cat ? 'bg-emerald-500 text-slate-950 border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)]' : 'bg-slate-950 text-slate-500 border-slate-800 hover:border-slate-700'}`}>
+                    <button key={cat} onClick={() => setAbaAtiva(cat)} className={`px-6 py-3 rounded-2xl font-black italic uppercase text-[10px] tracking-widest transition-all border whitespace-nowrap ${abaAtiva === cat ? 'bg-emerald-500 text-slate-950 border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)]' : 'bg-slate-950 text-slate-500 border-slate-800 hover:border-slate-700'}`}>
                       {cat}
                     </button>
                   ))}
