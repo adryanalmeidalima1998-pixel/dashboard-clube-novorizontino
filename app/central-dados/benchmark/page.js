@@ -11,6 +11,7 @@ export default function BenchmarkPage() {
   const [erro, setErro] = useState(null)
   
   const [jogadorSelecionado, setJogadorSelecionado] = useState(null)
+  const [posicaoReferencia, setPosicaoReferencia] = useState(null) // NOVO: Posição para comparação
   const [todasAsMetricas, setTodasAsMetricas] = useState([])
   const [categoriasMetricas, setCategoriasMetricas] = useState({})
   const [abaAtiva, setAbaAtiva] = useState('Ataque')
@@ -20,6 +21,7 @@ export default function BenchmarkPage() {
   const [mediasLiga, setMediasLiga] = useState({})
   const [ligas, setLigas] = useState([])
   const [temporadas, setTemporadas] = useState([])
+  const [todasPosicoes, setTodasPosicoes] = useState([])
 
   useEffect(() => {
     const carregarDados = async () => {
@@ -37,11 +39,17 @@ export default function BenchmarkPage() {
               if (dados.length > 0) {
                 setLigas(['Todas', ...new Set(dados.map(j => j.Liga).filter(Boolean))])
                 setTemporadas(['Todas', ...new Set(dados.map(j => j.Temporada).filter(Boolean))])
+                setTodasPosicoes([...new Set(dados.map(j => j.Posição).filter(Boolean))].sort())
+                
                 const colunas = Object.keys(dados[0]).filter(col => col && col.trim() && !['Jogador', 'Time', 'Posição', 'Número', 'Idade', 'Altura', 'Peso', 'Nacionalidade', '?', 'Liga', 'Temporada'].includes(col))
                 setTodasAsMetricas(colunas)
                 setCategoriasMetricas(categorizarMetricas(colunas))
                 calcularMedias(dados, colunas, 'Todas', 'Todas')
-                setJogadorSelecionado(dados[0].Jogador)
+                
+                if (dados[0]) {
+                  setJogadorSelecionado(dados[0].Jogador)
+                  setPosicaoReferencia(dados[0].Posição)
+                }
               }
               setCarregando(false)
             } catch (e) {
@@ -115,7 +123,12 @@ export default function BenchmarkPage() {
     setMediasLiga(medias)
   }
 
-  const jogadorAtual = useMemo(() => jogadores.find(j => j.Jogador === jogadorSelecionado), [jogadores, jogadorSelecionado])
+  const jogadorAtual = useMemo(() => {
+    const j = jogadores.find(j => j.Jogador === jogadorSelecionado)
+    if (j && !posicaoReferencia) setPosicaoReferencia(j.Posição)
+    return j
+  }, [jogadores, jogadorSelecionado])
+
   const calcularVariacao = (valor, media) => media === 0 ? 0 : ((valor - media) / media) * 100
 
   if (carregando) return (
@@ -164,7 +177,7 @@ export default function BenchmarkPage() {
               <h2 className="text-slate-400 font-black text-[10px] uppercase tracking-[0.2em] mb-6">Atletas</h2>
               <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
                 {jogadores.map(j => (
-                  <button key={j.Jogador} onClick={() => setJogadorSelecionado(j.Jogador)} className={`w-full text-left p-4 rounded-2xl transition-all border ${jogadorSelecionado === j.Jogador ? 'bg-emerald-500 border-emerald-500 text-slate-950 shadow-[0_0_15px_rgba(16,185,129,0.3)]' : 'bg-slate-950 border-slate-800 hover:border-slate-700 text-slate-400'}`}>
+                  <button key={j.Jogador} onClick={() => { setJogadorSelecionado(j.Jogador); setPosicaoReferencia(j.Posição); }} className={`w-full text-left p-4 rounded-2xl transition-all border ${jogadorSelecionado === j.Jogador ? 'bg-emerald-500 border-emerald-500 text-slate-950 shadow-[0_0_15px_rgba(16,185,129,0.3)]' : 'bg-slate-950 border-slate-800 hover:border-slate-700 text-slate-400'}`}>
                     <div className="font-black italic uppercase text-xs tracking-tighter">{j.Jogador}</div>
                     <div className={`text-[9px] font-bold uppercase tracking-widest mt-1 ${jogadorSelecionado === j.Jogador ? 'text-slate-900' : 'text-slate-600'}`}>{j.Posição}</div>
                   </button>
@@ -175,7 +188,7 @@ export default function BenchmarkPage() {
 
           {/* ÁREA DE ANÁLISE */}
           <div className="lg:col-span-3 space-y-8">
-            {jogadorAtual && mediasLiga[jogadorAtual.Posição] && (
+            {jogadorAtual && (
               <div className="bg-slate-900/40 backdrop-blur-md rounded-[3rem] p-10 border border-slate-800/50 shadow-2xl">
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12 pb-8 border-b border-slate-800/50">
                   <div>
@@ -186,9 +199,17 @@ export default function BenchmarkPage() {
                     <h3 className="text-5xl font-black italic uppercase tracking-tighter text-white">{jogadorAtual.Jogador}</h3>
                     <p className="text-slate-500 font-bold uppercase text-xs tracking-widest mt-2">{jogadorAtual.Posição} • {jogadorAtual.Time}</p>
                   </div>
-                  <div className="bg-slate-950 px-6 py-4 rounded-2xl border border-slate-800 text-center">
-                    <span className="text-[9px] text-slate-600 font-black uppercase tracking-widest block mb-1">Média da Posição</span>
-                    <span className="text-xl font-black text-emerald-500 italic">{jogadorAtual.Posição.toUpperCase()}</span>
+                  
+                  {/* NOVO: Seletor de Posição de Referência */}
+                  <div className="bg-slate-950 px-6 py-4 rounded-2xl border border-slate-800 text-center min-w-[200px]">
+                    <span className="text-[9px] text-slate-600 font-black uppercase tracking-widest block mb-2">Comparar com Média de:</span>
+                    <select 
+                      value={posicaoReferencia || ''} 
+                      onChange={(e) => setPosicaoReferencia(e.target.value)}
+                      className="bg-slate-900 border border-slate-800 text-emerald-500 font-black italic uppercase text-sm rounded-xl px-4 py-2 focus:outline-none focus:border-emerald-500/50 w-full text-center"
+                    >
+                      {todasPosicoes.map(p => <option key={p} value={p}>{p.toUpperCase()}</option>)}
+                    </select>
                   </div>
                 </div>
 
@@ -203,7 +224,7 @@ export default function BenchmarkPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {categoriasMetricas[abaAtiva]?.map(metrica => {
                     const val = parseValue(jogadorAtual[metrica])
-                    const media = mediasLiga[jogadorAtual.Posição][metrica] || 0
+                    const media = (mediasLiga[posicaoReferencia] && mediasLiga[posicaoReferencia][metrica]) || 0
                     const variacao = calcularVariacao(val, media)
                     const isPositive = variacao >= 0
                     return (
@@ -218,7 +239,7 @@ export default function BenchmarkPage() {
                           <div className="flex-grow">
                             <div className="flex justify-between text-[9px] font-black uppercase tracking-widest text-slate-600 mb-2">
                               <span>Atleta: {val.toFixed(2)}</span>
-                              <span>Média: {media.toFixed(2)}</span>
+                              <span>Média ({posicaoReferencia}): {media.toFixed(2)}</span>
                             </div>
                             <div className="h-2 bg-slate-900 rounded-full overflow-hidden flex">
                               <div className={`h-full transition-all duration-1000 ${isPositive ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'bg-red-500/50'}`} style={{ width: `${Math.min(Math.max((val / (media || 1)) * 50, 5), 100)}%` }}></div>

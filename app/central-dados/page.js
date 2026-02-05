@@ -16,6 +16,7 @@ export default function CentralDados() {
   const [busca, setBusca] = useState('')
   const [filtroTime, setFiltroTime] = useState('todos')
   const [filtroPosicao, setFiltroPosicao] = useState('todas')
+  const [filtroPosicaoMedia, setFiltroPosicaoMedia] = useState('todas') // NOVO: Filtro para a média da liga
   
   // Ordenação
   const [ordenacao, setOrdenacao] = useState({ coluna: 'Jogador', direcao: 'asc' })
@@ -165,12 +166,17 @@ export default function CentralDados() {
 
   const mediaLiga = useMemo(() => {
     const medias = {}
+    // Filtrar jogadores para o cálculo da média baseado no novo filtro de posição
+    const jogadoresParaMedia = filtroPosicaoMedia === 'todas' 
+      ? jogadores 
+      : jogadores.filter(j => j.Posição === filtroPosicaoMedia)
+
     metricasSelecionadas.forEach(m => {
-      const valores = jogadores.map(j => parseValue(j[m]))
+      const valores = jogadoresParaMedia.map(j => parseValue(j[m]))
       medias[m] = valores.reduce((a, b) => a + b, 0) / (valores.length || 1)
     })
     return medias
-  }, [jogadores, metricasSelecionadas])
+  }, [jogadores, metricasSelecionadas, filtroPosicaoMedia])
 
   const jogadoresFiltrados = useMemo(() => {
     let filtrados = jogadores.filter(j => {
@@ -282,9 +288,11 @@ export default function CentralDados() {
 
   if (erro) return (
     <div className="min-h-screen bg-[#0a0c10] text-white flex items-center justify-center">
-      <div className="bg-red-500/10 border border-red-500/50 p-8 rounded-3xl text-center max-w-md">
-        <svg className="w-12 h-12 text-red-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-        <span className="text-lg font-black italic uppercase text-red-500">{erro}</span>
+      <div className="text-center bg-slate-900/50 p-12 rounded-[3rem] border border-red-500/20">
+        <div className="text-red-500 text-5xl mb-6">⚠️</div>
+        <h2 className="text-2xl font-black italic uppercase tracking-tighter mb-2">Erro de Conexão</h2>
+        <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">{erro}</p>
+        <button onClick={() => window.location.reload()} className="mt-8 px-8 py-4 bg-red-500 text-white font-black italic uppercase text-xs rounded-2xl hover:bg-red-600 transition-all">Tentar Novamente</button>
       </div>
     </div>
   )
@@ -293,126 +301,213 @@ export default function CentralDados() {
     <div className="min-h-screen bg-[#0a0c10] text-white p-4 md:p-8 font-sans">
       <div className="max-w-[1600px] mx-auto">
         
-        {/* HEADER ESTILO PERFORMANCE */}
-        <div className="flex flex-col lg:flex-row items-center justify-between mb-12 gap-8">
+        {/* HEADER */}
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 mb-12">
           <div className="flex items-center gap-6">
             <button onClick={() => router.push('/')} className="p-4 bg-slate-900/80 hover:bg-emerald-500/20 rounded-2xl border border-slate-800 transition-all group">
               <svg className="w-6 h-6 text-slate-500 group-hover:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
             </button>
             <div>
-              <h1 className="text-4xl md:text-5xl font-black italic tracking-tighter uppercase leading-none bg-gradient-to-r from-white via-white to-slate-500 bg-clip-text text-transparent">
-                Central de <span className="text-emerald-500">Inteligência</span>
+              <h1 className="text-4xl md:text-6xl font-black italic tracking-tighter uppercase leading-none bg-gradient-to-r from-white via-white to-slate-500 bg-clip-text text-transparent">
+                Central de <span className="text-emerald-500">Dados</span>
               </h1>
-              <div className="flex items-center gap-2 mt-2">
-                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-                <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Análise de Performance em Tempo Real</p>
-              </div>
+              <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-2">Inteligência de Performance e Scouting</p>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-4">
-            <button onClick={() => router.push('/central-dados/graficos')} className="bg-slate-900 hover:bg-slate-800 text-white px-6 py-3 rounded-2xl font-black italic uppercase text-xs transition-all border border-slate-800 flex items-center gap-2">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
-              Gráficos
+          <div className="flex flex-wrap gap-3">
+            <button onClick={() => router.push('/central-dados/graficos')} className="px-6 py-4 bg-slate-900/80 hover:bg-emerald-500/20 rounded-2xl border border-slate-800 transition-all flex items-center gap-3 group">
+              <svg className="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:text-white">Gráficos</span>
             </button>
-            <button onClick={() => router.push('/central-dados/benchmark')} className="bg-slate-900 hover:bg-slate-800 text-white px-6 py-3 rounded-2xl font-black italic uppercase text-xs transition-all border border-slate-800 flex items-center gap-2">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-              Benchmark
+            <button onClick={() => router.push('/central-dados/benchmark')} className="px-6 py-4 bg-slate-900/80 hover:bg-emerald-500/20 rounded-2xl border border-slate-800 transition-all flex items-center gap-3 group">
+              <svg className="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:text-white">Benchmark</span>
             </button>
-            <button onClick={() => setPainelAberto(!painelAberto)} className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-6 py-3 rounded-2xl font-black italic uppercase text-xs transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] flex items-center gap-2">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
-              Configurar Métricas
-            </button>
-            <button onClick={exportarCSV} className="bg-slate-900 hover:bg-slate-800 text-white px-6 py-3 rounded-2xl font-black italic uppercase text-xs transition-all border border-slate-800 flex items-center gap-2">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+            <button onClick={exportarCSV} className="px-6 py-4 bg-emerald-500 text-slate-950 rounded-2xl font-black italic uppercase text-[10px] tracking-widest hover:bg-emerald-400 transition-all shadow-[0_0_20px_rgba(16,185,129,0.2)]">
               Exportar CSV
             </button>
           </div>
         </div>
 
-        {/* FILTROS RÁPIDOS */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <div className="relative group">
+        {/* FILTROS E BUSCA */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+          <div className="lg:col-span-1 relative group">
             <input 
               type="text" 
               placeholder="BUSCAR ATLETA..." 
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
-              className="w-full bg-slate-900/50 border border-slate-800 rounded-2xl px-6 py-4 text-sm font-bold uppercase tracking-widest focus:outline-none focus:border-emerald-500/50 transition-all group-hover:bg-slate-900"
+              className="w-full bg-slate-900/50 border border-slate-800 rounded-2xl px-6 py-4 text-[10px] font-black uppercase tracking-widest focus:outline-none focus:border-emerald-500/50 transition-all"
             />
-            <svg className="w-5 h-5 text-slate-600 absolute right-6 top-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+            <svg className="absolute right-6 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
           </div>
-          <select 
-            value={filtroTime}
-            onChange={(e) => setFiltroTime(e.target.value)}
-            className="bg-slate-900/50 border border-slate-800 rounded-2xl px-6 py-4 text-sm font-bold uppercase tracking-widest focus:outline-none focus:border-emerald-500/50 transition-all appearance-none cursor-pointer"
-          >
+
+          <select value={filtroTime} onChange={(e) => setFiltroTime(e.target.value)} className="bg-slate-900/50 border border-slate-800 rounded-2xl px-6 py-4 text-[10px] font-black uppercase tracking-widest focus:outline-none focus:border-emerald-500/50 transition-all">
             <option value="todos">TODOS OS TIMES</option>
             {times.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
           </select>
-          <select 
-            value={filtroPosicao}
-            onChange={(e) => setFiltroPosicao(e.target.value)}
-            className="bg-slate-900/50 border border-slate-800 rounded-2xl px-6 py-4 text-sm font-bold uppercase tracking-widest focus:outline-none focus:border-emerald-500/50 transition-all appearance-none cursor-pointer"
-          >
+
+          <select value={filtroPosicao} onChange={(e) => setFiltroPosicao(e.target.value)} className="bg-slate-900/50 border border-slate-800 rounded-2xl px-6 py-4 text-[10px] font-black uppercase tracking-widest focus:outline-none focus:border-emerald-500/50 transition-all">
             <option value="todas">TODAS AS POSIÇÕES</option>
             {posicoes.map(p => <option key={p} value={p}>{p.toUpperCase()}</option>)}
           </select>
+
+          {/* NOVO: Filtro de Posição para Média da Liga */}
+          <div className="lg:col-span-1 flex flex-col">
+            <select 
+              value={filtroPosicaoMedia} 
+              onChange={(e) => setFiltroPosicaoMedia(e.target.value)} 
+              className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 rounded-2xl px-6 py-4 text-[10px] font-black uppercase tracking-widest focus:outline-none focus:border-emerald-500 transition-all"
+            >
+              <option value="todas">MÉDIA: TODAS POSIÇÕES</option>
+              {posicoes.map(p => <option key={p} value={p}>MÉDIA: {p.toUpperCase()}</option>)}
+            </select>
+          </div>
+
+          <button 
+            onClick={() => setPainelAberto(!painelAberto)}
+            className={`px-6 py-4 rounded-2xl border font-black italic uppercase text-[10px] tracking-widest transition-all flex items-center justify-center gap-3 ${painelAberto ? 'bg-emerald-500 border-emerald-500 text-slate-950' : 'bg-slate-900/50 border-slate-800 text-slate-400 hover:border-slate-700'}`}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
+            Configurar Métricas
+          </button>
         </div>
 
-        {/* TABELA DE DADOS */}
-        <div className="bg-slate-900/30 backdrop-blur-md rounded-[2.5rem] border border-slate-800/50 overflow-hidden shadow-2xl">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-950/80 border-b border-slate-800/50">
-                  <th onClick={() => handleOrdenacao('Jogador')} className="p-6 font-black text-slate-500 uppercase text-[10px] tracking-widest cursor-pointer hover:text-white transition-colors sticky left-0 bg-slate-950 z-10">
-                    ATLETA {ordenacao.coluna === 'Jogador' && (ordenacao.direcao === 'asc' ? '▲' : '▼')}
-                  </th>
-                  <th className="p-6 font-black text-slate-500 uppercase text-[10px] tracking-widest text-center">TIME / POS</th>
-                  {metricasSelecionadas.map(m => (
-                    <th key={m} onClick={() => handleOrdenacao(m)} className="p-6 font-black text-slate-500 uppercase text-[10px] tracking-widest text-center cursor-pointer hover:text-white transition-colors">
-                      <div className="flex flex-col items-center gap-1">
-                        {m.toUpperCase()}
-                        {ordenacao.coluna === m && <span className="text-emerald-400 text-[8px]">{ordenacao.direcao === 'asc' ? '▲' : '▼'}</span>}
+        {/* PAINEL DE CONFIGURAÇÃO DE MÉTRICAS */}
+        {painelAberto && (
+          <div className="bg-slate-900/40 backdrop-blur-md rounded-[2.5rem] p-8 border border-slate-800/50 mb-8 shadow-2xl animate-in fade-in slide-in-from-top-4 duration-500">
+            <div className="flex flex-col lg:flex-row gap-8">
+              <div className="flex-grow">
+                <div className="flex items-center justify-between mb-8">
+                  <div className="flex gap-4 overflow-x-auto pb-2">
+                    {Object.keys(categoriasMetricas).map(cat => (
+                      <button 
+                        key={cat} 
+                        onClick={() => setAbaAtiva(cat)}
+                        className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border whitespace-nowrap ${abaAtiva === cat ? 'bg-emerald-500 border-emerald-500 text-slate-950 shadow-[0_0_15px_rgba(16,185,129,0.3)]' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-700'}`}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-[300px] overflow-y-auto pr-4 custom-scrollbar">
+                  {categoriasMetricas[abaAtiva]?.map(metrica => (
+                    <button
+                      key={metrica}
+                      onClick={() => toggleMetrica(metrica)}
+                      className={`p-4 rounded-2xl text-left border transition-all flex items-center justify-between group ${metricasSelecionadas.includes(metrica) ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-400' : 'bg-slate-950 border-slate-800 text-slate-600 hover:border-slate-700'}`}
+                    >
+                      <span className="text-[9px] font-black uppercase tracking-tighter leading-tight">{metrica}</span>
+                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all ${metricasSelecionadas.includes(metrica) ? 'bg-emerald-500 border-emerald-500' : 'border-slate-800 group-hover:border-slate-600'}`}>
+                        {metricasSelecionadas.includes(metrica) && <svg className="w-2 h-2 text-slate-950" fill="currentColor" viewBox="0 0 20 20"><path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" /></svg>}
                       </div>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex flex-wrap gap-4 mt-8 pt-8 border-t border-slate-800/50">
+                  <button onClick={() => selecionarCategoria(abaAtiva)} className="text-[9px] font-black uppercase tracking-widest text-emerald-500 hover:text-emerald-400 transition-colors">Selecionar Categoria</button>
+                  <button onClick={() => deselecionarCategoria(abaAtiva)} className="text-[9px] font-black uppercase tracking-widest text-red-500 hover:text-red-400 transition-colors">Limpar Categoria</button>
+                  <button onClick={selecionarTodas} className="text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition-colors">Selecionar Todas</button>
+                  <button onClick={limparTodas} className="text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition-colors">Resetar Padrão</button>
+                </div>
+              </div>
+
+              <div className="lg:w-80 bg-slate-950 rounded-3xl p-6 border border-slate-800">
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-6">Templates Salvos</h3>
+                <div className="space-y-3 mb-6 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
+                  {templates.length === 0 ? (
+                    <p className="text-[9px] text-slate-700 font-bold uppercase italic">Nenhum template salvo</p>
+                  ) : (
+                    templates.map(t => (
+                      <div key={t.id} className="flex items-center gap-2 group">
+                        <button onClick={() => carregarTemplate(t)} className="flex-grow text-left p-3 bg-slate-900 border border-slate-800 rounded-xl text-[9px] font-black uppercase tracking-widest text-slate-400 hover:border-emerald-500/50 hover:text-emerald-400 transition-all">{t.nome}</button>
+                        <button onClick={() => excluirTemplate(t.id)} className="p-3 text-red-500/30 hover:text-red-500 transition-colors">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+                <div className="space-y-3">
+                  <input 
+                    type="text" 
+                    placeholder="NOME DO TEMPLATE..." 
+                    value={nomeNovoTemplate}
+                    onChange={(e) => setNomeNovoTemplate(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-[9px] font-black uppercase tracking-widest focus:outline-none focus:border-emerald-500/50"
+                  />
+                  <button onClick={salvarTemplate} className="w-full py-3 bg-emerald-500 text-slate-950 rounded-xl font-black italic uppercase text-[9px] tracking-widest hover:bg-emerald-400 transition-all">Salvar Atual</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TABELA DE DADOS */}
+        <div className="bg-slate-900/40 backdrop-blur-md rounded-[2.5rem] border border-slate-800/50 shadow-2xl overflow-hidden">
+          <div className="overflow-x-auto custom-scrollbar">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="bg-slate-950/50 border-b border-slate-800">
+                  <th className="p-6 text-left sticky left-0 bg-[#0d1117] z-10">
+                    <button onClick={() => handleOrdenacao('Jogador')} className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 hover:text-emerald-500 transition-colors">
+                      ATLETA {ordenacao.coluna === 'Jogador' && (ordenacao.direcao === 'asc' ? '↑' : '↓')}
+                    </button>
+                  </th>
+                  <th className="p-6 text-left">
+                    <button onClick={() => handleOrdenacao('Time')} className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 hover:text-emerald-500 transition-colors">
+                      TIME {ordenacao.coluna === 'Time' && (ordenacao.direcao === 'asc' ? '↑' : '↓')}
+                    </button>
+                  </th>
+                  <th className="p-6 text-left">
+                    <button onClick={() => handleOrdenacao('Posição')} className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 hover:text-emerald-500 transition-colors">
+                      POS {ordenacao.coluna === 'Posição' && (ordenacao.direcao === 'asc' ? '↑' : '↓')}
+                    </button>
+                  </th>
+                  {metricasSelecionadas.map(m => (
+                    <th key={m} className="p-6 text-center">
+                      <button onClick={() => handleOrdenacao(m)} className="flex flex-col items-center gap-1 mx-auto group">
+                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-500 group-hover:text-emerald-500 transition-colors">{m}</span>
+                        <span className="text-[8px] text-slate-700 font-bold">{ordenacao.coluna === m && (ordenacao.direcao === 'asc' ? 'ASC' : 'DESC')}</span>
+                      </button>
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/30">
+              <tbody>
                 {jogadoresFiltrados.map((j, idx) => (
-                  <tr key={idx} className="hover:bg-emerald-500/[0.02] transition-all group">
-                    <td className="p-6 sticky left-0 bg-[#0d1016] z-10 group-hover:bg-slate-900/90 transition-colors">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center border border-slate-800 font-black italic text-slate-600 group-hover:text-emerald-500 transition-colors">
-                          {j.Jogador.charAt(0)}
-                        </div>
-                        <div>
-                          <span className="block font-black text-base text-white group-hover:text-emerald-400 transition-colors leading-tight">{j.Jogador}</span>
-                          <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{j.Nacionalidade || 'BRA'} • {j.Idade} ANOS</span>
-                        </div>
+                  <tr key={idx} className="border-b border-slate-800/30 hover:bg-emerald-500/[0.02] transition-colors group">
+                    <td className="p-6 sticky left-0 bg-[#0d1117] z-10 group-hover:bg-[#121821] transition-colors">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-black italic uppercase tracking-tighter text-white group-hover:text-emerald-400 transition-colors">{j.Jogador}</span>
+                        <span className="text-[9px] font-bold text-slate-600 uppercase tracking-widest">{j.Nacionalidade || 'BRASIL'}</span>
                       </div>
                     </td>
-                    <td className="p-6 text-center">
-                      <div className="flex flex-col items-center gap-1">
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{j.Time}</span>
-                        <span className="bg-slate-950 px-2 py-1 rounded-lg text-[9px] font-black border border-slate-800 text-emerald-500 shadow-inner">{j.Posição}</span>
-                      </div>
+                    <td className="p-6">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{j.Time}</span>
+                    </td>
+                    <td className="p-6">
+                      <span className="px-3 py-1 bg-slate-950 border border-slate-800 rounded-lg text-[9px] font-black text-emerald-500 uppercase tracking-widest">{j.Posição}</span>
                     </td>
                     {metricasSelecionadas.map(m => {
                       const val = parseValue(j[m])
-                      const media = mediaLiga[m]
-                      const percent = (val / (media || 1)) * 100
-                      const isGood = val >= media
+                      const media = mediaLiga[m] || 0
+                      const diff = media === 0 ? 0 : ((val - media) / media) * 100
+                      const isPositive = diff >= 0
+                      
                       return (
-                        <td key={m} className="p-6">
-                          <div className="flex flex-col items-center gap-2">
-                            <span className={`text-base font-black ${isGood ? 'text-emerald-400' : 'text-slate-500'}`}>
-                              {j[m] || '-'}
-                            </span>
-                            <div className="w-12 h-1 bg-slate-800 rounded-full overflow-hidden">
-                              <div className={`h-full rounded-full transition-all duration-1000 ${isGood ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]' : 'bg-red-500/30'}`} style={{ width: `${Math.min(percent, 100)}%` }}></div>
+                        <td key={m} className="p-6 text-center">
+                          <div className="flex flex-col items-center gap-1">
+                            <span className="text-sm font-black italic text-white">{typeof j[m] === 'string' && j[m].includes('%') ? j[m] : val.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}</span>
+                            <div className="flex items-center gap-1">
+                              <div className={`w-1 h-1 rounded-full ${isPositive ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
+                              <span className={`text-[8px] font-black ${isPositive ? 'text-emerald-500/50' : 'text-red-500/50'}`}>
+                                {isPositive ? '+' : ''}{diff.toFixed(0)}%
+                              </span>
                             </div>
                           </div>
                         </td>
@@ -423,60 +518,21 @@ export default function CentralDados() {
               </tbody>
             </table>
           </div>
-        </div>
+          
+          {jogadoresFiltrados.length === 0 && (
+            <div className="p-20 text-center">
+              <p className="text-slate-600 font-black italic uppercase tracking-[0.3em]">Nenhum atleta encontrado nos critérios</p>
+            </div>
+          )}
 
-        {/* PAINEL DE CONFIGURAÇÃO (MODAL) */}
-        {painelAberto && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8">
-            <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-xl" onClick={() => setPainelAberto(false)}></div>
-            <div className="relative bg-[#0d1016] w-full max-w-5xl max-h-[90vh] rounded-[3rem] border border-slate-800 shadow-2xl overflow-hidden flex flex-col">
-              <div className="p-8 border-b border-slate-800 flex items-center justify-between">
-                <div>
-                  <h2 className="text-3xl font-black italic uppercase tracking-tighter">Configurar <span className="text-emerald-500">Métricas</span></h2>
-                  <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-1">Selecione os indicadores para análise</p>
-                </div>
-                <button onClick={() => setPainelAberto(false)} className="p-4 bg-slate-900 hover:bg-red-500/20 rounded-2xl border border-slate-800 transition-all group">
-                  <svg className="w-6 h-6 text-slate-500 group-hover:text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg>
-                </button>
-              </div>
-
-              <div className="flex-grow overflow-y-auto p-8">
-                <div className="flex gap-4 mb-8 overflow-x-auto pb-2">
-                  {Object.keys(categoriasMetricas).map(cat => (
-                    <button 
-                      key={cat}
-                      onClick={() => setAbaAtiva(cat)}
-                      className={`px-6 py-3 rounded-2xl font-black italic uppercase text-[10px] tracking-widest transition-all whitespace-nowrap border ${abaAtiva === cat ? 'bg-emerald-500 text-slate-950 border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)]' : 'bg-slate-900 text-slate-500 border-slate-800 hover:border-slate-700'}`}
-                    >
-                      {cat}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {categoriasMetricas[abaAtiva]?.map(m => (
-                    <button 
-                      key={m}
-                      onClick={() => toggleMetrica(m)}
-                      className={`p-4 rounded-2xl text-left transition-all border flex items-center justify-between group ${metricasSelecionadas.includes(m) ? 'bg-emerald-500/10 border-emerald-500/50' : 'bg-slate-900/50 border-slate-800 hover:border-slate-700'}`}
-                    >
-                      <span className={`text-[10px] font-black uppercase tracking-tight leading-tight ${metricasSelecionadas.includes(m) ? 'text-emerald-400' : 'text-slate-500'}`}>{m}</span>
-                      {metricasSelecionadas.includes(m) && <div className="w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="p-8 border-t border-slate-800 bg-slate-950/50 flex flex-wrap items-center justify-between gap-4">
-                <div className="flex gap-3">
-                  <button onClick={selecionarTodas} className="text-[10px] font-black uppercase tracking-widest text-emerald-500 hover:text-emerald-400 transition-colors">Selecionar Todas</button>
-                  <button onClick={limparTodas} className="text-[10px] font-black uppercase tracking-widest text-red-500 hover:text-red-400 transition-colors">Limpar Seleção</button>
-                </div>
-                <button onClick={() => setPainelAberto(false)} className="bg-emerald-500 text-slate-950 px-10 py-4 rounded-2xl font-black italic uppercase text-xs shadow-xl hover:scale-105 transition-all">Aplicar Filtros</button>
-              </div>
+          <div className="p-6 bg-slate-950/50 border-t border-slate-800 flex justify-between items-center">
+            <span className="text-[9px] font-black text-slate-600 uppercase tracking-[0.2em]">Exibindo {jogadoresFiltrados.length} de {jogadores.length} atletas</span>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
+              <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Base de Dados Sincronizada</span>
             </div>
           </div>
-        )}
+        </div>
 
       </div>
     </div>
