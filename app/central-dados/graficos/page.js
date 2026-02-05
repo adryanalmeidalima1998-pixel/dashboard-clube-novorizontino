@@ -130,22 +130,27 @@ export default function GraficosPage() {
   const posicoes = useMemo(() => [...new Set(jogadores.map(j => j.Posição).filter(Boolean))], [jogadores])
 
   const jogadoresFiltrados = useMemo(() => {
-    return jogadores.filter(j => {
-      // Normalização do Time/Equipe para comparação estrita
-      const timeAtleta = (j.Time || j.Equipe || '').trim();
-      const passaTime = filtroTime === 'Todos' || timeAtleta === filtroTime;
-      
+    // 1. Primeiro, filtramos estritamente pela equipe selecionada (Filtro Soberano)
+    let baseFiltrada = jogadores;
+    if (filtroTime !== 'Todos') {
+      baseFiltrada = baseFiltrada.filter(j => {
+        const timeAtleta = (j.Time || j.Equipe || '').trim();
+        return timeAtleta === filtroTime;
+      });
+    }
+
+    // 2. Agora aplicamos os demais filtros sobre a base que já respeita a equipe
+    return baseFiltrada.filter(j => {
       // Multi-seleção de Posições
       const passaPosicao = filtrosPosicao.length === 0 || filtrosPosicao.includes(j.Posição);
       
-      // Outros filtros
+      // Filtros numéricos
       const idade = parseValue(j.Idade);
       const passaIdade = idade >= filtroIdade.min && idade <= filtroIdade.max;
       const passaMinutagem = parseValue(j['Minutos jogados']) >= filtroMinutagem;
       
-      // Lógica E (AND) rigorosa: Todas as condições devem ser verdadeiras
-      return passaTime && passaPosicao && passaIdade && passaMinutagem;
-    })
+      return passaPosicao && passaIdade && passaMinutagem;
+    });
   }, [jogadores, filtroTime, filtrosPosicao, filtroIdade, filtroMinutagem])
 
   const radarData = useMemo(() => {
