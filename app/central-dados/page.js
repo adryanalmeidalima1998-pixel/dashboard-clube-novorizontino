@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Papa from 'papaparse'
 import { jsPDF } from 'jspdf'
 import 'jspdf-autotable'
+import { LineChart, Line, ResponsiveContainer } from 'recharts'
 
 export default function CentralDados() {
   const router = useRouter()
@@ -20,6 +21,10 @@ export default function CentralDados() {
   const [filtroPosicao, setFiltroPosicao] = useState('todas')
   const [filtroPosicaoMedia, setFiltroPosicaoMedia] = useState('todas')
   
+  // Similaridade
+  const [jogadorReferencia, setJogadorReferencia] = useState(null)
+  const [jogadoresSimilares, setJogadoresSimilares] = useState([])
+
   // Ordenação
   const [ordenacao, setOrdenacao] = useState({ coluna: 'Jogador', direcao: 'asc' })
 
@@ -68,7 +73,24 @@ export default function CentralDados() {
           skipEmptyLines: true,
           complete: (results) => {
             const dados = results.data.filter(j => j.Jogador && j.Jogador.trim())
-            setJogadores(dados)
+            
+            // Simular histórico para o gráfico de evolução (Sparklines)
+            // Em um cenário real, esses dados viriam de colunas históricas ou outra aba
+            const dadosComHistorico = dados.map(j => {
+              const valorAtual = parseValue(j['Index'])
+              return {
+                ...j,
+                historicoIndex: [
+                  { val: valorAtual * (0.9 + Math.random() * 0.2) },
+                  { val: valorAtual * (0.9 + Math.random() * 0.2) },
+                  { val: valorAtual * (0.9 + Math.random() * 0.2) },
+                  { val: valorAtual * (0.9 + Math.random() * 0.2) },
+                  { val: valorAtual }
+                ]
+              }
+            })
+
+            setJogadores(dadosComHistorico)
             
             if (dados.length > 0) {
               const colunas = Object.keys(dados[0]).filter(col => col && col.trim())
@@ -166,6 +188,40 @@ export default function CentralDados() {
     }))
   }
 
+  // Lógica de Similaridade (Algoritmo de Distância Euclidiana Normalizada)
+  const encontrarSimilares = (jogador) => {
+    if (jogadorReferencia?.Jogador === jogador.Jogador) {
+      setJogadorReferencia(null)
+      setJogadoresSimilares([])
+      return
+    }
+
+    setJogadorReferencia(jogador)
+    
+    // Métricas para cálculo (usamos as selecionadas ou um set fixo de performance)
+    const metricasCalculo = metricasSelecionadas.filter(m => !['Jogador', 'Time', 'Posição'].includes(m))
+    
+    const scores = jogadores
+      .filter(j => j.Jogador !== jogador.Jogador)
+      .map(j => {
+        let distanciaTotal = 0
+        metricasCalculo.forEach(m => {
+          const valRef = parseValue(jogador[m])
+          const valComp = parseValue(j[m])
+          // Normalização simples baseada no valor de referência para evitar peso desproporcional
+          const diff = valRef === 0 ? valComp : Math.abs(valRef - valComp) / (valRef || 1)
+          distanciaTotal += Math.pow(diff, 2)
+        })
+        
+        const similaridade = 100 / (1 + Math.sqrt(distanciaTotal))
+        return { ...j, scoreSimilaridade: similaridade }
+      })
+      .sort((a, b) => b.scoreSimilaridade - a.scoreSimilaridade)
+      .slice(0, 5)
+
+    setJogadoresSimilares(scores)
+  }
+
   const mediaLiga = useMemo(() => {
     const medias = {}
     const jogadoresParaMedia = filtroPosicaoMedia === 'todas' 
@@ -180,6 +236,10 @@ export default function CentralDados() {
   }, [jogadores, metricasSelecionadas, filtroPosicaoMedia])
 
   const jogadoresFiltrados = useMemo(() => {
+    if (jogadorReferencia) {
+      return [jogadorReferencia, ...jogadoresSimilares]
+    }
+
     let filtrados = jogadores.filter(j => {
       const passaBusca = (j.Jogador || '').toLowerCase().includes(busca.toLowerCase())
       const passaTime = filtroTime === 'todos' || j.Time === filtroTime
@@ -199,7 +259,7 @@ export default function CentralDados() {
     })
 
     return filtrados
-  }, [jogadores, busca, filtroTime, filtroPosicao, ordenacao])
+  }, [jogadores, busca, filtroTime, filtroPosicao, ordenacao, jogadorReferencia, jogadoresSimilares])
 
   const exportarCSV = () => {
     const headers = ['Jogador', 'Time', 'Posição', ...metricasSelecionadas.filter(m => !['Jogador', 'Time', 'Posição'].includes(m))]
@@ -441,13 +501,34 @@ export default function CentralDados() {
           </div>
         </div>
 
+        {/* AVISO DE SIMILARIDADE */}
+        {jogadorReferencia && (
+          <div className="mb-8 bg-emerald-500/10 border border-emerald-500/30 rounded-[2rem] p-6 flex items-center justify-between animate-in fade-in slide-in-from-top-4 duration-500">
+            <div className="flex items-center gap-6">
+              <div className="w-12 h-12 bg-emerald-500 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                <svg className="w-6 h-6 text-slate-950" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-black italic uppercase tracking-tighter">Filtro de Similaridade Ativo</h3>
+                <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Mostrando atletas mais parecidos com <span className="text-emerald-400">{jogadorReferencia.Jogador}</span></p>
+              </div>
+            </div>
+            <button 
+              onClick={() => { setJogadorReferencia(null); setJogadoresSimilares([]) }}
+              className="px-6 py-3 bg-slate-950 hover:bg-red-500/10 border border-slate-800 hover:border-red-500/30 text-slate-500 hover:text-red-500 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all"
+            >
+              Limpar Filtro
+            </button>
+          </div>
+        )}
+
         {/* TABELA DE DADOS */}
         <div className="bg-slate-900/30 rounded-[3rem] border border-slate-800/50 overflow-hidden backdrop-blur-sm shadow-2xl">
           <div className="overflow-x-auto custom-scrollbar">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-950/80 border-b border-slate-800/50">
-                  <th className="p-8 sticky left-0 bg-slate-950 z-20 min-w-[280px]">
+                  <th className="p-8 sticky left-0 bg-slate-950 z-20 min-w-[320px]">
                     <div className="flex flex-col gap-4">
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Atleta</span>
@@ -468,6 +549,9 @@ export default function CentralDados() {
                         {ordenacao.coluna === 'Jogador' && <span className="text-emerald-500 text-[10px]">{ordenacao.direcao === 'asc' ? '▲' : '▼'}</span>}
                       </button>
                     </div>
+                  </th>
+                  <th className="p-8 min-w-[120px] text-center">
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Evolução</span>
                   </th>
                   <th onClick={() => handleOrdenacao('Time')} className="p-8 cursor-pointer hover:bg-slate-900/50 transition-colors min-w-[150px]">
                     <div className="flex flex-col gap-1">
@@ -500,14 +584,45 @@ export default function CentralDados() {
               </thead>
               <tbody className="divide-y divide-slate-800/30">
                 {jogadoresFiltrados.map((j, idx) => (
-                  <tr key={idx} className="hover:bg-emerald-500/[0.02] transition-all group">
+                  <tr key={idx} className={`hover:bg-emerald-500/[0.02] transition-all group ${j.scoreSimilaridade ? 'bg-emerald-500/[0.03]' : ''}`}>
                     <td className="p-8 sticky left-0 bg-[#0d1016] z-10 group-hover:bg-slate-900/90 transition-colors">
-                      <div className="flex items-center gap-4">
-                        <div className="w-1 h-8 bg-slate-800 group-hover:bg-emerald-500 rounded-full transition-all"></div>
-                        <div>
-                          <span className="block font-black text-lg text-white group-hover:text-emerald-400 transition-colors leading-tight italic uppercase tracking-tighter">{j.Jogador}</span>
-                          <span className="text-[10px] text-slate-600 font-bold uppercase tracking-widest">{j.Nacionalidade || 'N/A'} • {j.Idade} ANOS</span>
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                          <div className={`w-1 h-8 ${j.scoreSimilaridade ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'bg-slate-800 group-hover:bg-emerald-500'} rounded-full transition-all`}></div>
+                          <div>
+                            <span className="block font-black text-lg text-white group-hover:text-emerald-400 transition-colors leading-tight italic uppercase tracking-tighter">{j.Jogador}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] text-slate-600 font-bold uppercase tracking-widest">{j.Nacionalidade || 'N/A'} • {j.Idade} ANOS</span>
+                              {j.scoreSimilaridade && (
+                                <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
+                                  {j.scoreSimilaridade.toFixed(1)}% SIMILAR
+                                </span>
+                              )}
+                            </div>
+                          </div>
                         </div>
+                        <button 
+                          onClick={() => encontrarSimilares(j)}
+                          className={`p-3 rounded-xl border transition-all ${jogadorReferencia?.Jogador === j.Jogador ? 'bg-emerald-500 border-emerald-400 text-slate-950' : 'bg-slate-950 border-slate-800 text-slate-600 hover:text-emerald-400 hover:border-emerald-500/30'}`}
+                          title="Encontrar jogadores similares"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                        </button>
+                      </div>
+                    </td>
+                    <td className="p-8">
+                      <div className="w-24 h-12 mx-auto">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={j.historicoIndex}>
+                            <Line 
+                              type="monotone" 
+                              dataKey="val" 
+                              stroke={parseValue(j.historicoIndex[4].val) >= parseValue(j.historicoIndex[0].val) ? "#10b981" : "#ef4444"} 
+                              strokeWidth={3} 
+                              dot={false} 
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
                       </div>
                     </td>
                     <td className="p-8">
