@@ -1,8 +1,36 @@
 "use client"
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
+import { useEffect } from "react"
 import Image from 'next/image'
 import Link from 'next/link'
 
 export default function Home() {
+  const { data: session, status } = useSession()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/login")
+    }
+  }, [status, router])
+
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen bg-[#0a0c10] text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="relative w-20 h-20 mx-auto mb-6">
+            <div className="absolute inset-0 border-4 border-emerald-500/20 rounded-full"></div>
+            <div className="absolute inset-0 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+          <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 animate-pulse italic">Autenticando Acesso...</span>
+        </div>
+      </div>
+    )
+  }
+
+  if (!session) return null
+
   return (
     <div className="min-h-screen bg-[#0a0c10] text-white p-6 md:p-12 font-sans selection:bg-emerald-500/30">
       
@@ -74,7 +102,7 @@ export default function Home() {
             
             <div className="flex items-center gap-6 mb-8">
               <div className="w-20 h-20 bg-slate-950 rounded-[2rem] flex items-center justify-center border border-slate-800 group-hover:border-emerald-500/30 transition-all duration-500 shadow-inner">
-                <svg className="w-10 h-10 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                <svg className="w-10 h-10 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
               </div>
               <div>
                 <span className="block text-3xl font-black italic uppercase tracking-tighter text-white group-hover:text-emerald-400 transition-colors">Agenda</span>
