@@ -5,11 +5,12 @@ import { useRouter } from 'next/navigation'
 import { getLogo, DEFAULT_LOGO } from '../logos'
 
 const LOGOS_CAMPEONATOS = {
-  'PAULISTA SÉRIE A1': '/competitions/paulistao.png',
-  'PAULISTÃO': '/competitions/paulistao.png',
-  'BRASILEIRÃO SÉRIE B': '/competitions/brasileirao-b.png',
-  'SÉRIE B': '/competitions/brasileirao-b.png',
-  'COPA DO BRASIL': '/competitions/copa-do-brasil.png',
+  'PAULISTA SÉRIE A1': '/competitions/paulista/logo.png',
+  'PAULISTÃO': '/competitions/paulista/logo.png',
+  'BRASILEIRÃO SÉRIE B': '/competitions/serie-b/logo.png',
+  'SÉRIE B': '/competitions/serie-b/logo.png',
+  'COPA DO BRASIL': '/competitions/copa-do-brasil/logo.png',
+  'SUL-SUDESTE': '/competitions/copa-sul-sudeste/logo.png',
 }
 
 const getLogoCampeonato = (campeonato) => {
@@ -27,7 +28,7 @@ export default function AgendaPage() {
   useEffect(() => {
     async function loadData() {
       try {
-        const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRTx9m5RGrJDNka8hpPUh2k1iTTSSs6lDOyDqNoDFOjBJDG7xCsIcEhdEutK2lKGmc5LgCmcsFcGZBY/pub?output=csv"
+        const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRTx9m5RGrJDNka8hpPUh2k1iTTSSs6lDOyDqNoDFOjBJDG7xCsIcEhdEutK2lKGmc5LgCmcsFcGZBY/pub?output=csv&t=" + Date.now()
         const response = await fetch(url)
         const csvText = await response.text()
         
@@ -126,63 +127,84 @@ export default function AgendaPage() {
             >
               <div className="absolute -right-10 -top-10 w-40 h-40 bg-emerald-500/[0.02] rounded-full blur-3xl group-hover:bg-emerald-500/5 transition-all"></div>
               
-              <div className="relative flex flex-col md:flex-row items-center justify-between gap-8">
-                
-                {/* DATA E HORA */}
-                <div className="flex flex-col items-center md:items-start min-w-[120px]">
-                  <span className="text-emerald-500 font-black italic text-2xl tracking-tighter">{jogo.data}</span>
-                  <span className="text-slate-500 font-black uppercase text-[10px] tracking-[0.2em] mt-1">{jogo.hora || 'A DEFINIR'}</span>
-                </div>
+              <div className="relative flex flex-col gap-6">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+                  
+                  {/* DATA E HORA */}
+                  <div className="flex flex-col items-center md:items-start min-w-[120px]">
+                    <span className="text-emerald-500 font-black italic text-2xl tracking-tighter">{jogo.data}</span>
+                    <span className="text-slate-500 font-black uppercase text-[10px] tracking-[0.2em] mt-1">{jogo.hora || 'A DEFINIR'}</span>
+                  </div>
 
-                {/* CONFRONTO */}
-                <div className="flex-grow flex items-center justify-center gap-4 md:gap-12">
-                  {/* MANDANTE */}
-                  <div className="flex flex-col md:flex-row items-center gap-4 flex-1 justify-end">
-                    <span className="font-black italic uppercase text-sm md:text-lg text-right text-white group-hover:text-emerald-400 transition-colors hidden sm:block">
-                      {jogo.mandante}
-                    </span>
-                    <div className="w-16 h-16 md:w-20 md:h-20 bg-slate-950 rounded-[2rem] p-3 border border-slate-800 group-hover:border-emerald-500/20 transition-all shadow-inner flex items-center justify-center">
-                      <img src={jogo.logoMandante} alt={jogo.mandante} className="w-full h-full object-contain" onError={handleImageError} />
+                  {/* CONFRONTO */}
+                  <div className="flex-grow flex items-center justify-center gap-4 md:gap-12">
+                    {/* MANDANTE */}
+                    <div className="flex flex-col md:flex-row items-center gap-4 flex-1 justify-end">
+                      <span className="font-black italic uppercase text-sm md:text-lg text-right text-white group-hover:text-emerald-400 transition-colors hidden sm:block">
+                        {jogo.mandante}
+                      </span>
+                      <div className="w-16 h-16 md:w-20 md:h-20 bg-slate-950 rounded-[2rem] p-3 border border-slate-800 group-hover:border-emerald-500/20 transition-all shadow-inner flex items-center justify-center">
+                        <img src={jogo.logoMandante} alt={jogo.mandante} className="w-full h-full object-contain" onError={handleImageError} />
+                      </div>
+                    </div>
+
+                    {/* PLACAR / VS */}
+                    <div className="flex-shrink-0">
+                      {jogo.status === 'passado' ? (
+                        <div className="flex items-center gap-4 bg-slate-950 rounded-2xl px-6 py-3 border border-slate-800 shadow-inner">
+                          <span className="text-2xl md:text-4xl font-black italic text-white">{jogo.golsMandanteNum}</span>
+                          <span className="text-slate-700 font-black text-xl">-</span>
+                          <span className="text-2xl md:text-4xl font-black italic text-white">{jogo.golsVisitanteNum}</span>
+                        </div>
+                      ) : (
+                        <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-2xl px-6 py-3 shadow-[0_0_15px_rgba(16,185,129,0.1)]">
+                          <span className="text-emerald-500 font-black italic text-xl">VS</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* VISITANTE */}
+                    <div className="flex flex-col md:flex-row-reverse items-center gap-4 flex-1 justify-end">
+                      <span className="font-black italic uppercase text-sm md:text-lg text-left text-white group-hover:text-emerald-400 transition-colors hidden sm:block">
+                        {jogo.visitante}
+                      </span>
+                      <div className="w-16 h-16 md:w-20 md:h-20 bg-slate-950 rounded-[2rem] p-3 border border-slate-800 group-hover:border-emerald-500/20 transition-all shadow-inner flex items-center justify-center">
+                        <img src={jogo.logoVisitante} alt={jogo.visitante} className="w-full h-full object-contain" onError={handleImageError} />
+                      </div>
                     </div>
                   </div>
 
-                  {/* PLACAR / VS */}
-                  <div className="flex-shrink-0">
-                    {jogo.status === 'passado' ? (
-                      <div className="flex items-center gap-4 bg-slate-950 rounded-2xl px-6 py-3 border border-slate-800 shadow-inner">
-                        <span className="text-2xl md:text-4xl font-black italic text-white">{jogo.golsMandanteNum}</span>
-                        <span className="text-slate-700 font-black text-xl">-</span>
-                        <span className="text-2xl md:text-4xl font-black italic text-white">{jogo.golsVisitanteNum}</span>
-                      </div>
-                    ) : (
-                      <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-2xl px-6 py-3 shadow-[0_0_15px_rgba(16,185,129,0.1)]">
-                        <span className="text-emerald-500 font-black italic text-xl">VS</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* VISITANTE */}
-                  <div className="flex flex-col md:flex-row-reverse items-center gap-4 flex-1 justify-end">
-                    <span className="font-black italic uppercase text-sm md:text-lg text-left text-white group-hover:text-emerald-400 transition-colors hidden sm:block">
-                      {jogo.visitante}
-                    </span>
-                    <div className="w-16 h-16 md:w-20 md:h-20 bg-slate-950 rounded-[2rem] p-3 border border-slate-800 group-hover:border-emerald-500/20 transition-all shadow-inner flex items-center justify-center">
-                      <img src={jogo.logoVisitante} alt={jogo.visitante} className="w-full h-full object-contain" onError={handleImageError} />
+                  {/* INFO EXTRA */}
+                  <div className="flex flex-col items-center md:items-end min-w-[150px]">
+                    <div className="flex items-center gap-2 mb-2">
+                      {jogo.logoCampeonato && (
+                        <img src={jogo.logoCampeonato} alt={jogo.campeonato} className="w-5 h-5 object-contain" />
+                      )}
+                      <span className="bg-slate-950 px-3 py-1 rounded-lg text-[9px] font-black border border-slate-800 text-emerald-500 uppercase tracking-widest">
+                        {jogo.campeonato}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-slate-600">
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /></svg>
+                      <span className="text-[10px] font-black uppercase tracking-widest">{jogo.local}</span>
                     </div>
                   </div>
                 </div>
 
-                {/* INFO EXTRA */}
-                <div className="flex flex-col items-center md:items-end min-w-[150px]">
-                  <span className="bg-slate-950 px-3 py-1 rounded-lg text-[9px] font-black border border-slate-800 text-emerald-500 uppercase tracking-widest mb-2">
-                    {jogo.campeonato}
-                  </span>
-                  <div className="flex items-center gap-2 text-slate-600">
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /></svg>
-                    <span className="text-[10px] font-black uppercase tracking-widest">{jogo.local}</span>
+                {/* ARTILHEIROS DA PARTIDA */}
+                {jogo.status === 'passado' && (jogo.golsMandante || jogo.golsVisitante) && (
+                  <div className="mt-4 pt-4 border-t border-slate-800/50 flex flex-col md:flex-row justify-between gap-4">
+                    <div className="flex-1 text-right">
+                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Gols {jogo.mandante}</p>
+                      <p className="text-xs font-bold text-emerald-400 italic">{jogo.golsMandante || '-'}</p>
+                    </div>
+                    <div className="hidden md:block w-px bg-slate-800/50"></div>
+                    <div className="flex-1 text-left">
+                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Gols {jogo.visitante}</p>
+                      <p className="text-xs font-bold text-emerald-400 italic">{jogo.golsVisitante || '-'}</p>
+                    </div>
                   </div>
-                </div>
-
+                )}
               </div>
             </div>
           ))}

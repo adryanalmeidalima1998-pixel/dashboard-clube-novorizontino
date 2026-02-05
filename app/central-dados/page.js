@@ -3,6 +3,8 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Papa from 'papaparse'
+import { jsPDF } from 'jspdf'
+import 'jspdf-autotable'
 
 export default function CentralDados() {
   const router = useRouter()
@@ -211,6 +213,60 @@ export default function CentralDados() {
     link.click()
   }
 
+  const exportarPDF = () => {
+    const doc = new jsPDF('l', 'mm', 'a4')
+    
+    // Configurações de Design Clean
+    const title = "RELATÓRIO TÉCNICO DE PERFORMANCE"
+    const subtitle = `Filtros: ${filtroTime.toUpperCase()} | ${filtroPosicao.toUpperCase()} | ${busca || 'TODOS'}`
+    const date = new Date().toLocaleDateString('pt-BR')
+
+    doc.setFontSize(18)
+    doc.setTextColor(40, 40, 40)
+    doc.text(title, 14, 20)
+    
+    doc.setFontSize(10)
+    doc.setTextColor(100, 100, 100)
+    doc.text(subtitle, 14, 28)
+    doc.text(`Data: ${date}`, 260, 20, { align: 'right' })
+
+    const headers = [['JOGADOR', 'TIME', 'POS', ...metricasSelecionadas]]
+    const data = jogadoresFiltrados.map(j => [
+      j.Jogador.toUpperCase(),
+      j.Time.toUpperCase(),
+      j.Posição.toUpperCase(),
+      ...metricasSelecionadas.map(m => j[m] || '-')
+    ])
+
+    doc.autoTable({
+      head: headers,
+      body: data,
+      startY: 35,
+      theme: 'striped',
+      headStyles: { 
+        fillColor: [15, 23, 42], 
+        textColor: [255, 255, 255],
+        fontSize: 8,
+        fontStyle: 'bold',
+        halign: 'center'
+      },
+      bodyStyles: { 
+        fontSize: 7,
+        textColor: [50, 50, 50],
+        halign: 'center'
+      },
+      columnStyles: {
+        0: { halign: 'left', fontStyle: 'bold', cellWidth: 40 }
+      },
+      alternateRowStyles: {
+        fillColor: [245, 247, 250]
+      },
+      margin: { top: 35 }
+    })
+
+    doc.save(`relatorio_performance_${Date.now()}.pdf`)
+  }
+
   const toggleMetrica = (metrica) => {
     if (['Jogador', 'Time', 'Posição'].includes(metrica)) return
     if (metricasSelecionadas.includes(metrica)) {
@@ -305,7 +361,7 @@ export default function CentralDados() {
 
           <div className="flex flex-wrap justify-center gap-3">
             <button onClick={() => router.push('/central-dados/graficos')} className="px-6 py-3 bg-slate-900/50 hover:bg-emerald-500/10 border border-slate-800 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2">
-              <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m0 0a2 2 0 002 2h2a2 2 0 002-2v-6a2 2 0 00-2-2h-2a2 2 0 00-2 2v6z" /></svg>
+              <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2z" /></svg>
               Gráficos
             </button>
             <button onClick={() => router.push('/central-dados/benchmark')} className="px-6 py-3 bg-slate-900/50 hover:bg-emerald-500/10 border border-slate-800 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2">
@@ -368,12 +424,20 @@ export default function CentralDados() {
             >
               Configurar Métricas
             </button>
-            <button 
-              onClick={exportarCSV}
-              className="w-full bg-slate-950 hover:bg-slate-900 border border-slate-800 text-white font-black italic uppercase text-[10px] tracking-widest py-4 rounded-2xl transition-all"
-            >
-              Exportar Relatório
-            </button>
+            <div className="grid grid-cols-2 gap-3">
+              <button 
+                onClick={exportarCSV}
+                className="bg-slate-950 hover:bg-slate-900 border border-slate-800 text-white font-black italic uppercase text-[9px] tracking-widest py-4 rounded-2xl transition-all"
+              >
+                CSV
+              </button>
+              <button 
+                onClick={exportarPDF}
+                className="bg-slate-950 hover:bg-slate-900 border border-slate-800 text-white font-black italic uppercase text-[9px] tracking-widest py-4 rounded-2xl transition-all"
+              >
+                PDF CLEAN
+              </button>
+            </div>
           </div>
         </div>
 
