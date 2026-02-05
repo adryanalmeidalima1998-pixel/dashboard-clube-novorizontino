@@ -131,11 +131,15 @@ export default function GraficosPage() {
 
   const jogadoresFiltrados = useMemo(() => {
     return jogadores.filter(j => {
-      const pT = filtroTime === 'Todos' || j.Time === filtroTime || j.Equipe === filtroTime
-      const pP = filtrosPosicao.length === 0 || filtrosPosicao.includes(j.Posição)
-      const idade = parseValue(j.Idade), pI = idade >= filtroIdade.min && idade <= filtroIdade.max
-      const pM = parseValue(j['Minutos jogados']) >= filtroMinutagem
-      return pT && pP && pI && pM
+      const timeAtleta = j.Time || j.Equipe || '';
+      const passaTime = filtroTime === 'Todos' || timeAtleta === filtroTime;
+      const passaPosicao = filtrosPosicao.length === 0 || filtrosPosicao.includes(j.Posição);
+      const idade = parseValue(j.Idade);
+      const passaIdade = idade >= filtroIdade.min && idade <= filtroIdade.max;
+      const passaMinutagem = parseValue(j['Minutos jogados']) >= filtroMinutagem;
+      
+      // Filtro estrito: deve passar em TODOS os critérios simultaneamente
+      return passaTime && passaPosicao && passaIdade && passaMinutagem;
     })
   }, [jogadores, filtroTime, filtrosPosicao, filtroIdade, filtroMinutagem])
 

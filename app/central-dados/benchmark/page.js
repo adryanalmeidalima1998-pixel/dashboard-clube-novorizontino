@@ -106,10 +106,15 @@ export default function BenchmarkPage() {
 
   const jogadoresFiltrados = useMemo(() => {
     return jogadores.filter(j => {
-      const passaBusca = j.Jogador.toLowerCase().includes(busca.toLowerCase())
-      const passaTime = filtroTime === 'Todas' || j.Time === filtroTime || j.Equipe === filtroTime
-      const passaPosicao = filtrosPosicao.length === 0 || filtrosPosicao.includes(j.Posição)
-      return passaBusca && passaTime && passaPosicao
+      const nomeAtleta = j.Jogador || '';
+      const timeAtleta = j.Time || j.Equipe || '';
+      
+      const passaBusca = nomeAtleta.toLowerCase().includes(busca.toLowerCase());
+      const passaTime = filtroTime === 'Todas' || timeAtleta === filtroTime;
+      const passaPosicao = filtrosPosicao.length === 0 || filtrosPosicao.includes(j.Posição);
+      
+      // Filtro estrito: O atleta deve pertencer à equipe selecionada E à posição selecionada
+      return passaBusca && passaTime && passaPosicao;
     })
   }, [jogadores, busca, filtroTime, filtrosPosicao])
 
