@@ -7,31 +7,14 @@ import Papa from 'papaparse'
 export default function PlantelPage() {
   const router = useRouter()
   const [elenco, setElenco] = useState([])
+  const [colunasMetricas, setColunasMetricas] = useState([])
   const [loading, setLoading] = useState(true)
   const [sortConfig, setSortConfig] = useState({ key: 'Index', direction: 'desc' })
-
-  // Mapeamento exato das colunas do CSV para o objeto do Jogador
-  const MAP_COLUMNS = {
-    numero: '№',
-    nome: 'Jogador',
-    idade: 'Idade',
-    altura: 'Altura',
-    nacionalidade: 'Nacionalidade',
-    posicao: 'Posição',
-    index: 'Index',
-    partidas: 'Partidas jogadas',
-    gols: 'Gols',
-    acoes_sucesso: 'Ações / com sucesso %',
-    passes_precisos: 'Passes precisos %',
-    dribles: 'Dribles bem sucedidos',
-    desafios: 'Desafios vencidos, %',
-    minutos: 'Minutos jogados'
-  }
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // URL do NOVO CSV (sempre forçando a versão mais recente)
+        // URL do CSV (sempre forçando a versão mais recente)
         const url = `https://docs.google.com/spreadsheets/d/e/2PACX-1vTmwbp8vD9bx7WhL_CMwZqwI_5k6Uol2qCGY_DiViTs-OdDTzMuWHeeGFwXARGGgvPzMZVuPgKwkXqm/pub?output=csv&t=${Date.now()}`
         const response = await fetch(url)
         const csvText = await response.text()
@@ -40,25 +23,18 @@ export default function PlantelPage() {
           header: true,
           skipEmptyLines: true,
           complete: (results) => {
-            const parsedData = results.data
-              .filter(row => row[MAP_COLUMNS.nome] && row[MAP_COLUMNS.nome].trim() !== "")
-              .map(row => ({
-                numero: row[MAP_COLUMNS.numero] || '-',
-                nome: row[MAP_COLUMNS.nome],
-                idade: row[MAP_COLUMNS.idade] || '-',
-                altura: row[MAP_COLUMNS.altura] || '-',
-                nacionalidade: row[MAP_COLUMNS.nacionalidade] || 'BRA',
-                posicao: row[MAP_COLUMNS.posicao] || '-',
-                index: row[MAP_COLUMNS.index] || '-',
-                partidas: row[MAP_COLUMNS.partidas] || '0',
-                gols: row[MAP_COLUMNS.gols] || '0',
-                acoes_sucesso: row[MAP_COLUMNS.acoes_sucesso] || '0%',
-                passes_precisos: row[MAP_COLUMNS.passes_precisos] || '0%',
-                dribles: row[MAP_COLUMNS.dribles] || '0',
-                desafios: row[MAP_COLUMNS.desafios] || '0%',
-                minutos: row[MAP_COLUMNS.minutos] || '0'
-              }))
-            setElenco(parsedData)
+            if (results.data.length > 0) {
+              const headers = Object.keys(results.data[0])
+              // Identificar colunas de metadados vs métricas
+              const metaCols = ['№', 'Jogador', 'Idade', 'Altura', 'Nacionalidade', 'Posição', 'Time']
+              const metricas = headers.filter(h => !metaCols.includes(h))
+              setColunasMetricas(metricas)
+              
+              const parsedData = results.data
+                .filter(row => row['Jogador'] && row['Jogador'].trim() !== "")
+              
+              setElenco(parsedData)
+            }
             setLoading(false)
           }
         })
@@ -83,8 +59,9 @@ export default function PlantelPage() {
         let aVal = a[sortConfig.key]
         let bVal = b[sortConfig.key]
 
-        const numericKeys = ['index', 'partidas', 'gols', 'acoes_sucesso', 'passes_precisos', 'dribles', 'desafios', 'minutos', 'idade', 'altura']
-        if (numericKeys.includes(sortConfig.key)) {
+        // Se for uma métrica ou idade/altura, tratar como número
+        const isNumeric = colunasMetricas.includes(sortConfig.key) || ['Idade', 'Altura', '№'].includes(sortConfig.key)
+        if (isNumeric) {
           aVal = parseNum(aVal)
           bVal = parseNum(bVal)
         }
@@ -95,7 +72,7 @@ export default function PlantelPage() {
       })
     }
     return sortable
-  }, [elenco, sortConfig])
+  }, [elenco, sortConfig, colunasMetricas])
 
   const requestSort = (key) => {
     let direction = 'desc'
@@ -107,30 +84,30 @@ export default function PlantelPage() {
 
   const getCategoria = (pos) => {
     const p = (pos || '').toUpperCase()
-    if (p.includes('GK') || p.includes('GOL')) return 'Goleiros'
-    if (p.includes('DEF') || p.includes('ZAG') || p.includes('LAT') || p.includes('LD') || p.includes('LE') || p.includes('DC') || p.includes('DR') || p.includes('DL') || p.includes('CD') || p.includes('RD') || p.includes('LCD') || p.includes('RCD')) return 'Defensores'
-    if (p.includes('MEI') || p.includes('VOL') || p.includes('MC') || p.includes('DM') || p.includes('AM') || p.includes('CAM') || p.includes('CM') || p.includes('MID') || p.includes('RCDM') || p.includes('LCDM') || p.includes('LCM') || p.includes('RCM') || p.includes('RDM')) return 'Meio-Campistas'
+    if (p.includes('GK') || p.includes('GOL') || p.includes('GOLEIRO')) return 'Goleiros'
+    if (p.includes('DEF') || p.includes('ZAG') || p.includes('LAT') || p.includes('LD') || p.includes('LE') || p.includes('DC') || p.includes('DR') || p.includes('DL') || p.includes('CD') || p.includes('RD') || p.includes('LCD') || p.includes('RCD') || p.includes('ZAGUEIRO')) return 'Defensores'
+    if (p.includes('MEI') || p.includes('VOL') || p.includes('MC') || p.includes('DM') || p.includes('AM') || p.includes('CAM') || p.includes('CM') || p.includes('MID') || p.includes('RCDM') || p.includes('LCDM') || p.includes('LCM') || p.includes('RCM') || p.includes('RDM') || p.includes('VOLANTE')) return 'Meio-Campistas'
     return 'Atacantes'
   }
 
   const grupos = useMemo(() => {
     const g = { 'Goleiros': [], 'Defensores': [], 'Meio-Campistas': [], 'Atacantes': [] }
     sortedElenco.forEach(j => {
-      const cat = getCategoria(j.posicao)
-      g[cat].push(j)
+      const cat = getCategoria(j['Posição'])
+      if (g[cat]) g[cat].push(j)
+      else g['Atacantes'].push(j)
     })
     return g
   }, [sortedElenco])
 
   const medias = useMemo(() => {
-    const keys = ['index', 'partidas', 'gols', 'acoes_sucesso', 'passes_precisos', 'dribles', 'desafios']
     const m = {}
-    keys.forEach(k => {
+    colunasMetricas.forEach(k => {
       const vals = elenco.map(j => parseNum(j[k])).filter(v => v > 0)
       m[k] = vals.reduce((a, b) => a + b, 0) / (vals.length || 1)
     })
     return m
-  }, [elenco])
+  }, [elenco, colunasMetricas])
 
   if (loading) return (
     <div className="min-h-screen bg-slate-950 flex items-center justify-center">
@@ -183,12 +160,12 @@ export default function PlantelPage() {
                     <table className="w-full text-left border-collapse">
                       <thead>
                         <tr className="bg-slate-950/80 border-b border-slate-800/50">
-                          <th onClick={() => requestSort('nome')} className="p-6 font-black text-slate-500 uppercase text-[10px] tracking-widest cursor-pointer hover:text-white transition-colors sticky left-0 bg-slate-950 z-10"># JOGADOR</th>
+                          <th onClick={() => requestSort('Jogador')} className="p-6 font-black text-slate-500 uppercase text-[10px] tracking-widest cursor-pointer hover:text-white transition-colors sticky left-0 bg-slate-950 z-10"># JOGADOR</th>
                           <th className="p-6 font-black text-slate-500 uppercase text-[10px] tracking-widest text-center">POS</th>
-                          {['index', 'partidas', 'gols', 'acoes_sucesso', 'passes_precisos', 'dribles', 'desafios'].map(k => (
+                          {colunasMetricas.map(k => (
                             <th key={k} onClick={() => requestSort(k)} className="p-6 font-black text-slate-500 uppercase text-[10px] tracking-widest text-center cursor-pointer hover:text-white transition-colors">
                               <div className="flex flex-col items-center gap-1">
-                                {k === 'acoes_sucesso' ? 'AÇÕES %' : k === 'passes_precisos' ? 'PASSES %' : k === 'desafios' ? 'DUELOS %' : k.toUpperCase()}
+                                {k.toUpperCase()}
                                 {sortConfig.key === k && <span className="text-emerald-400 text-[8px]">{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>}
                               </div>
                             </th>
@@ -200,17 +177,17 @@ export default function PlantelPage() {
                           <tr key={idx} className="hover:bg-emerald-500/[0.02] transition-all group">
                             <td className="p-6 sticky left-0 bg-[#0d1016] z-10 group-hover:bg-slate-900/90 transition-colors">
                               <div className="flex items-center gap-5">
-                                <span className="text-slate-700 font-black italic text-xl w-8">{j.numero}</span>
+                                <span className="text-slate-700 font-black italic text-xl w-8">{j['№'] || '-'}</span>
                                 <div>
-                                  <span className="block font-black text-lg text-white group-hover:text-emerald-400 transition-colors leading-tight">{j.nome}</span>
-                                  <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{j.nacionalidade} • {j.idade} ANOS • {j.altura}CM</span>
+                                  <span className="block font-black text-lg text-white group-hover:text-emerald-400 transition-colors leading-tight">{j['Jogador']}</span>
+                                  <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{j['Nacionalidade']} • {j['Idade']} ANOS • {j['Altura']}CM</span>
                                 </div>
                               </div>
                             </td>
                             <td className="p-6 text-center">
-                              <span className="bg-slate-950 px-3 py-1.5 rounded-xl text-[10px] font-black border border-slate-800 text-emerald-500 shadow-inner">{j.posicao}</span>
+                              <span className="bg-slate-950 px-3 py-1.5 rounded-xl text-[10px] font-black border border-slate-800 text-emerald-500 shadow-inner">{j['Posição']}</span>
                             </td>
-                            {['index', 'partidas', 'gols', 'acoes_sucesso', 'passes_precisos', 'dribles', 'desafios'].map(k => {
+                            {colunasMetricas.map(k => {
                               const val = parseNum(j[k])
                               const media = medias[k]
                               const percent = (val / (media || 1)) * 100
