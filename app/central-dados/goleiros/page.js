@@ -191,12 +191,34 @@ export default function CentralGoleiros() {
             </tr></thead>
             <tbody>{jogadoresFiltrados.map((j, idx) => (
               <tr key={idx} className={`border-b border-slate-800/30 hover:bg-emerald-500/5 transition-all group ${jogadorReferencia?.Jogador === j.Jogador ? 'bg-emerald-500/10' : ''}`}>
-                <td className="p-6"><span className="font-black italic uppercase text-sm group-hover:text-emerald-400">{j.Jogador}</span></td>
+                <td className="p-6">
+                  <div className="flex flex-col">
+                    <span className="font-black italic uppercase text-sm group-hover:text-emerald-400">{j.Jogador}</span>
+                    <div className="flex gap-1 mt-1">
+                      {parseValue(j.Idade) <= 23 && (
+                        <span className="px-1 py-0.5 bg-blue-500/10 border border-blue-500/30 rounded text-[7px] font-black text-blue-400 uppercase tracking-tighter" title="Potencial de Revenda">U23</span>
+                      )}
+                      {parseValue(j['Minutos jogados']) > 1500 && parseValue(j.Idade) > 28 && (
+                        <span className="px-1 py-0.5 bg-amber-500/10 border border-amber-500/30 rounded text-[7px] font-black text-amber-400 uppercase tracking-tighter" title="Experiência de Mercado">EXP</span>
+                      )}
+                    </div>
+                  </div>
+                </td>
                 <td className="p-6"><div className="w-24 h-10"><ResponsiveContainer width="100%" height="100%"><LineChart data={j.historicoIndex}><Line type="monotone" dataKey="val" stroke="#10b981" strokeWidth={3} dot={false} /></LineChart></ResponsiveContainer></div></td>
                 <td className="p-6 text-[10px] font-black uppercase text-slate-400">{j.Time || j.Equipe}</td>
                 <td className="p-6"><span className="px-3 py-1 bg-slate-950 border border-slate-800 rounded-lg text-[9px] font-black text-slate-500">{j.Posição}</span></td>
                 {metricasSelecionadas.map(m => <td key={m} className="p-6 text-xs font-black text-emerald-400/80">{j[m] || '0'}</td>)}
-                <td className="p-6"><button onClick={() => encontrarSimilares(j)} className={`p-3 rounded-xl border transition-all ${jogadorReferencia?.Jogador === j.Jogador ? 'bg-emerald-500 text-slate-950' : 'bg-slate-900 text-slate-500 hover:border-emerald-500'}`}><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg></button></td>
+                <td className="p-6">
+                  <div className="flex items-center gap-3">
+                    <button onClick={() => encontrarSimilares(j)} className={`p-3 rounded-xl border transition-all ${jogadorReferencia?.Jogador === j.Jogador ? 'bg-emerald-500 text-slate-950' : 'bg-slate-900 text-slate-500 hover:border-emerald-500'}`}><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg></button>
+                    {j.scoreSimilaridade && (
+                      <div className="flex flex-col items-center min-w-[40px]">
+                        <span className="text-[10px] font-black text-emerald-500 leading-none">{Math.round(j.scoreSimilaridade)}%</span>
+                        <span className="text-[7px] text-slate-600 uppercase font-bold tracking-tighter">Match</span>
+                      </div>
+                    )}
+                  </div>
+                </td>
               </tr>
             ))}</tbody>
           </table></div>

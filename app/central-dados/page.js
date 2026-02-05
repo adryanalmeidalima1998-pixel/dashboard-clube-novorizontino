@@ -403,7 +403,17 @@ export default function CentralDados() {
                     <td className="p-6">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 bg-slate-800 rounded-lg flex items-center justify-center text-[10px] font-black text-slate-500 group-hover:bg-emerald-500 group-hover:text-slate-950 transition-all">{j.Jogador.substring(0, 2).toUpperCase()}</div>
-                        <span className="font-black italic uppercase tracking-tighter text-sm group-hover:text-emerald-400 transition-all">{j.Jogador}</span>
+                        <div className="flex flex-col">
+                          <span className="font-black italic uppercase tracking-tighter text-sm group-hover:text-emerald-400 transition-all">{j.Jogador}</span>
+                          <div className="flex gap-1 mt-1">
+                            {parseValue(j.Idade) <= 23 && (
+                              <span className="px-1 py-0.5 bg-blue-500/10 border border-blue-500/30 rounded text-[7px] font-black text-blue-400 uppercase tracking-tighter" title="Potencial de Revenda">U23</span>
+                            )}
+                            {parseValue(j['Minutos jogados']) > 2000 && parseValue(j.Idade) > 28 && (
+                              <span className="px-1 py-0.5 bg-amber-500/10 border border-amber-500/30 rounded text-[7px] font-black text-amber-400 uppercase tracking-tighter" title="Experiência de Mercado">EXP</span>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </td>
                     <td className="p-6">
@@ -424,9 +434,17 @@ export default function CentralDados() {
                       <td key={m} className="p-6 text-xs font-black text-emerald-400/80">{j[m] || '0'}</td>
                     ))}
                     <td className="p-6">
-                      <button onClick={() => encontrarSimilares(j)} className={`p-3 rounded-xl border transition-all ${jogadorReferencia?.Jogador === j.Jogador ? 'bg-emerald-500 border-emerald-500 text-slate-950' : 'bg-slate-900 border-slate-800 text-slate-500 hover:border-emerald-500 hover:text-emerald-400'}`} title="Encontrar Similares">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-                      </button>
+                      <div className="flex items-center gap-3">
+                        <button onClick={() => encontrarSimilares(j)} className={`p-3 rounded-xl border transition-all ${jogadorReferencia?.Jogador === j.Jogador ? 'bg-emerald-500 border-emerald-500 text-slate-950' : 'bg-slate-900 border-slate-800 text-slate-500 hover:border-emerald-500 hover:text-emerald-400'}`} title="Encontrar Similares">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                        </button>
+                        {j.scoreSimilaridade && (
+                          <div className="flex flex-col items-center min-w-[40px]">
+                            <span className="text-[10px] font-black text-emerald-500 leading-none">{Math.round(j.scoreSimilaridade)}%</span>
+                            <span className="text-[7px] text-slate-600 uppercase font-bold tracking-tighter">Match</span>
+                          </div>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
