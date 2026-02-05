@@ -131,14 +131,19 @@ export default function GraficosPage() {
 
   const jogadoresFiltrados = useMemo(() => {
     return jogadores.filter(j => {
-      const timeAtleta = j.Time || j.Equipe || '';
+      // Normalização do Time/Equipe para comparação estrita
+      const timeAtleta = (j.Time || j.Equipe || '').trim();
       const passaTime = filtroTime === 'Todos' || timeAtleta === filtroTime;
+      
+      // Multi-seleção de Posições
       const passaPosicao = filtrosPosicao.length === 0 || filtrosPosicao.includes(j.Posição);
+      
+      // Outros filtros
       const idade = parseValue(j.Idade);
       const passaIdade = idade >= filtroIdade.min && idade <= filtroIdade.max;
       const passaMinutagem = parseValue(j['Minutos jogados']) >= filtroMinutagem;
       
-      // Filtro estrito: deve passar em TODOS os critérios simultaneamente
+      // Lógica E (AND) rigorosa: Todas as condições devem ser verdadeiras
       return passaTime && passaPosicao && passaIdade && passaMinutagem;
     })
   }, [jogadores, filtroTime, filtrosPosicao, filtroIdade, filtroMinutagem])
