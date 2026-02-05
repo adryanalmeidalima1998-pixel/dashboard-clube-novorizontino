@@ -162,8 +162,15 @@ export default function BenchmarkGoleirosPage() {
             </div>
             
             <div className="flex flex-col gap-3">
-              <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 overflow-x-auto custom-scrollbar">
-                {Object.keys(categoriasMetricas).map(cat => (
+              <div className="flex items-center gap-4 mb-1">
+                <button 
+                  onClick={() => setMetricasBenchmark([])}
+                  className="text-[10px] font-black uppercase text-slate-500 hover:text-emerald-400 transition-colors ml-1"
+                >
+                  [ Desmarcar Tudo ]
+                </button>
+                <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 overflow-x-auto custom-scrollbar flex-1">
+                  {Object.keys(categoriasMetricas).map(cat => (
                   <button 
                     key={cat} 
                     onClick={() => setAbaAtiva(cat)}
@@ -172,6 +179,7 @@ export default function BenchmarkGoleirosPage() {
                     {cat}
                   </button>
                 ))}
+                </div>
               </div>
               <div className="flex flex-wrap gap-2">
                 {templates.map(t => (
