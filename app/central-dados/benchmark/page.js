@@ -225,49 +225,46 @@ export default function BenchmarkPage() {
                     </div>
                   </div>
 
-                  <div className="bg-slate-950 p-6 rounded-[2rem] border border-slate-800 min-w-[250px]">
-                    <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest block mb-3">Comparar com Média de:</span>
-                    <select 
-                      value={posicaoReferencia} 
-                      onChange={(e) => setPosicaoReferencia(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-emerald-500 font-black italic uppercase text-sm outline-none focus:border-emerald-500/50"
-                    >
-                      <option value="MESMA">MESMA POSIÇÃO ({jogadorSelecionado.Posição})</option>
-                      <option value="LIGA">TODA A LIGA</option>
-                      {posicoes.map(p => <option key={p} value={p}>{p.toUpperCase()}</option>)}
-                    </select>
+                  <div className="flex flex-col gap-4">
+                    <div className="flex gap-2">
+                      <button onClick={() => setMostrarPainelMetricas(true)} className="px-6 py-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500/20 transition-all">Escolher Métricas</button>
+                      <select value={posicaoReferencia} onChange={(e) => setPosicaoReferencia(e.target.value)} className="bg-slate-950 border border-slate-800 rounded-2xl px-6 py-3 text-[10px] font-black uppercase text-emerald-500 outline-none">
+                        <option value="MESMA">VS MESMA POSIÇÃO</option>
+                        <option value="LIGA">VS MÉDIA DA LIGA</option>
+                        {posicoes.map(p => <option key={p} value={p}>VS {p.toUpperCase()}</option>)}
+                      </select>
+                    </div>
                   </div>
-                </div>
-
-                <div className="flex justify-between items-center mb-8">
-                  <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500">Métricas de Performance</h3>
-                  <button onClick={() => setMostrarPainelMetricas(true)} className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 rounded-xl text-[9px] font-black uppercase tracking-widest">Personalizar Métricas</button>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {metricasBenchmark.map(m => {
                     const valorAtleta = parseValue(jogadorSelecionado[m])
                     const valorMedia = mediaReferencia[m] || 0
-                    const variacao = valorMedia === 0 ? 0 : ((valorAtleta - valorMedia) / valorMedia) * 100
-                    const percentualBarra = Math.min(Math.max((valorAtleta / (valorMedia * 2 || 1)) * 50, 5), 100)
+                    const diff = valorMedia === 0 ? 0 : ((valorAtleta - valorMedia) / valorMedia) * 100
+                    const isPositivo = diff >= 0
 
                     return (
-                      <div key={m} className="bg-slate-950/50 p-6 rounded-3xl border border-slate-800/50 group hover:border-emerald-500/30 transition-all">
+                      <div key={m} className="bg-slate-950/50 p-6 rounded-[2rem] border border-slate-800/50 group hover:border-emerald-500/30 transition-all">
                         <div className="flex justify-between items-start mb-4">
                           <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 group-hover:text-slate-300 transition-all">{m}</span>
-                          <span className={`text-[10px] font-black italic ${variacao >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                            {variacao >= 0 ? '+' : ''}{variacao.toFixed(1)}%
+                          <span className={`text-[10px] font-black italic ${isPositivo ? 'text-emerald-500' : 'text-red-500'}`}>
+                            {isPositivo ? '+' : ''}{diff.toFixed(1)}%
                           </span>
                         </div>
-                        <div className="flex items-end justify-between mb-2">
-                          <div className="text-2xl font-black italic text-white">{jogadorSelecionado[m] || '0'}</div>
-                          <div className="text-[9px] font-bold text-slate-600 uppercase tracking-widest">Média: {valorMedia.toFixed(2)}</div>
-                        </div>
-                        <div className="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden">
-                          <div 
-                            className={`h-full rounded-full transition-all duration-1000 ${variacao >= 0 ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]'}`}
-                            style={{ width: `${percentualBarra}%` }}
-                          ></div>
+                        <div className="flex items-end justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden">
+                              <div 
+                                className={`h-full rounded-full transition-all duration-1000 ${isPositivo ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]'}`}
+                                style={{ width: `${Math.min(Math.max((valorAtleta / (valorMedia * 2 || 1)) * 100, 5), 100)}%` }}
+                              ></div>
+                            </div>
+                            <div className="flex justify-between mt-3">
+                              <span className="text-[9px] font-bold text-slate-600 uppercase">Atleta: <span className="text-white">{valorAtleta.toFixed(2)}</span></span>
+                              <span className="text-[9px] font-bold text-slate-600 uppercase">Média: <span className="text-slate-400">{valorMedia.toFixed(2)}</span></span>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     )
@@ -279,45 +276,47 @@ export default function BenchmarkPage() {
         </div>
       </div>
 
-      {/* MODAL MÉTRICAS BENCHMARK */}
+      {/* MODAL MÉTRICAS */}
       {mostrarPainelMetricas && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-[#0a0c10]/90 backdrop-blur-xl" onClick={() => setMostrarPainelMetricas(false)}></div>
-          <div className="relative w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-[3rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="relative w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-[3rem] shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
             <div className="p-8 border-b border-slate-800 flex items-center justify-between">
-              <h2 className="text-2xl font-black italic uppercase tracking-tighter text-white">Métricas do Benchmark</h2>
-              <button onClick={() => setMostrarPainelMetricas(false)} className="p-4 hover:bg-slate-800 rounded-2xl transition-all text-slate-500 hover:text-white">×</button>
+              <h2 className="text-xl font-black italic uppercase text-white">Configurar Benchmark</h2>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setMetricasBenchmark([])}
+                  className="px-4 py-2 bg-red-500/10 border border-red-500/30 text-red-500 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-red-500/20 transition-all"
+                >
+                  Desmarcar Tudo
+                </button>
+                <button onClick={() => setMostrarPainelMetricas(false)} className="text-slate-500 hover:text-white text-2xl">×</button>
+              </div>
             </div>
             <div className="p-8 overflow-y-auto custom-scrollbar">
-              <div className="flex gap-4 mb-8 overflow-x-auto pb-2 custom-scrollbar">
+              <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
                 {Object.keys(categoriasMetricas).map(cat => (
-                  <button key={cat} onClick={() => setAbaAtiva(cat)} className={`px-6 py-3 rounded-2xl font-black italic uppercase text-[10px] tracking-widest transition-all border whitespace-nowrap ${abaAtiva === cat ? 'bg-emerald-500 text-slate-950 border-emerald-500' : 'bg-slate-950 text-slate-500 border-slate-800 hover:border-slate-700'}`}>
-                    {cat}
-                  </button>
+                  <button key={cat} onClick={() => setAbaAtiva(cat)} className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase border whitespace-nowrap ${abaAtiva === cat ? 'bg-emerald-500 text-slate-950 border-emerald-500' : 'bg-slate-950 text-slate-500 border-slate-800'}`}>{cat}</button>
                 ))}
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                 {categoriasMetricas[abaAtiva]?.map(m => (
-                  <button key={m} onClick={() => {
-                    if (metricasBenchmark.includes(m)) setMetricasBenchmark(metricasBenchmark.filter(x => x !== m))
-                    else setMetricasBenchmark([...metricasBenchmark, m])
-                  }} className={`p-4 rounded-2xl text-left transition-all border text-[10px] font-black uppercase ${metricasBenchmark.includes(m) ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-400' : 'bg-slate-950 border-slate-800 text-slate-500'}`}>
+                  <button 
+                    key={m} 
+                    onClick={() => setMetricasBenchmark(prev => prev.includes(m) ? prev.filter(x => x !== m) : [...prev, m])}
+                    className={`p-3 rounded-xl text-left text-[9px] font-black uppercase border transition-all ${metricasBenchmark.includes(m) ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-400' : 'bg-slate-950 border-slate-800 text-slate-500'}`}
+                  >
                     {m}
                   </button>
                 ))}
               </div>
-              <div className="mt-8 pt-8 border-t border-slate-800">
-                <h3 className="text-[10px] font-black uppercase tracking-widest text-emerald-500 mb-4">Templates Salvos</h3>
-                <div className="flex flex-wrap gap-3 mb-6">
-                  {templates.map(t => (
-                    <button key={t.id} onClick={() => setMetricasBenchmark(t.metricas)} className="px-4 py-2 bg-slate-950 border border-slate-800 rounded-xl text-[9px] font-black uppercase text-slate-400 hover:text-white">{t.nome}</button>
-                  ))}
-                </div>
-                <div className="flex gap-2">
-                  <input type="text" placeholder="NOME DO TEMPLATE..." value={nomeNovoTemplate} onChange={(e) => setNomeNovoTemplate(e.target.value)} className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-[9px] font-black uppercase outline-none focus:border-emerald-500/50" />
-                  <button onClick={salvarTemplate} className="bg-emerald-500 text-slate-950 px-4 py-2 rounded-xl text-[9px] font-black uppercase">Salvar Atual</button>
-                </div>
+            </div>
+            <div className="p-8 bg-slate-950/50 border-t border-slate-800 flex justify-between items-center">
+              <div className="flex gap-2">
+                <input type="text" placeholder="NOME DO TEMPLATE..." value={nomeNovoTemplate} onChange={(e) => setNomeNovoTemplate(e.target.value)} className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-[9px] font-black uppercase outline-none" />
+                <button onClick={salvarTemplate} className="bg-emerald-500 text-slate-950 px-4 py-2 rounded-xl text-[9px] font-black uppercase">Salvar</button>
               </div>
+              <button onClick={() => setMostrarPainelMetricas(false)} className="px-6 py-3 bg-emerald-500 text-slate-950 rounded-xl text-[9px] font-black uppercase">Fechar</button>
             </div>
           </div>
         </div>

@@ -51,17 +51,19 @@ export default function GraficosPage() {
   const [metricasRadar, setMetricasRadar] = useState(['Gols', 'Passes precisos %', 'Dribles', 'Desafios vencidos, %', 'Interceptações'])
   
   // Filtros Dispersão
-  const [filtroPosicaoDispersa, setFiltroPosicaoDispersa] = useState('Todos')
+  const [filtroTimeDispersa, setFiltroTimeDispersa] = useState('Todos')
+  const [filtrosPosicaoDispersa, setFiltrosPosicaoDispersa] = useState([])
   const [jogadoresSelecionadosDispersa, setJogadoresSelecionadosDispersa] = useState([])
   const [metricaXDispersa, setMetricaXDispersa] = useState('Minutos jogados')
   const [metricaYDispersa, setMetricaYDispersa] = useState('Gols')
 
-  // Templates
+  // Templates e Painel
   const [templates, setTemplates] = useState([])
   const [nomeNovoTemplate, setNomeNovoTemplate] = useState('')
   const [mostrarPainelMetricas, setMostrarPainelMetricas] = useState(false)
   const [abaAtiva, setAbaAtiva] = useState('Ataque')
   const [categoriasMetricas, setCategoriasMetricas] = useState({})
+  const [tipoGraficoAtivo, setTipoGraficoAtivo] = useState('radar') // 'radar' ou 'dispersao'
 
   // Carregar dados do CSV
   useEffect(() => {
@@ -74,22 +76,19 @@ export default function GraficosPage() {
           header: true,
           skipEmptyLines: true,
           complete: (results) => {
-            try {
-              const dados = results.data.filter(j => j.Jogador && j.Jogador.trim())
-              setJogadores(dados)
+            const dados = results.data.filter(j => j.Jogador && j.Jogador.trim())
+            setJogadores(dados)
+            if (dados.length > 0) {
+              const colunas = Object.keys(dados[0]).filter(col => col && col.trim())
+              setCategoriasMetricas(categorizarMetricas(colunas))
+              
+              // Seleção inicial
               if (dados.length > 0) {
                 setJogadoresSelecionadosRadar([dados[0].Jogador])
                 setJogadoresSelecionadosDispersa([dados[0].Jogador])
-                
-                const colunas = Object.keys(dados[0]).filter(col => col && col.trim())
-                setCategoriasMetricas(categorizarMetricas(colunas))
               }
-              setCarregando(false)
-            } catch (e) {
-              console.error('Erro ao processar dados:', e)
-              setErro('Erro ao processar dados do CSV')
-              setCarregando(false)
             }
+            setCarregando(false)
           },
           error: (error) => {
             console.error('Erro ao parsear CSV:', error)
@@ -156,10 +155,6 @@ export default function GraficosPage() {
 
   const times = useMemo(() => ['Todos', ...new Set(jogadores.map(j => j.Time).filter(Boolean))], [jogadores])
   const posicoes = useMemo(() => [...new Set(jogadores.map(j => j.Posição).filter(Boolean))], [jogadores])
-  const todasAsMetricas = useMemo(() => {
-    if (jogadores.length === 0) return []
-    return Object.keys(jogadores[0]).filter(k => !['Jogador', 'Time', 'Posição', 'Número', '?', 'Idade', 'Altura', 'Peso', 'Nacionalidade'].includes(k)).sort()
-  }, [jogadores])
 
   const jogadoresFiltradosRadar = useMemo(() => {
     return jogadores.filter(j => {
@@ -168,6 +163,14 @@ export default function GraficosPage() {
       return passaTime && passaPosicao
     })
   }, [jogadores, filtroTimeRadar, filtrosPosicaoRadar])
+
+  const jogadoresFiltradosDispersa = useMemo(() => {
+    return jogadores.filter(j => {
+      const passaTime = filtroTimeDispersa === 'Todos' || j.Time === filtroTimeDispersa
+      const passaPosicao = filtrosPosicaoDispersa.length === 0 || filtrosPosicaoDispersa.includes(j.Posição)
+      return passaTime && passaPosicao
+    })
+  }, [jogadores, filtroTimeDispersa, filtrosPosicaoDispersa])
 
   const radarData = useMemo(() => {
     if (jogadoresSelecionadosRadar.length === 0 || metricasRadar.length === 0) return null
@@ -192,13 +195,15 @@ export default function GraficosPage() {
   const scatterData = useMemo(() => {
     const jogadoresParaMostrar = jogadoresSelecionadosDispersa.length > 0 
       ? jogadores.filter(j => jogadoresSelecionadosDispersa.includes(j.Jogador))
-      : jogadores.filter(j => filtroPosicaoDispersa === 'Todos' || j.Posição === filtroPosicaoDispersa)
+      : jogadoresFiltradosDispersa
+
     const pontos = jogadoresParaMostrar.map((j, idx) => ({
       x: parseValue(j[metricaXDispersa]),
       y: parseValue(j[metricaYDispersa]),
       jogador: j.Jogador,
       cor: CORES_JOGADORES[idx % CORES_JOGADORES.length]
-    })).filter(p => p.x >= 0 && p.y >= 0 && p.jogador)
+    })).filter(p => p.jogador)
+
     return {
       datasets: [{
         label: `${metricaXDispersa} vs ${metricaYDispersa}`,
@@ -210,7 +215,7 @@ export default function GraficosPage() {
         pointHoverRadius: 10
       }]
     }
-  }, [jogadores, jogadoresSelecionadosDispersa, filtroPosicaoDispersa, metricaXDispersa, metricaYDispersa])
+  }, [jogadores, jogadoresSelecionadosDispersa, jogadoresFiltradosDispersa, metricaXDispersa, metricaYDispersa])
 
   const radarOptions = {
     responsive: true,
@@ -241,13 +246,25 @@ export default function GraficosPage() {
       }
     },
     scales: {
-      x: { grid: { color: 'rgba(148, 163, 184, 0.05)' }, ticks: { color: '#64748b', font: { size: 10 } } },
-      y: { grid: { color: 'rgba(148, 163, 184, 0.05)' }, ticks: { color: '#64748b', font: { size: 10 } } }
+      x: { 
+        title: { display: true, text: metricaXDispersa, color: '#64748b', font: { size: 10, weight: 'bold' } },
+        grid: { color: 'rgba(148, 163, 184, 0.05)' }, 
+        ticks: { color: '#64748b', font: { size: 10 } } 
+      },
+      y: { 
+        title: { display: true, text: metricaYDispersa, color: '#64748b', font: { size: 10, weight: 'bold' } },
+        grid: { color: 'rgba(148, 163, 184, 0.05)' }, 
+        ticks: { color: '#64748b', font: { size: 10 } } 
+      }
     }
   }
 
   const togglePosicaoRadar = (pos) => {
     setFiltrosPosicaoRadar(prev => prev.includes(pos) ? prev.filter(p => p !== pos) : [...prev, pos])
+  }
+
+  const togglePosicaoDispersa = (pos) => {
+    setFiltrosPosicaoDispersa(prev => prev.includes(pos) ? prev.filter(p => p !== pos) : [...prev, pos])
   }
 
   const salvarTemplate = () => {
@@ -276,142 +293,135 @@ export default function GraficosPage() {
           </button>
           <div>
             <h1 className="text-4xl md:text-5xl font-black italic tracking-tighter uppercase leading-none bg-gradient-to-r from-white via-white to-slate-500 bg-clip-text text-transparent">
-              Análise <span className="text-emerald-500">Visual</span>
+              Gráficos <span className="text-emerald-500">Avançados</span>
             </h1>
-            <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-2">Gráficos de Radar e Dispersão de Performance</p>
+            <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-2">Radar & Dispersão • Inteligência de Mercado</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           
-          {/* RADAR CHART CARD */}
-          <div className="bg-slate-900/40 backdrop-blur-md rounded-[2.5rem] p-8 border border-slate-800/50 shadow-2xl flex flex-col">
+          {/* RADAR CHART */}
+          <div className="bg-slate-900/40 backdrop-blur-md p-8 rounded-[3rem] border border-slate-800/50 shadow-2xl flex flex-col">
             <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center gap-3">
-                <div className="w-1.5 h-6 bg-emerald-500 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.5)]"></div>
-                <h2 className="text-slate-400 font-black text-[10px] uppercase tracking-[0.2em]">Radar de Atributos</h2>
-              </div>
-              <button onClick={() => setMostrarPainelMetricas(true)} className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 rounded-xl text-[9px] font-black uppercase tracking-widest">Personalizar Métricas</button>
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Gráfico de Radar</h3>
+              <button onClick={() => { setTipoGraficoAtivo('radar'); setMostrarPainelMetricas(true); }} className="px-4 py-2 bg-slate-950 border border-slate-800 rounded-xl text-[9px] font-black uppercase text-slate-500 hover:text-white transition-all">Métricas</button>
             </div>
-
-            <div className="space-y-4 mb-8">
-              <div className="grid grid-cols-2 gap-4">
-                <select value={filtroTimeRadar} onChange={(e) => setFiltroTimeRadar(e.target.value)} className="bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black uppercase tracking-widest focus:outline-none focus:border-emerald-500/50">
-                  {times.map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
-                <div className="flex flex-wrap gap-1 bg-slate-950 border border-slate-800 rounded-xl p-2 max-h-[100px] overflow-y-auto custom-scrollbar">
-                  {posicoes.map(p => (
-                    <button key={p} onClick={() => togglePosicaoRadar(p)} className={`px-2 py-1 rounded text-[8px] font-black uppercase border ${filtrosPosicaoRadar.includes(p) ? 'bg-emerald-500 text-slate-950 border-emerald-500' : 'bg-slate-900 text-slate-500 border-slate-800'}`}>{p}</button>
-                  ))}
-                </div>
+            
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <select value={filtroTimeRadar} onChange={(e) => setFiltroTimeRadar(e.target.value)} className="bg-slate-950 border border-slate-800 rounded-xl p-3 text-[9px] font-black uppercase outline-none">
+                {times.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
+              </select>
+              <div className="flex flex-wrap gap-1 max-h-[40px] overflow-y-auto custom-scrollbar">
+                {posicoes.map(p => (
+                  <button key={p} onClick={() => togglePosicaoRadar(p)} className={`px-2 py-1 rounded text-[7px] font-black uppercase border ${filtrosPosicaoRadar.includes(p) ? 'bg-emerald-500 text-slate-950 border-emerald-500' : 'bg-slate-900 text-slate-500 border-slate-800'}`}>{p}</button>
+                ))}
               </div>
             </div>
 
-            <div className="flex-grow min-h-[400px] relative">
+            <div className="mb-6">
+              <select 
+                multiple 
+                value={jogadoresSelecionadosRadar} 
+                onChange={(e) => setJogadoresSelecionadosRadar(Array.from(e.target.selectedOptions, option => option.value))}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[9px] font-black uppercase outline-none h-24 custom-scrollbar"
+              >
+                {jogadoresFiltradosRadar.map(j => <option key={j.Jogador} value={j.Jogador}>{j.Jogador}</option>)}
+              </select>
+              <p className="text-[8px] text-slate-600 mt-2 uppercase font-bold">Segure CTRL para selecionar múltiplos</p>
+            </div>
+
+            <div className="flex-1 min-h-[400px]">
               {radarData && <Radar data={radarData} options={radarOptions} />}
             </div>
-
-            <div className="mt-8 flex flex-wrap gap-2 max-h-[150px] overflow-y-auto custom-scrollbar p-2">
-              {jogadoresFiltradosRadar.map(j => (
-                <button 
-                  key={j.Jogador}
-                  onClick={() => {
-                    if (jogadoresSelecionadosRadar.includes(j.Jogador)) {
-                      setJogadoresSelecionadosRadar(jogadoresSelecionadosRadar.filter(n => n !== j.Jogador))
-                    } else if (jogadoresSelecionadosRadar.length < 10) {
-                      setJogadoresSelecionadosRadar([...jogadoresSelecionadosRadar, j.Jogador])
-                    }
-                  }}
-                  className={`px-3 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border ${jogadoresSelecionadosRadar.includes(j.Jogador) ? 'bg-emerald-500 text-slate-950 border-emerald-500' : 'bg-slate-950 text-slate-500 border-slate-800 hover:border-slate-700'}`}
-                >
-                  {j.Jogador}
-                </button>
-              ))}
-            </div>
           </div>
 
-          {/* SCATTER CHART CARD */}
-          <div className="bg-slate-900/40 backdrop-blur-md rounded-[2.5rem] p-8 border border-slate-800/50 shadow-2xl flex flex-col">
+          {/* SCATTER CHART */}
+          <div className="bg-slate-900/40 backdrop-blur-md p-8 rounded-[3rem] border border-slate-800/50 shadow-2xl flex flex-col">
             <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center gap-3">
-                <div className="w-1.5 h-6 bg-emerald-500 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.5)]"></div>
-                <h2 className="text-slate-400 font-black text-[10px] uppercase tracking-[0.2em]">Dispersão de Performance</h2>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4 mb-8">
-              <div className="space-y-2">
-                <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest ml-2">Eixo X</span>
-                <select value={metricaXDispersa} onChange={(e) => setMetricaXDispersa(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black uppercase tracking-widest focus:outline-none focus:border-emerald-500/50">
-                  {todasAsMetricas.map(m => <option key={m} value={m}>{m}</option>)}
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Gráfico de Dispersão</h3>
+              <div className="flex gap-2">
+                <select value={metricaXDispersa} onChange={(e) => setMetricaXDispersa(e.target.value)} className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1 text-[8px] font-black uppercase outline-none">
+                  {Object.values(categoriasMetricas).flat().map(m => <option key={m} value={m}>X: {m}</option>)}
                 </select>
-              </div>
-              <div className="space-y-2">
-                <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest ml-2">Eixo Y</span>
-                <select value={metricaYDispersa} onChange={(e) => setMetricaYDispersa(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black uppercase tracking-widest focus:outline-none focus:border-emerald-500/50">
-                  {todasAsMetricas.map(m => <option key={m} value={m}>{m}</option>)}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest ml-2">Posição</span>
-                <select value={filtroPosicaoDispersa} onChange={(e) => setFiltroPosicaoDispersa(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black uppercase tracking-widest focus:outline-none focus:border-emerald-500/50">
-                  {posicoes.map(p => <option key={p} value={p}>{p}</option>)}
+                <select value={metricaYDispersa} onChange={(e) => setMetricaYDispersa(e.target.value)} className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1 text-[8px] font-black uppercase outline-none">
+                  {Object.values(categoriasMetricas).flat().map(m => <option key={m} value={m}>Y: {m}</option>)}
                 </select>
               </div>
             </div>
 
-            <div className="flex-grow min-h-[400px] relative">
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <select value={filtroTimeDispersa} onChange={(e) => setFiltroTimeDispersa(e.target.value)} className="bg-slate-950 border border-slate-800 rounded-xl p-3 text-[9px] font-black uppercase outline-none">
+                {times.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
+              </select>
+              <div className="flex flex-wrap gap-1 max-h-[40px] overflow-y-auto custom-scrollbar">
+                {posicoes.map(p => (
+                  <button key={p} onClick={() => togglePosicaoDispersa(p)} className={`px-2 py-1 rounded text-[7px] font-black uppercase border ${filtrosPosicaoDispersa.includes(p) ? 'bg-emerald-500 text-slate-950 border-emerald-500' : 'bg-slate-900 text-slate-500 border-slate-800'}`}>{p}</button>
+                ))}
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <select 
+                multiple 
+                value={jogadoresSelecionadosDispersa} 
+                onChange={(e) => setJogadoresSelecionadosDispersa(Array.from(e.target.selectedOptions, option => option.value))}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[9px] font-black uppercase outline-none h-24 custom-scrollbar"
+              >
+                <option value="">TODOS OS FILTRADOS</option>
+                {jogadoresFiltradosDispersa.map(j => <option key={j.Jogador} value={j.Jogador}>{j.Jogador}</option>)}
+              </select>
+            </div>
+
+            <div className="flex-1 min-h-[400px]">
               <Scatter data={scatterData} options={scatterOptions} />
             </div>
-
-            <div className="mt-8 p-4 bg-slate-950/50 rounded-2xl border border-slate-800/50">
-              <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest leading-relaxed">
-                Este gráfico correlaciona duas métricas para identificar "outliers" (jogadores fora da curva). Atletas no quadrante superior direito são os mais eficientes em ambos os critérios.
-              </p>
-            </div>
           </div>
+
         </div>
       </div>
 
-      {/* MODAL MÉTRICAS RADAR */}
+      {/* MODAL MÉTRICAS */}
       {mostrarPainelMetricas && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-[#0a0c10]/90 backdrop-blur-xl" onClick={() => setMostrarPainelMetricas(false)}></div>
-          <div className="relative w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-[3rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="relative w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-[3rem] shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
             <div className="p-8 border-b border-slate-800 flex items-center justify-between">
-              <h2 className="text-2xl font-black italic uppercase tracking-tighter text-white">Métricas do Radar</h2>
-              <button onClick={() => setMostrarPainelMetricas(false)} className="p-4 hover:bg-slate-800 rounded-2xl transition-all text-slate-500 hover:text-white">×</button>
+              <h2 className="text-xl font-black italic uppercase text-white">Configurar Métricas</h2>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setMetricasRadar([])}
+                  className="px-4 py-2 bg-red-500/10 border border-red-500/30 text-red-500 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-red-500/20 transition-all"
+                >
+                  Desmarcar Tudo
+                </button>
+                <button onClick={() => setMostrarPainelMetricas(false)} className="text-slate-500 hover:text-white text-2xl">×</button>
+              </div>
             </div>
             <div className="p-8 overflow-y-auto custom-scrollbar">
-              <div className="flex gap-4 mb-8 overflow-x-auto pb-2 custom-scrollbar">
+              <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
                 {Object.keys(categoriasMetricas).map(cat => (
-                  <button key={cat} onClick={() => setAbaAtiva(cat)} className={`px-6 py-3 rounded-2xl font-black italic uppercase text-[10px] tracking-widest transition-all border whitespace-nowrap ${abaAtiva === cat ? 'bg-emerald-500 text-slate-950 border-emerald-500' : 'bg-slate-950 text-slate-500 border-slate-800 hover:border-slate-700'}`}>
-                    {cat}
-                  </button>
+                  <button key={cat} onClick={() => setAbaAtiva(cat)} className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase border whitespace-nowrap ${abaAtiva === cat ? 'bg-emerald-500 text-slate-950 border-emerald-500' : 'bg-slate-950 text-slate-500 border-slate-800'}`}>{cat}</button>
                 ))}
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                 {categoriasMetricas[abaAtiva]?.map(m => (
-                  <button key={m} onClick={() => {
-                    if (metricasRadar.includes(m)) setMetricasRadar(metricasRadar.filter(x => x !== m))
-                    else if (metricasRadar.length < 8) setMetricasRadar([...metricasRadar, m])
-                  }} className={`p-4 rounded-2xl text-left transition-all border text-[10px] font-black uppercase ${metricasRadar.includes(m) ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-400' : 'bg-slate-950 border-slate-800 text-slate-500'}`}>
+                  <button 
+                    key={m} 
+                    onClick={() => setMetricasRadar(prev => prev.includes(m) ? prev.filter(x => x !== m) : [...prev, m])}
+                    className={`p-3 rounded-xl text-left text-[9px] font-black uppercase border transition-all ${metricasRadar.includes(m) ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-400' : 'bg-slate-950 border-slate-800 text-slate-500'}`}
+                  >
                     {m}
                   </button>
                 ))}
               </div>
-              <div className="mt-8 pt-8 border-t border-slate-800">
-                <h3 className="text-[10px] font-black uppercase tracking-widest text-emerald-500 mb-4">Templates Salvos</h3>
-                <div className="flex flex-wrap gap-3 mb-6">
-                  {templates.map(t => (
-                    <button key={t.id} onClick={() => setMetricasRadar(t.metricas)} className="px-4 py-2 bg-slate-950 border border-slate-800 rounded-xl text-[9px] font-black uppercase text-slate-400 hover:text-white">{t.nome}</button>
-                  ))}
-                </div>
-                <div className="flex gap-2">
-                  <input type="text" placeholder="NOME DO TEMPLATE..." value={nomeNovoTemplate} onChange={(e) => setNomeNovoTemplate(e.target.value)} className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-[9px] font-black uppercase outline-none focus:border-emerald-500/50" />
-                  <button onClick={salvarTemplate} className="bg-emerald-500 text-slate-950 px-4 py-2 rounded-xl text-[9px] font-black uppercase">Salvar Atual</button>
-                </div>
+            </div>
+            <div className="p-8 bg-slate-950/50 border-t border-slate-800 flex justify-between items-center">
+              <div className="flex gap-2">
+                <input type="text" placeholder="NOME DO TEMPLATE..." value={nomeNovoTemplate} onChange={(e) => setNomeNovoTemplate(e.target.value)} className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-[9px] font-black uppercase outline-none" />
+                <button onClick={salvarTemplate} className="bg-emerald-500 text-slate-950 px-4 py-2 rounded-xl text-[9px] font-black uppercase">Salvar</button>
               </div>
+              <button onClick={() => setMostrarPainelMetricas(false)} className="px-6 py-3 bg-emerald-500 text-slate-950 rounded-xl text-[9px] font-black uppercase">Fechar</button>
             </div>
           </div>
         </div>
