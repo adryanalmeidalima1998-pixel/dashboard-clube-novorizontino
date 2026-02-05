@@ -7,6 +7,8 @@ import { jsPDF } from 'jspdf'
 import 'jspdf-autotable'
 import { LineChart, Line, ResponsiveContainer } from 'recharts'
 
+const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSVC0eenchMDxK3wsOTXjq9kQiy3aHTFl0X1o5vwJZR7RiZzg1Irxxe_SL2IDrqb3c1i7ZL2ugpBJkN/pub?output=csv";
+
 export default function CentralDados() {
   const router = useRouter()
   const [jogadores, setJogadores] = useState([])
@@ -18,8 +20,7 @@ export default function CentralDados() {
   // Busca e Filtros
   const [busca, setBusca] = useState('')
   const [filtroTime, setFiltroTime] = useState('todos')
-  const [filtrosPosicao, setFiltrosPosicao] = useState([]) // Multi-seleção
-  const [filtroPosicaoMedia, setFiltroPosicaoMedia] = useState('todas')
+  const [filtrosPosicao, setFiltrosPosicao] = useState([])
   const [filtroIdade, setFiltroIdade] = useState({ min: 15, max: 45 })
   const [filtroMinutagem, setFiltroMinutagem] = useState(0)
   
@@ -30,7 +31,7 @@ export default function CentralDados() {
   // Ordenação
   const [ordenacao, setOrdenacao] = useState({ coluna: 'Jogador', direcao: 'asc' })
 
-  // Métricas selecionadas
+  // Métricas selecionadas (Máximo 8)
   const [metricasSelecionadas, setMetricasSelecionadas] = useState([
     'Index',
     'Minutos jogados',
@@ -42,13 +43,11 @@ export default function CentralDados() {
   // Templates
   const [templates, setTemplates] = useState([])
   const [nomeNovoTemplate, setNomeNovoTemplate] = useState('')
-  const [painelAberto, setPainelAberto] = useState(false)
   const [abaAtiva, setAbaAtiva] = useState('Ataque')
-  const [mostrarTemplates, setMostrarTemplates] = useState(false)
 
   // Carregar templates do LocalStorage
   useEffect(() => {
-    const templatesArmazenados = localStorage.getItem('metricsTemplates')
+    const templatesArmazenados = localStorage.getItem('metricsTemplates_Central')
     if (templatesArmazenados) {
       try {
         setTemplates(JSON.parse(templatesArmazenados))
@@ -60,14 +59,14 @@ export default function CentralDados() {
 
   // Salvar templates no LocalStorage
   useEffect(() => {
-    localStorage.setItem('metricsTemplates', JSON.stringify(templates))
+    localStorage.setItem('metricsTemplates_Central', JSON.stringify(templates))
   }, [templates])
 
   // Carregar dados do CSV
   useEffect(() => {
     const carregarDados = async () => {
       try {
-        const response = await fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vSVC0eenchMDxK3wsOTXjq9kQiy3aHTFl0X1o5vwJZR7RiZzg1Irxxe_SL2IDrqb3c1i7ZL2ugpBJkN/pub?output=csv&t=' + Date.now())
+        const response = await fetch(`${CSV_URL}&t=${Date.now()}`)
         const csvText = await response.text()
         
         Papa.parse(csvText, {
@@ -76,15 +75,16 @@ export default function CentralDados() {
           complete: (results) => {
             const dados = results.data.filter(j => j.Jogador && j.Jogador.trim())
             
+            // Simular histórico para o gráfico de evolução
             const dadosComHistorico = dados.map(j => {
               const valorAtual = parseValue(j['Index'])
               return {
                 ...j,
                 historicoIndex: [
-                  { val: valorAtual * (0.9 + Math.random() * 0.2) },
-                  { val: valorAtual * (0.9 + Math.random() * 0.2) },
-                  { val: valorAtual * (0.9 + Math.random() * 0.2) },
-                  { val: valorAtual * (0.9 + Math.random() * 0.2) },
+                  { val: valorAtual * (0.85 + Math.random() * 0.3) },
+                  { val: valorAtual * (0.85 + Math.random() * 0.3) },
+                  { val: valorAtual * (0.85 + Math.random() * 0.3) },
+                  { val: valorAtual * (0.85 + Math.random() * 0.3) },
                   { val: valorAtual }
                 ]
               }
@@ -95,8 +95,7 @@ export default function CentralDados() {
             if (dados.length > 0) {
               const colunas = Object.keys(dados[0]).filter(col => col && col.trim())
               setTodasAsColunas(colunas)
-              const categorias = categorizarMetricas(colunas)
-              setCategoriasMetricas(categorias)
+              setCategoriasMetricas(categorizarMetricas(colunas))
             }
             
             setCarregando(false)
@@ -134,42 +133,19 @@ export default function CentralDados() {
     const palavrasChaveFisico = ['Duelo', 'Disputa', 'Disputa aérea', 'Desafio', 'Minutos']
 
     colunas.forEach(metrica => {
-      if (['?', 'Jogador', 'Time', 'Posição', 'Idade', 'Altura', 'Peso', 'Nacionalidade'].includes(metrica)) {
-        return
-      }
+      if (['?', 'Jogador', 'Time', 'Equipe', 'Posição', 'Idade', 'Altura', 'Peso', 'Nacionalidade', '№'].includes(metrica)) return
 
       let categorizado = false
+      if (palavrasChaveAtaque.some(palavra => metrica.includes(palavra))) { categorias['Ataque'].push(metrica); categorizado = true; }
+      else if (palavrasChaveDefesa.some(palavra => metrica.includes(palavra))) { categorias['Defesa'].push(metrica); categorizado = true; }
+      else if (palavrasChavePasses.some(palavra => metrica.includes(palavra))) { categorias['Passes & Criação'].push(metrica); categorizado = true; }
+      else if (palavrasChavePosse.some(palavra => metrica.includes(palavra))) { categorias['Posse & Controle'].push(metrica); categorizado = true; }
+      else if (palavrasChaveFisico.some(palavra => metrica.includes(palavra))) { categorias['Físico & Duelos'].push(metrica); categorizado = true; }
 
-      if (palavrasChaveAtaque.some(palavra => metrica.includes(palavra))) {
-        categorias['Ataque'].push(metrica)
-        categorizado = true
-      }
-      else if (palavrasChaveDefesa.some(palavra => metrica.includes(palavra))) {
-        categorias['Defesa'].push(metrica)
-        categorizado = true
-      }
-      else if (palavrasChavePasses.some(palavra => metrica.includes(palavra))) {
-        categorias['Passes & Criação'].push(metrica)
-        categorizado = true
-      }
-      else if (palavrasChavePosse.some(palavra => metrica.includes(palavra))) {
-        categorias['Posse & Controle'].push(metrica)
-        categorizado = true
-      }
-      else if (palavrasChaveFisico.some(palavra => metrica.includes(palavra))) {
-        categorias['Físico & Duelos'].push(metrica)
-        categorizado = true
-      }
-
-      if (!categorizado) {
-        categorias['Geral'].push(metrica)
-      }
+      if (!categorizado) categorias['Geral'].push(metrica)
     })
 
-    if (colunas.includes('Index')) {
-      categorias['Geral'].unshift('Index')
-    }
-
+    if (colunas.includes('Index')) categorias['Geral'].unshift('Index')
     return categorias
   }
 
@@ -197,10 +173,10 @@ export default function CentralDados() {
 
     setJogadorReferencia(jogador)
     
-    const metricasCalculo = metricasSelecionadas.filter(m => !['Jogador', 'Time', 'Posição'].includes(m))
+    const metricasCalculo = metricasSelecionadas.filter(m => !['Jogador', 'Time', 'Equipe', 'Posição'].includes(m))
     
     const scores = jogadores
-      .filter(j => j.Jogador !== jogador.Jogador)
+      .filter(j => j.Jogador !== jogador.Jogador && j.Posição === jogador.Posição)
       .map(j => {
         let distanciaTotal = 0
         metricasCalculo.forEach(m => {
@@ -219,27 +195,12 @@ export default function CentralDados() {
     setJogadoresSimilares(scores)
   }
 
-  const mediaLiga = useMemo(() => {
-    const medias = {}
-    const jogadoresParaMedia = filtroPosicaoMedia === 'todas' 
-      ? jogadores 
-      : jogadores.filter(j => j.Posição === filtroPosicaoMedia)
-
-    metricasSelecionadas.forEach(m => {
-      const valores = jogadoresParaMedia.map(j => parseValue(j[m]))
-      medias[m] = valores.reduce((a, b) => a + b, 0) / (valores.length || 1)
-    })
-    return medias
-  }, [jogadores, metricasSelecionadas, filtroPosicaoMedia])
-
   const jogadoresFiltrados = useMemo(() => {
-    if (jogadorReferencia) {
-      return [jogadorReferencia, ...jogadoresSimilares]
-    }
+    if (jogadorReferencia) return [jogadorReferencia, ...jogadoresSimilares]
 
     let filtrados = jogadores.filter(j => {
       const passaBusca = (j.Jogador || '').toLowerCase().includes(busca.toLowerCase())
-      const passaTime = filtroTime === 'todos' || j.Time === filtroTime
+      const passaTime = filtroTime === 'todos' || j.Time === filtroTime || j.Equipe === filtroTime
       const passaPosicao = filtrosPosicao.length === 0 || filtrosPosicao.includes(j.Posição)
       const idade = parseValue(j.Idade)
       const passaIdade = idade >= filtroIdade.min && idade <= filtroIdade.max
@@ -262,56 +223,47 @@ export default function CentralDados() {
     return filtrados
   }, [jogadores, busca, filtroTime, filtrosPosicao, filtroIdade, filtroMinutagem, ordenacao, jogadorReferencia, jogadoresSimilares])
 
-  const times = useMemo(() => ['todos', ...new Set(jogadores.map(j => j.Time).filter(Boolean))], [jogadores])
+  const times = useMemo(() => ['todos', ...new Set(jogadores.map(j => j.Time || j.Equipe).filter(Boolean))], [jogadores])
   const posicoes = useMemo(() => [...new Set(jogadores.map(j => j.Posição).filter(Boolean))], [jogadores])
 
-  const togglePosicao = (pos) => {
-    setFiltrosPosicao(prev => 
-      prev.includes(pos) ? prev.filter(p => p !== pos) : [...prev, pos]
-    )
+  const toggleMetrica = (metrica) => {
+    if (metricasSelecionadas.includes(metrica)) {
+      setMetricasSelecionadas(metricasSelecionadas.filter(m => m !== metrica))
+    } else if (metricasSelecionadas.length < 8) {
+      setMetricasSelecionadas([...metricasSelecionadas, metrica])
+    }
   }
 
   const salvarTemplate = () => {
     if (!nomeNovoTemplate.trim()) return
-    const novoTemplate = {
-      id: Date.now(),
-      nome: nomeNovoTemplate,
-      metricas: [...metricasSelecionadas]
-    }
+    const novoTemplate = { id: Date.now(), nome: nomeNovoTemplate, metricas: [...metricasSelecionadas] }
     setTemplates([...templates, novoTemplate])
     setNomeNovoTemplate('')
   }
 
   const exportarPDF = () => {
     const doc = new jsPDF('l', 'mm', 'a4')
-    
-    doc.setFontSize(20)
-    doc.setTextColor(15, 23, 42)
-    doc.text('RELATÓRIO TÉCNICO - CENTRAL DE DADOS', 14, 20)
-    
-    doc.setFontSize(10)
-    doc.setTextColor(100, 116, 139)
-    doc.text(`Gerado em: ${new Date().toLocaleString()}`, 14, 28)
+    doc.setFontSize(20); doc.setTextColor(15, 23, 42); doc.text('RELATÓRIO TÉCNICO - CENTRAL DE DADOS', 14, 20)
+    doc.setFontSize(10); doc.setTextColor(100, 116, 139); doc.text(`Gerado em: ${new Date().toLocaleString()}`, 14, 28)
     
     const head = [['Jogador', 'Time', 'Posição', ...metricasSelecionadas]]
-    const body = jogadoresFiltrados.map(j => [
-      j.Jogador,
-      j.Time,
-      j.Posição,
-      ...metricasSelecionadas.map(m => j[m] || '0')
-    ])
+    const body = jogadoresFiltrados.map(j => [j.Jogador, j.Time || j.Equipe, j.Posição, ...metricasSelecionadas.map(m => j[m] || '0')])
 
     doc.autoTable({
-      head,
-      body,
-      startY: 35,
-      theme: 'grid',
-      styles: { fontSize: 8, cellPadding: 2 },
+      head, body, startY: 35, theme: 'grid', styles: { fontSize: 8, cellPadding: 2 },
       headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: 'bold' },
       alternateRowStyles: { fillColor: [248, 250, 252] }
     })
-
     doc.save('relatorio-tecnico-novorizontino.pdf')
+  }
+
+  const exportarCSV = () => {
+    const headers = ['Jogador', 'Time', 'Posição', 'Idade', 'Minutos jogados', ...metricasSelecionadas]
+    const rows = jogadoresFiltrados.map(j => [j.Jogador, j.Time || j.Equipe, j.Posição, j.Idade, j['Minutos jogados'], ...metricasSelecionadas.map(m => j[m] || '0')])
+    const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n")
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.setAttribute("download", "central_dados.csv");
+    document.body.appendChild(link); link.click(); document.body.removeChild(link)
   }
 
   if (carregando) return (
@@ -345,6 +297,7 @@ export default function CentralDados() {
             <button onClick={() => router.push('/central-dados/graficos')} className="px-6 py-3 bg-slate-900/80 hover:bg-emerald-500/20 border border-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all">Gráficos</button>
             <button onClick={() => router.push('/central-dados/benchmark')} className="px-6 py-3 bg-slate-900/80 hover:bg-emerald-500/20 border border-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all">Benchmark</button>
             <button onClick={() => router.push('/central-dados/goleiros')} className="px-6 py-3 bg-slate-900/80 hover:bg-emerald-500/20 border border-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all">Goleiros</button>
+            <button onClick={exportarCSV} className="px-6 py-3 bg-slate-900/80 hover:bg-slate-800 border border-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all">Exportar CSV</button>
             <button onClick={exportarPDF} className="px-6 py-3 bg-emerald-500 text-slate-950 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-400 transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)]">PDF Clean</button>
           </div>
         </div>
@@ -354,18 +307,8 @@ export default function CentralDados() {
           <div className="bg-slate-900/40 backdrop-blur-md p-6 rounded-3xl border border-slate-800/50">
             <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Busca & Time</h3>
             <div className="space-y-3">
-              <input 
-                type="text" 
-                placeholder="BUSCAR ATLETA..." 
-                value={busca}
-                onChange={(e) => setBusca(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black uppercase tracking-widest focus:border-emerald-500/50 outline-none"
-              />
-              <select 
-                value={filtroTime} 
-                onChange={(e) => setFiltroTime(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black uppercase tracking-widest focus:outline-none"
-              >
+              <input type="text" placeholder="BUSCAR ATLETA..." value={busca} onChange={(e) => setBusca(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black uppercase tracking-widest focus:border-emerald-500/50 outline-none" />
+              <select value={filtroTime} onChange={(e) => setFiltroTime(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black uppercase tracking-widest focus:outline-none">
                 {times.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
               </select>
             </div>
@@ -375,13 +318,7 @@ export default function CentralDados() {
             <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Posições (Multi)</h3>
             <div className="flex flex-wrap gap-1 max-h-[100px] overflow-y-auto custom-scrollbar p-1">
               {posicoes.map(p => (
-                <button 
-                  key={p} 
-                  onClick={() => togglePosicao(p)}
-                  className={`px-2 py-1 rounded text-[8px] font-black uppercase border transition-all ${filtrosPosicao.includes(p) ? 'bg-emerald-500 text-slate-950 border-emerald-500' : 'bg-slate-900 text-slate-500 border-slate-800'}`}
-                >
-                  {p}
-                </button>
+                <button key={p} onClick={() => setFiltrosPosicao(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p])} className={`px-2 py-1 rounded text-[8px] font-black uppercase border transition-all ${filtrosPosicao.includes(p) ? 'bg-emerald-500 text-slate-950 border-emerald-500' : 'bg-slate-900 text-slate-500 border-slate-800'}`}>{p}</button>
               ))}
             </div>
           </div>
@@ -390,194 +327,126 @@ export default function CentralDados() {
             <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Idade & Minutagem</h3>
             <div className="space-y-4">
               <div className="flex items-center gap-4">
-                <span className="text-[9px] font-bold text-slate-500 w-12">IDADE:</span>
-                <input type="number" value={filtroIdade.min} onChange={(e) => setFiltroIdade({...filtroIdade, min: parseInt(e.target.value)})} className="w-12 bg-slate-950 border border-slate-800 rounded p-1 text-[10px] text-center" />
-                <span className="text-slate-700">-</span>
-                <input type="number" value={filtroIdade.max} onChange={(e) => setFiltroIdade({...filtroIdade, max: parseInt(e.target.value)})} className="w-12 bg-slate-950 border border-slate-800 rounded p-1 text-[10px] text-center" />
+                <div className="flex-1"><label className="text-[8px] text-slate-500 font-bold uppercase block mb-1">Min</label><input type="number" value={filtroIdade.min} onChange={e => setFiltroIdade({...filtroIdade, min: parseInt(e.target.value)})} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-[10px] font-bold" /></div>
+                <div className="flex-1"><label className="text-[8px] text-slate-500 font-bold uppercase block mb-1">Max</label><input type="number" value={filtroIdade.max} onChange={e => setFiltroIdade({...filtroIdade, max: parseInt(e.target.value)})} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-[10px] font-bold" /></div>
               </div>
-              <div className="flex items-center gap-4">
-                <span className="text-[9px] font-bold text-slate-500 w-12">MIN:</span>
-                <input type="number" value={filtroMinutagem} onChange={(e) => setFiltotMinutagem(parseInt(e.target.value))} className="flex-1 bg-slate-950 border border-slate-800 rounded p-1 text-[10px] text-center" />
-              </div>
+              <div><label className="text-[8px] text-slate-500 font-bold uppercase block mb-1">Minutagem Mínima</label><input type="number" value={filtroMinutagem} onChange={e => setFiltroMinutagem(parseInt(e.target.value))} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-[10px] font-bold" /></div>
             </div>
           </div>
 
-          <div className="bg-slate-900/40 backdrop-blur-md p-6 rounded-3xl border border-slate-800/50 flex flex-col justify-between">
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Configurações</h3>
-            <div className="flex gap-2">
-              <button onClick={() => setPainelAberto(true)} className="flex-1 bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-emerald-500/20 transition-all">Escolher Métricas</button>
-              <button onClick={() => setMostrarTemplates(!mostrarTemplates)} className="px-4 bg-slate-950 border border-slate-800 text-slate-500 rounded-xl hover:text-white transition-all">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
-              </button>
+          <div className="bg-slate-900/40 backdrop-blur-md p-6 rounded-3xl border border-slate-800/50">
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Templates de Métricas</h3>
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                <input type="text" placeholder="NOME DO TEMPLATE..." value={nomeNovoTemplate} onChange={e => setNomeNovoTemplate(e.target.value)} className="flex-1 bg-slate-950 border border-slate-800 rounded-xl p-2 text-[8px] font-black uppercase tracking-widest outline-none" />
+                <button onClick={salvarTemplate} className="p-2 bg-emerald-500 text-slate-950 rounded-xl hover:bg-emerald-400 transition-all"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" /></svg></button>
+              </div>
+              <div className="flex flex-wrap gap-1 max-h-[60px] overflow-y-auto custom-scrollbar">
+                {templates.map(t => (
+                  <div key={t.id} className="flex items-center gap-1 bg-slate-800 rounded-lg px-2 py-1">
+                    <button onClick={() => setMetricasSelecionadas(t.metricas)} className="text-[8px] font-black uppercase tracking-widest text-slate-300 hover:text-emerald-400">{t.nome}</button>
+                    <button onClick={() => setTemplates(templates.filter(x => x.id !== t.id))} className="text-slate-600 hover:text-red-500"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg></button>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
 
-        {/* TEMPLATES DROPDOWN */}
-        {mostrarTemplates && (
-          <div className="bg-slate-900/60 backdrop-blur-xl border border-slate-800 p-6 rounded-3xl mb-8 animate-in fade-in slide-in-from-top-4 duration-300">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Templates de Métricas</h3>
-              <div className="flex gap-2">
-                <input 
-                  type="text" 
-                  placeholder="NOME DO NOVO TEMPLATE..." 
-                  value={nomeNovoTemplate}
-                  onChange={(e) => setNomeNovoTemplate(e.target.value)}
-                  className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-[9px] font-black uppercase outline-none focus:border-emerald-500/50"
-                />
-                <button onClick={salvarTemplate} className="bg-emerald-500 text-slate-950 px-4 py-2 rounded-xl text-[9px] font-black uppercase">Salvar Atual</button>
+        {/* SELEÇÃO DE MÉTRICAS */}
+        <div className="bg-slate-900/40 backdrop-blur-md p-8 rounded-[2rem] border border-slate-800/50 mb-8">
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-4">
+              <h2 className="text-xl font-black italic uppercase tracking-tighter">Escolher <span className="text-emerald-500">Métricas</span></h2>
+              <span className="px-3 py-1 bg-slate-800 rounded-full text-[10px] font-black text-emerald-500 border border-emerald-500/20">{metricasSelecionadas.length} / 8</span>
+            </div>
+            <div className="flex gap-4">
+              <button onClick={() => setMetricasSelecionadas([])} className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-white transition-all">Desmarcar Tudo</button>
+              <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800">
+                {Object.keys(categoriasMetricas).map(cat => (
+                  <button key={cat} onClick={() => setAbaAtiva(cat)} className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${abaAtiva === cat ? 'bg-emerald-500 text-slate-950' : 'text-slate-500 hover:text-slate-300'}`}>{cat}</button>
+                ))}
               </div>
             </div>
-            <div className="flex flex-wrap gap-3">
-              {templates.map(t => (
-                <div key={t.id} className="group flex items-center gap-2 bg-slate-950 border border-slate-800 p-1 pl-4 rounded-xl">
-                  <button onClick={() => setMetricasSelecionadas(t.metricas)} className="text-[9px] font-black uppercase text-slate-400 hover:text-white transition-all">{t.nome}</button>
-                  <button onClick={() => setTemplates(templates.filter(x => x.id !== t.id))} className="p-2 text-slate-700 hover:text-red-500 transition-all">×</button>
-                </div>
-              ))}
-              {templates.length === 0 && <p className="text-[9px] text-slate-600 font-bold uppercase">Nenhum template salvo</p>}
-            </div>
           </div>
-        )}
 
-        {/* TABELA */}
-        <div className="bg-slate-900/20 backdrop-blur-md rounded-[2.5rem] border border-slate-800/50 overflow-hidden shadow-2xl">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            {categoriasMetricas[abaAtiva]?.map(metrica => (
+              <button key={metrica} onClick={() => toggleMetrica(metrica)} className={`p-3 rounded-xl border text-[9px] font-black uppercase tracking-widest transition-all text-left flex items-center justify-between group ${metricasSelecionadas.includes(metrica) ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400' : 'bg-slate-950/50 border-slate-800 text-slate-500 hover:border-slate-600'}`}>
+                <span className="truncate mr-2">{metrica}</span>
+                {metricasSelecionadas.includes(metrica) && <div className="w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* TABELA PRINCIPAL */}
+        <div className="bg-slate-900/40 backdrop-blur-md rounded-[2rem] border border-slate-800/50 overflow-hidden">
           <div className="overflow-x-auto custom-scrollbar">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-950/50 border-b border-slate-800">
-                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-500">Ações</th>
-                  <th onClick={() => handleOrdenacao('Jogador')} className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-500 cursor-pointer hover:text-emerald-400 transition-all">Jogador</th>
-                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-500">Evolução</th>
-                  <th onClick={() => handleOrdenacao('Time')} className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-500 cursor-pointer hover:text-emerald-400 transition-all">Time</th>
-                  <th onClick={() => handleOrdenacao('Posição')} className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-500 cursor-pointer hover:text-emerald-400 transition-all text-center">Pos</th>
+                  <th className="p-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 cursor-pointer hover:text-emerald-400 transition-all" onClick={() => handleOrdenacao('Jogador')}>Atleta</th>
+                  <th className="p-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Evolução</th>
+                  <th className="p-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 cursor-pointer hover:text-emerald-400 transition-all" onClick={() => handleOrdenacao('Time')}>Equipe</th>
+                  <th className="p-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Pos</th>
+                  <th className="p-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 cursor-pointer hover:text-emerald-400 transition-all" onClick={() => handleOrdenacao('Idade')}>Idade</th>
                   {metricasSelecionadas.map(m => (
-                    <th key={m} onClick={() => handleOrdenacao(m)} className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-500 cursor-pointer hover:text-emerald-400 transition-all text-center">
-                      {m}
-                    </th>
+                    <th key={m} className="p-6 text-[10px] font-black uppercase tracking-[0.2em] text-emerald-500 cursor-pointer hover:text-emerald-300 transition-all" onClick={() => handleOrdenacao(m)}>{m}</th>
                   ))}
+                  <th className="p-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {jogadoresFiltrados.map((j, idx) => (
-                  <tr key={j.Jogador} className={`border-b border-slate-800/30 hover:bg-emerald-500/[0.02] transition-all group ${jogadorReferencia?.Jogador === j.Jogador ? 'bg-emerald-500/10' : ''}`}>
+                  <tr key={idx} className={`border-b border-slate-800/30 hover:bg-emerald-500/5 transition-all group ${jogadorReferencia?.Jogador === j.Jogador ? 'bg-emerald-500/10' : ''}`}>
                     <td className="p-6">
-                      <button 
-                        onClick={() => encontrarSimilares(j)}
-                        className={`p-3 rounded-xl border transition-all ${jogadorReferencia?.Jogador === j.Jogador ? 'bg-emerald-500 border-emerald-500 text-slate-950' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-emerald-500/50 hover:text-emerald-400'}`}
-                        title="Encontrar Similares"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                      </button>
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-slate-800 rounded-lg flex items-center justify-center text-[10px] font-black text-slate-500 group-hover:bg-emerald-500 group-hover:text-slate-950 transition-all">{j.Jogador.substring(0, 2).toUpperCase()}</div>
+                        <span className="font-black italic uppercase tracking-tighter text-sm group-hover:text-emerald-400 transition-all">{j.Jogador}</span>
+                      </div>
                     </td>
                     <td className="p-6">
-                      <div className="font-black italic uppercase text-sm tracking-tighter text-white group-hover:text-emerald-400 transition-all">{j.Jogador}</div>
-                      <div className="text-[9px] font-bold text-slate-600 uppercase tracking-widest mt-1">{j.Idade} ANOS • {j.Nacionalidade || 'BRA'}</div>
-                    </td>
-                    <td className="p-6 w-32">
-                      <div className="h-8 w-full">
+                      <div className="w-24 h-10">
                         <ResponsiveContainer width="100%" height="100%">
                           <LineChart data={j.historicoIndex}>
-                            <Line 
-                              type="monotone" 
-                              dataKey="val" 
-                              stroke={parseValue(j['Index']) > j.historicoIndex[0].val ? '#10b981' : '#ef4444'} 
-                              strokeWidth={2} 
-                              dot={false} 
-                            />
+                            <Line type="monotone" dataKey="val" stroke="#10b981" strokeWidth={3} dot={false} />
                           </LineChart>
                         </ResponsiveContainer>
                       </div>
                     </td>
-                    <td className="p-6 text-[10px] font-black uppercase text-slate-400">{j.Time}</td>
-                    <td className="p-6 text-center">
-                      <span className="px-3 py-1 bg-slate-950 border border-slate-800 rounded-lg text-[9px] font-black uppercase text-emerald-500">{j.Posição}</span>
+                    <td className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400">{j.Time || j.Equipe}</td>
+                    <td className="p-6">
+                      <span className="px-3 py-1 bg-slate-950 border border-slate-800 rounded-lg text-[9px] font-black text-slate-500 uppercase tracking-widest">{j.Posição}</span>
                     </td>
-                    {metricasSelecionadas.map(m => {
-                      const valor = parseValue(j[m])
-                      const media = mediaLiga[m] || 0
-                      const superior = valor >= media
-                      return (
-                        <td key={m} className="p-6 text-center">
-                          <div className={`text-sm font-black italic ${superior ? 'text-white' : 'text-slate-500'}`}>{j[m] || '0'}</div>
-                          <div className={`text-[8px] font-bold uppercase mt-1 ${superior ? 'text-emerald-500' : 'text-red-500/50'}`}>
-                            {superior ? '↑' : '↓'} {Math.abs(((valor - media) / (media || 1)) * 100).toFixed(0)}%
-                          </div>
-                        </td>
-                      )
-                    })}
+                    <td className="p-6 text-xs font-black text-slate-400">{j.Idade}</td>
+                    {metricasSelecionadas.map(m => (
+                      <td key={m} className="p-6 text-xs font-black text-emerald-400/80">{j[m] || '0'}</td>
+                    ))}
+                    <td className="p-6">
+                      <button onClick={() => encontrarSimilares(j)} className={`p-3 rounded-xl border transition-all ${jogadorReferencia?.Jogador === j.Jogador ? 'bg-emerald-500 border-emerald-500 text-slate-950' : 'bg-slate-900 border-slate-800 text-slate-500 hover:border-emerald-500 hover:text-emerald-400'}`} title="Encontrar Similares">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         </div>
-      </div>
 
-      {/* MODAL SELEÇÃO DE MÉTRICAS */}
-      {painelAberto && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-[#0a0c10]/90 backdrop-blur-xl" onClick={() => setPainelAberto(false)}></div>
-          <div className="relative w-full max-w-5xl bg-slate-900 border border-slate-800 rounded-[3rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="p-8 border-b border-slate-800 flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-black italic uppercase tracking-tighter text-white">Configurar Painel</h2>
-                <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-1">Selecione as métricas para exibição na tabela</p>
-              </div>
-              <div className="flex gap-3">
-                <button 
-                  onClick={() => setMetricasSelecionadas([])}
-                  className="px-4 py-2 bg-red-500/10 border border-red-500/30 text-red-500 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-red-500/20 transition-all"
-                >
-                  Desmarcar Tudo
-                </button>
-                <button onClick={() => setPainelAberto(false)} className="p-4 hover:bg-slate-800 rounded-2xl transition-all text-slate-500 hover:text-white">×</button>
-              </div>
-            </div>
-            
-            <div className="p-8 overflow-y-auto custom-scrollbar">
-              <div className="flex gap-4 mb-8 overflow-x-auto pb-2 custom-scrollbar">
-                {Object.keys(categoriasMetricas).map(cat => (
-                  <button 
-                    key={cat} 
-                    onClick={() => setAbaAtiva(cat)}
-                    className={`px-6 py-3 rounded-2xl font-black italic uppercase text-[10px] tracking-widest transition-all border whitespace-nowrap ${abaAtiva === cat ? 'bg-emerald-500 text-slate-950 border-emerald-500' : 'bg-slate-950 text-slate-500 border-slate-800 hover:border-slate-700'}`}
-                  >
-                    {cat}
-                  </button>
-                ))}
-              </div>
-
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                {categoriasMetricas[abaAtiva]?.map(m => (
-                  <button 
-                    key={m}
-                    onClick={() => {
-                      if (metricasSelecionadas.includes(m)) setMetricasSelecionadas(metricasSelecionadas.filter(x => x !== m))
-                      else setMetricasSelecionadas([...metricasSelecionadas, m])
-                    }}
-                    className={`p-4 rounded-2xl text-left transition-all border text-[10px] font-black uppercase ${metricasSelecionadas.includes(m) ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-400' : 'bg-slate-950 border-slate-800 text-slate-500'}`}
-                  >
-                    {m}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="p-8 bg-slate-950/50 border-t border-slate-800 flex justify-between items-center">
-              <div className="text-[10px] font-black uppercase text-slate-500">
-                <span className="text-emerald-500">{metricasSelecionadas.length}</span> MÉTRICAS SELECIONADAS
-              </div>
-              <button onClick={() => setPainelAberto(false)} className="px-8 py-4 bg-emerald-500 text-slate-950 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-400 transition-all">Confirmar Seleção</button>
-            </div>
+        {jogadorReferencia && (
+          <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-emerald-500 text-slate-950 px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs shadow-[0_0_40px_rgba(16,185,129,0.5)] flex items-center gap-6 z-50 animate-bounce">
+            <span>Modo Similaridade: {jogadorReferencia.Jogador}</span>
+            <button onClick={() => setJogadorReferencia(null)} className="bg-slate-950 text-white p-1 rounded-lg hover:scale-110 transition-all"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg></button>
           </div>
-        </div>
-      )}
+        )}
+
+      </div>
 
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #0a0c10; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #10b981; }
       `}</style>
