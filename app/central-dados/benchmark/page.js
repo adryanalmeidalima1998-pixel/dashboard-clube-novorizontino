@@ -11,22 +11,24 @@ export default function BenchmarkPage() {
   const [erro, setErro] = useState(null)
   
   const [jogadorSelecionado, setJogadorSelecionado] = useState(null)
-  const [posicaoReferencia, setPosicaoReferencia] = useState(null) // NOVO: Posição para comparação
-  const [todasAsMetricas, setTodasAsMetricas] = useState([])
+  const [posicaoReferencia, setPosicaoReferencia] = useState(null)
   const [categoriasMetricas, setCategoriasMetricas] = useState({})
   const [abaAtiva, setAbaAtiva] = useState('Ataque')
-  const [ligaSelecionada, setLigaSelecionada] = useState('Todas')
-  const [temporadaSelecionada, setTemporadaSelecionada] = useState('Todas')
+  
+  // Filtros de Contexto
+  const [filtroTime, setFiltroTime] = useState('Todas')
+  const [filtroPosicao, setFiltroPosicao] = useState('Todas')
+  const [busca, setBusca] = useState('')
   
   const [mediasLiga, setMediasLiga] = useState({})
-  const [ligas, setLigas] = useState([])
-  const [temporadas, setTemporadas] = useState([])
+  const [times, setTimes] = useState([])
+  const [posicoes, setPosicoes] = useState([])
   const [todasPosicoes, setTodasPosicoes] = useState([])
 
   useEffect(() => {
     const carregarDados = async () => {
       try {
-        const response = await fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vSVC0eenchMDxK3wsOTXjq9kQiy3aHTFl0X1o5vwJZR7RiZzg1Irxxe_SL2IDrqb3c1i7ZL2ugpBJkN/pub?output=csv')
+        const response = await fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vSVC0eenchMDxK3wsOTXjq9kQiy3aHTFl0X1o5vwJZR7RiZzg1Irxxe_SL2IDrqb3c1i7ZL2ugpBJkN/pub?output=csv&t=' + Date.now())
         const csvText = await response.text()
         
         Papa.parse(csvText, {
@@ -37,14 +39,13 @@ export default function BenchmarkPage() {
               const dados = results.data.filter(j => j.Jogador && j.Jogador.trim())
               setJogadores(dados)
               if (dados.length > 0) {
-                setLigas(['Todas', ...new Set(dados.map(j => j.Liga).filter(Boolean))])
-                setTemporadas(['Todas', ...new Set(dados.map(j => j.Temporada).filter(Boolean))])
+                setTimes(['Todas', ...new Set(dados.map(j => j.Time).filter(Boolean))].sort())
+                setPosicoes(['Todas', ...new Set(dados.map(j => j.Posição).filter(Boolean))].sort())
                 setTodasPosicoes([...new Set(dados.map(j => j.Posição).filter(Boolean))].sort())
                 
                 const colunas = Object.keys(dados[0]).filter(col => col && col.trim() && !['Jogador', 'Time', 'Posição', 'Número', 'Idade', 'Altura', 'Peso', 'Nacionalidade', '?', 'Liga', 'Temporada'].includes(col))
-                setTodasAsMetricas(colunas)
                 setCategoriasMetricas(categorizarMetricas(colunas))
-                calcularMedias(dados, colunas, 'Todas', 'Todas')
+                calcularMedias(dados, colunas)
                 
                 if (dados[0]) {
                   setJogadorSelecionado(dados[0].Jogador)
@@ -69,13 +70,6 @@ export default function BenchmarkPage() {
     }
     carregarDados()
   }, [])
-
-  useEffect(() => {
-    if (jogadores.length > 0) {
-      const colunas = Object.keys(jogadores[0]).filter(col => col && col.trim() && !['Jogador', 'Time', 'Posição', 'Número', 'Idade', 'Altura', 'Peso', 'Nacionalidade', '?', 'Liga', 'Temporada'].includes(col))
-      calcularMedias(jogadores, colunas, ligaSelecionada, temporadaSelecionada)
-    }
-  }, [ligaSelecionada, temporadaSelecionada, jogadores])
 
   const parseValue = (val) => {
     if (!val || val === '-' || val === 'nan' || val === '') return 0
@@ -106,15 +100,12 @@ export default function BenchmarkPage() {
     return categorias
   }
 
-  const calcularMedias = (dados, metricas, liga, temporada) => {
-    let dadosFiltrados = dados
-    if (liga !== 'Todas') dadosFiltrados = dadosFiltrados.filter(j => j.Liga === liga)
-    if (temporada !== 'Todas') dadosFiltrados = dadosFiltrados.filter(j => j.Temporada === temporada)
-    const posicoes = [...new Set(dadosFiltrados.map(j => j.Posição).filter(Boolean))]
+  const calcularMedias = (dados, metricas) => {
+    const posicoesUnicas = [...new Set(dados.map(j => j.Posição).filter(Boolean))]
     const medias = {}
-    posicoes.forEach(posicao => {
+    posicoesUnicas.forEach(posicao => {
       medias[posicao] = {}
-      const jogadoresPosicao = dadosFiltrados.filter(j => j.Posição === posicao)
+      const jogadoresPosicao = dados.filter(j => j.Posição === posicao)
       metricas.forEach(metrica => {
         const valores = jogadoresPosicao.map(j => parseValue(j[metrica])).filter(v => v > 0)
         medias[posicao][metrica] = valores.length > 0 ? valores.reduce((a, b) => a + b, 0) / valores.length : 0
@@ -123,9 +114,17 @@ export default function BenchmarkPage() {
     setMediasLiga(medias)
   }
 
+  const jogadoresFiltrados = useMemo(() => {
+    return jogadores.filter(j => {
+      const passaBusca = j.Jogador.toLowerCase().includes(busca.toLowerCase())
+      const passaTime = filtroTime === 'Todas' || j.Time === filtroTime
+      const passaPosicao = filtroPosicao === 'Todas' || j.Posição === filtroPosicao
+      return passaBusca && passaTime && passaPosicao
+    })
+  }, [jogadores, busca, filtroTime, filtroPosicao])
+
   const jogadorAtual = useMemo(() => {
     const j = jogadores.find(j => j.Jogador === jogadorSelecionado)
-    if (j && !posicaoReferencia) setPosicaoReferencia(j.Posição)
     return j
   }, [jogadores, jogadorSelecionado])
 
@@ -164,22 +163,29 @@ export default function BenchmarkPage() {
             <div className="bg-slate-900/40 backdrop-blur-md rounded-[2.5rem] p-6 border border-slate-800/50 shadow-2xl">
               <h2 className="text-slate-400 font-black text-[10px] uppercase tracking-[0.2em] mb-6">Filtros de Contexto</h2>
               <div className="space-y-4">
-                <select value={ligaSelecionada} onChange={(e) => setLigaSelecionada(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black uppercase tracking-widest focus:border-emerald-500/50">
-                  {ligas.map(l => <option key={l} value={l}>{l}</option>)}
+                <input 
+                  type="text" 
+                  placeholder="BUSCAR ATLETA..." 
+                  value={busca}
+                  onChange={(e) => setBusca(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black uppercase tracking-widest focus:border-emerald-500/50 outline-none"
+                />
+                <select value={filtroTime} onChange={(e) => setFiltroTime(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black uppercase tracking-widest focus:border-emerald-500/50">
+                  {times.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
                 </select>
-                <select value={temporadaSelecionada} onChange={(e) => setTemporadaSelecionada(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black uppercase tracking-widest focus:border-emerald-500/50">
-                  {temporadas.map(t => <option key={t} value={t}>{t}</option>)}
+                <select value={filtroPosicao} onChange={(e) => setFiltroPosicao(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black uppercase tracking-widest focus:border-emerald-500/50">
+                  {posicoes.map(p => <option key={p} value={p}>{p.toUpperCase()}</option>)}
                 </select>
               </div>
             </div>
 
             <div className="bg-slate-900/40 backdrop-blur-md rounded-[2.5rem] p-6 border border-slate-800/50 shadow-2xl">
-              <h2 className="text-slate-400 font-black text-[10px] uppercase tracking-[0.2em] mb-6">Atletas</h2>
+              <h2 className="text-slate-400 font-black text-[10px] uppercase tracking-[0.2em] mb-6">Atletas ({jogadoresFiltrados.length})</h2>
               <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-                {jogadores.map(j => (
+                {jogadoresFiltrados.map(j => (
                   <button key={j.Jogador} onClick={() => { setJogadorSelecionado(j.Jogador); setPosicaoReferencia(j.Posição); }} className={`w-full text-left p-4 rounded-2xl transition-all border ${jogadorSelecionado === j.Jogador ? 'bg-emerald-500 border-emerald-500 text-slate-950 shadow-[0_0_15px_rgba(16,185,129,0.3)]' : 'bg-slate-950 border-slate-800 hover:border-slate-700 text-slate-400'}`}>
                     <div className="font-black italic uppercase text-xs tracking-tighter">{j.Jogador}</div>
-                    <div className={`text-[9px] font-bold uppercase tracking-widest mt-1 ${jogadorSelecionado === j.Jogador ? 'text-slate-900' : 'text-slate-600'}`}>{j.Posição}</div>
+                    <div className={`text-[9px] font-bold uppercase tracking-widest mt-1 ${jogadorSelecionado === j.Jogador ? 'text-slate-900' : 'text-slate-600'}`}>{j.Time} • {j.Posição}</div>
                   </button>
                 ))}
               </div>
@@ -188,7 +194,7 @@ export default function BenchmarkPage() {
 
           {/* ÁREA DE ANÁLISE */}
           <div className="lg:col-span-3 space-y-8">
-            {jogadorAtual && (
+            {jogadorAtual ? (
               <div className="bg-slate-900/40 backdrop-blur-md rounded-[3rem] p-10 border border-slate-800/50 shadow-2xl">
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12 pb-8 border-b border-slate-800/50">
                   <div>
@@ -200,7 +206,6 @@ export default function BenchmarkPage() {
                     <p className="text-slate-500 font-bold uppercase text-xs tracking-widest mt-2">{jogadorAtual.Posição} • {jogadorAtual.Time}</p>
                   </div>
                   
-                  {/* NOVO: Seletor de Posição de Referência */}
                   <div className="bg-slate-950 px-6 py-4 rounded-2xl border border-slate-800 text-center min-w-[200px]">
                     <span className="text-[9px] text-slate-600 font-black uppercase tracking-widest block mb-2">Comparar com Média de:</span>
                     <select 
@@ -250,6 +255,10 @@ export default function BenchmarkPage() {
                     )
                   })}
                 </div>
+              </div>
+            ) : (
+              <div className="h-full flex items-center justify-center bg-slate-900/20 rounded-[3rem] border border-dashed border-slate-800 min-h-[400px]">
+                <p className="text-slate-600 font-black italic uppercase tracking-widest">Selecione um atleta para iniciar a análise</p>
               </div>
             )}
           </div>

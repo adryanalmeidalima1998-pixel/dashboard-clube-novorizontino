@@ -116,35 +116,8 @@ export default function Home() {
           </div>
         </Link>
 
-        {/* NOVO: CARD CENTRAL DE GOLEIROS */}
-        <Link href="/central-goleiros" className="bg-slate-900/40 backdrop-blur-md rounded-[2.5rem] p-8 border border-slate-800/50 group hover:border-emerald-500/30 transition-all duration-500 flex flex-col justify-between overflow-hidden relative shadow-2xl">
-          <div className="absolute -right-4 -top-4 w-32 h-32 bg-emerald-500/5 rounded-full blur-3xl group-hover:bg-emerald-500/10 transition-all"></div>
-          
-          <div>
-            <div className="flex items-center gap-3 mb-8">
-              <div className="w-1.5 h-6 bg-emerald-500 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.5)]"></div>
-              <h2 className="text-slate-400 font-black text-[10px] uppercase tracking-[0.2em]">Especializado</h2>
-            </div>
-            
-            <div className="flex items-center gap-6 mb-8">
-              <div className="w-20 h-20 bg-slate-950 rounded-[2rem] flex items-center justify-center border border-slate-800 group-hover:border-emerald-500/30 transition-all duration-500 shadow-inner">
-                <svg className="w-10 h-10 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
-              </div>
-              <div>
-                <span className="block text-3xl font-black italic uppercase tracking-tighter text-white group-hover:text-emerald-400 transition-colors">Goleiros</span>
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Análise de Goleiros da Liga</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-slate-950/80 p-5 rounded-2xl border border-slate-800 group-hover:bg-emerald-500 transition-all duration-500 flex items-center justify-between shadow-xl">
-            <span className="text-xs font-black uppercase tracking-widest group-hover:text-slate-950">Acessar Central</span>
-            <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform group-hover:text-slate-950" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
-          </div>
-        </Link>
-
         {/* CENTRAL DE DADOS - FULL WIDTH DESIGN */}
-        <Link href="/central-dados" className="bg-slate-900/40 backdrop-blur-md rounded-[3rem] p-10 border border-slate-800/50 lg:col-span-2 group hover:border-emerald-500/30 transition-all duration-700 overflow-hidden relative shadow-2xl">
+        <Link href="/central-dados" className="bg-slate-900/40 backdrop-blur-md rounded-[3rem] p-10 border border-slate-800/50 lg:col-span-3 group hover:border-emerald-500/30 transition-all duration-700 overflow-hidden relative shadow-2xl">
           <div className="absolute right-0 top-0 w-1/2 h-full bg-gradient-to-l from-emerald-500/[0.03] to-transparent"></div>
           <div className="absolute -left-20 -bottom-20 w-64 h-64 bg-emerald-500/[0.02] rounded-full blur-3xl"></div>
           
@@ -156,6 +129,19 @@ export default function Home() {
               </div>
               <h3 className="text-4xl md:text-5xl font-black italic uppercase tracking-tighter text-white mb-4 group-hover:text-emerald-400 transition-colors duration-500">Análise de Dados <span className="text-slate-600 group-hover:text-white transition-colors">Avançada</span></h3>
               <p className="text-slate-500 font-medium max-w-2xl text-sm leading-relaxed">Acesse o ecossistema completo de Big Data do clube. Métricas de performance, scouting avançado e indicadores técnicos integrados em tempo real.</p>
+            </div>
+            
+            <div className="grid grid-cols-3 gap-6 w-full lg:w-auto">
+              {[
+                { label: 'Métricas', val: '150+' },
+                { label: 'Atletas', val: '250+' },
+                { label: 'Análises', val: '14' }
+              ].map((stat, i) => (
+                <div key={i} className="bg-slate-950/80 p-6 rounded-[2rem] border border-slate-800 min-w-[140px] text-center shadow-inner group-hover:border-emerald-500/20 transition-all duration-500">
+                  <span className="text-[10px] text-slate-600 uppercase font-black tracking-widest block mb-2">{stat.label}</span>
+                  <span className="text-3xl font-black text-white italic">{stat.val}</span>
+                </div>
+              ))}
             </div>
           </div>
         </Link>
