@@ -105,7 +105,7 @@ export default function CentralDados() {
     }
 
     colunas.forEach(metrica => {
-      if (['?', 'Jogador', 'Time', 'Equipe', 'Posição', 'Idade', 'Altura', 'Peso', 'Nacionalidade', '№'].includes(metrica)) return
+      if (['?', 'ID_ATLETA', 'Jogador', 'Time', 'Equipe', 'Posição', 'Idade', 'Altura', 'Peso', 'Nacionalidade', '№'].includes(metrica)) return
       let categorizado = false
       for (const [cat, chaves] of Object.entries(palavrasChave)) {
         if (chaves.some(k => metrica.includes(k))) { categorias[cat].push(metrica); categorizado = true; break; }
@@ -285,10 +285,11 @@ export default function CentralDados() {
               <tr key={idx} className={`border-b border-slate-800/30 hover:bg-emerald-500/5 transition-all group ${jogadorReferencia?.Jogador === j.Jogador ? 'bg-emerald-500/10' : ''}`}>
                 <td className="p-6">
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-[10px] font-black text-slate-600 group-hover:bg-emerald-500 group-hover:text-slate-950 transition-all">{j.Jogador.substring(0, 2).toUpperCase()}</div>
+                    <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-[10px] font-black text-slate-600 group-hover:bg-emerald-500 group-hover:text-slate-950 transition-all">{j.ID_ATLETA || j.Jogador.substring(0, 2).toUpperCase()}</div>
                     <div className="flex flex-col">
                       <span className="font-black italic uppercase text-sm group-hover:text-emerald-400 transition-colors">{j.Jogador}</span>
                       <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest">• {j.Idade} ANOS</span>
+                      {j.ID_ATLETA && <span className="text-[7px] font-bold text-slate-700 uppercase tracking-widest">{j.ID_ATLETA}</span>}
                     </div>
                   </div>
                 </td>

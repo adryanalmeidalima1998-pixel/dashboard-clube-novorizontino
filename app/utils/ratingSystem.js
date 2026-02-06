@@ -3,6 +3,7 @@ import { safeParseFloat } from './dataCleaner';
 
 /**
  * Calcula a nota (0-10) de um atleta para um perfil específico
+ * Usa Z-Score normalizado pela posição do atleta
  * @param {Object} atleta - Objeto do atleta com suas métricas
  * @param {Array} todosAtletas - Lista de todos os atletas para cálculo da média/desvio
  * @param {string} perfilNome - Nome do perfil técnico (ex: 'Lateral Ofensivo')
@@ -18,8 +19,9 @@ export const calculateRating = (atleta, todosAtletas, perfilNome) => {
     const peso = weights[metrica];
     
     // Pegar valores de todos os atletas da MESMA POSIÇÃO para normalizar
+    const posicaoAtleta = (atleta.Posição || '').trim().toUpperCase();
     const valoresPosicao = todosAtletas
-      .filter(a => a.Posição === atleta.Posição)
+      .filter(a => (a.Posição || '').trim().toUpperCase() === posicaoAtleta)
       .map(a => safeParseFloat(a[metrica]));
 
     if (valoresPosicao.length === 0) return;
@@ -48,20 +50,49 @@ export const calculateRating = (atleta, todosAtletas, perfilNome) => {
 
 /**
  * Retorna os perfis sugeridos para uma posição
+ * Usa os novos nomes de posição do CSV: LATERAL DIREITO, LATERAL ESQUERDO, ZAGUEIRO, VOLANTE, MÉDIO, MEIA, EXTREMO, SEGUNDO ATACANTE, ATACANTE
  */
 export const getPerfisForPosicao = (posicao) => {
-  // Tenta match exato ou parcial (ex: "LD" em "Lateral Direito")
+  if (!posicao) return [];
+  const posNorm = posicao.trim().toUpperCase();
+  
+  // Busca exata primeiro
+  if (POSICAO_TO_PERFIS[posNorm]) {
+    return POSICAO_TO_PERFIS[posNorm];
+  }
+  
+  // Busca parcial (fallback)
   const key = Object.keys(POSICAO_TO_PERFIS).find(k => 
-    posicao?.toUpperCase().includes(k) || k.includes(posicao?.toUpperCase())
+    posNorm.includes(k) || k.includes(posNorm)
   );
-  return POSICAO_TO_PERFIS[key] || ['Geral'];
+  return key ? POSICAO_TO_PERFIS[key] : [];
+};
+
+/**
+ * Retorna todas as posições que podem usar um determinado perfil
+ */
+export const getPosicoesForPerfil = (perfilNome) => {
+  const posicoes = [];
+  Object.entries(POSICAO_TO_PERFIS).forEach(([posicao, perfis]) => {
+    if (perfis.includes(perfilNome)) {
+      posicoes.push(posicao);
+    }
+  });
+  return posicoes;
 };
 
 /**
  * Gera o ranking de atletas por perfil
+ * Filtra automaticamente apenas os atletas das posições compatíveis
  */
 export const getRankingByPerfil = (atletas, perfilNome) => {
+  const posicoesCompativeis = getPosicoesForPerfil(perfilNome);
+  
   return atletas
+    .filter(a => {
+      const posNorm = (a.Posição || '').trim().toUpperCase();
+      return posicoesCompativeis.some(p => p === posNorm);
+    })
     .map(a => ({
       ...a,
       notaPerfil: calculateRating(a, atletas, perfilNome)
@@ -75,7 +106,11 @@ export const getRankingByPerfil = (atletas, perfilNome) => {
 export const getDominantPerfil = (atleta, todosAtletas) => {
   const perfisPossiveis = getPerfisForPosicao(atleta.Posição);
   
-  let melhorPerfil = 'Geral';
+  if (perfisPossiveis.length === 0) {
+    return { perfil: 'Sem perfil', nota: 0 };
+  }
+
+  let melhorPerfil = perfisPossiveis[0];
   let maiorNota = 0;
 
   perfisPossiveis.forEach(perfil => {

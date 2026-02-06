@@ -6,8 +6,8 @@ import Papa from 'papaparse'
 import { jsPDF } from 'jspdf'
 import 'jspdf-autotable'
 import { cleanData, normalizeTeamName, safeParseFloat } from '../../utils/dataCleaner'
-import { calculateRating, getPerfisForPosicao, getDominantPerfil } from '../../utils/ratingSystem'
-import { PERFIL_WEIGHTS, POSICAO_TO_PERFIS } from '../../utils/perfilWeights'
+import { calculateRating, getPerfisForPosicao, getDominantPerfil, getRankingByPerfil, getPosicoesForPerfil } from '../../utils/ratingSystem'
+import { PERFIL_WEIGHTS, POSICAO_TO_PERFIS, PERFIL_DESCRICOES } from '../../utils/perfilWeights'
 
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSVC0eenchMDxK3wsOTXjq9kQiy3aHTFl0X1o5vwJZR7RiZzg1Irxxe_SL2IDrqb3c1i7ZL2ugpBJkN/pub?output=csv";
 
@@ -105,13 +105,23 @@ export default function RankingsPage() {
     setOrdenacao(prev => ({ coluna, direcao: prev.coluna === coluna && prev.direcao === 'desc' ? 'asc' : 'desc' }))
   }
 
-  // Agrupar perfis por categoria
+  // Agrupar perfis por categoria (usando prefixo correto)
   const perfisPorCategoria = useMemo(() => {
+    const ordemCategorias = [
+      { key: 'Goleiro', label: 'Goleiros' },
+      { key: 'Lateral', label: 'Laterais' },
+      { key: 'Zagueiro', label: 'Zagueiros' },
+      { key: 'Volante', label: 'Volantes' },
+      { key: '2º Volante', label: '2º Volantes (Médios)' },
+      { key: 'Meia', label: 'Meias' },
+      { key: 'Extremo', label: 'Extremos' },
+      { key: 'Segundo Atacante', label: 'Segundo Atacante' },
+      { key: 'Centroavante', label: 'Centroavantes' }
+    ]
     const categorias = {}
-    Object.keys(PERFIL_WEIGHTS).forEach(perfil => {
-      const cat = perfil.split(' ')[0] // Ex: "Lateral", "Zagueiro", etc.
-      if (!categorias[cat]) categorias[cat] = []
-      categorias[cat].push(perfil)
+    ordemCategorias.forEach(({ key, label }) => {
+      const perfis = Object.keys(PERFIL_WEIGHTS).filter(p => p.startsWith(key))
+      if (perfis.length > 0) categorias[label] = perfis
     })
     return categorias
   }, [])
@@ -177,7 +187,7 @@ export default function RankingsPage() {
           <div className="space-y-4">
             {Object.entries(perfisPorCategoria).map(([categoria, perfis]) => (
               <div key={categoria}>
-                <h3 className="text-[9px] font-black uppercase tracking-widest text-slate-600 mb-2">{categoria}s</h3>
+                <h3 className="text-[9px] font-black uppercase tracking-widest text-slate-600 mb-2">{categoria}</h3>
                 <div className="flex flex-wrap gap-2">
                   {perfis.map(perfil => (
                     <button
@@ -206,6 +216,7 @@ export default function RankingsPage() {
               <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mt-1">
                 Posições compatíveis: {posicoesCompativeis.join(', ')} | {jogadoresRankeados.length} atletas encontrados
               </p>
+              {PERFIL_DESCRICOES[perfilAtivo] && <p className="text-[10px] text-slate-400 mt-2 italic">{PERFIL_DESCRICOES[perfilAtivo]}</p>}
             </div>
             <div className="flex flex-wrap gap-3">
               {metricasPerfil.map(m => (
@@ -269,10 +280,11 @@ export default function RankingsPage() {
                 </td>
                 <td className="p-5">
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-[10px] font-black text-slate-600 group-hover:bg-emerald-500 group-hover:text-slate-950 transition-all">{j.Jogador.substring(0, 2).toUpperCase()}</div>
+                    <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-[10px] font-black text-slate-600 group-hover:bg-emerald-500 group-hover:text-slate-950 transition-all">{j.ID_ATLETA || j.Jogador.substring(0, 2).toUpperCase()}</div>
                     <div className="flex flex-col">
                       <span className="font-black italic uppercase text-sm group-hover:text-emerald-400 transition-colors">{j.Jogador}</span>
                       <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest">• {j.Idade} ANOS</span>
+                      {j.ID_ATLETA && <span className="text-[7px] font-bold text-slate-700 uppercase tracking-widest">{j.ID_ATLETA}</span>}
                     </div>
                   </div>
                 </td>
