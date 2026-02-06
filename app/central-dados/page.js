@@ -7,8 +7,6 @@ import { jsPDF } from 'jspdf'
 import 'jspdf-autotable'
 import { LineChart, Line, ResponsiveContainer } from 'recharts'
 import { cleanData, normalizeTeamName, safeParseFloat } from '../utils/dataCleaner'
-import { calculateRating, getPerfisForPosicao, getDominantPerfil } from '../utils/ratingSystem'
-import { PERFIL_WEIGHTS, POSICAO_TO_PERFIS } from '../utils/perfilWeights'
 
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSVC0eenchMDxK3wsOTXjq9kQiy3aHTFl0X1o5vwJZR7RiZzg1Irxxe_SL2IDrqb3c1i7ZL2ugpBJkN/pub?output=csv";
 
@@ -25,7 +23,6 @@ export default function CentralDados() {
   const [filtrosPosicao, setFiltrosPosicao] = useState([])
   const [filtroIdade, setFiltroIdade] = useState({ min: 15, max: 45 })
   const [filtroMinutagem, setFiltroMinutagem] = useState(0)
-  const [perfilAtivo, setPerfilAtivo] = useState('nenhum')
   
   const [jogadorReferencia, setJogadorReferencia] = useState(null)
   const [jogadoresSimilares, setJogadoresSimilares] = useState([])
@@ -116,12 +113,9 @@ export default function CentralDados() {
       if (!categorizado) categorias['Geral'].push(metrica)
     })
     if (colunas.includes('Index')) {
-      categorias['Geral'] = categorias['Geral'].filter(m => m !== 'Index'); categorias['Geral'].unshift('Index')
+      categorias['Geral'] = categorias['Geral'].filter(m => m !== 'Index')
+      categorias['Geral'].unshift('Index')
     }
-    // Adiciona Nota Perfil como métrica selecionável
-    categorias['Geral'] = categorias['Geral'].filter(m => m !== 'Nota Perfil');
-    categorias['Geral'].unshift('Nota Perfil');
-    
     return categorias
   }
 
@@ -140,7 +134,7 @@ export default function CentralDados() {
     if (jogadorReferencia?.Jogador === jogador.Jogador) { setJogadorReferencia(null); setJogadoresSimilares([]); return; }
     setJogadorReferencia(jogador)
     
-    const metricasCalculo = metricasSelecionadas.filter(m => !['Jogador', 'Time', 'Equipe', 'Posição', 'Nota Perfil'].includes(m))
+    const metricasCalculo = metricasSelecionadas.filter(m => !['Jogador', 'Time', 'Equipe', 'Posição'].includes(m))
     
     const scores = jogadores.filter(j => j.Jogador !== jogador.Jogador && j.Posição === jogador.Posição).map(j => {
       let dist = 0;
@@ -148,12 +142,6 @@ export default function CentralDados() {
         const v1 = safeParseFloat(jogador[m]), v2 = safeParseFloat(j[m])
         dist += Math.pow(v1 === 0 ? v2 : Math.abs(v1 - v2) / v1, 2)
       })
-      
-      // Inclui similaridade de Nota de Perfil Dominante no cálculo
-      const n1 = safeParseFloat(getDominantPerfil(jogador, jogadores).nota)
-      const n2 = safeParseFloat(getDominantPerfil(j, jogadores).nota)
-      dist += Math.pow(Math.abs(n1 - n2) / 10, 2)
-
       const similaridade = 100 / (1 + Math.sqrt(dist))
       return { ...j, scoreSimilaridade: similaridade }
     }).sort((a, b) => b.scoreSimilaridade - a.scoreSimilaridade).slice(0, 5)
@@ -164,46 +152,23 @@ export default function CentralDados() {
   const jogadoresFiltrados = useMemo(() => {
     if (jogadorReferencia) return [jogadorReferencia, ...jogadoresSimilares]
     
-    // 1. Filtragem por posição baseada no perfil se houver perfil selecionado
     let filtrados = jogadores.filter(j => {
       const pB = (j.Jogador || '').toLowerCase().includes(busca.toLowerCase())
       const pT = filtroTime === 'todos' || j.Time === filtroTime || j.Equipe === filtroTime
-      
-      // Se houver perfil ativo, filtrar apenas jogadores que podem ter aquele perfil
-      let pP = filtrosPosicao.length === 0 || filtrosPosicao.includes(j.Posição)
-      if (perfilAtivo !== 'nenhum' && perfilAtivo !== 'Geral') {
-        const posicoesCompativeis = Object.entries(POSICAO_TO_PERFIS)
-          .filter(([pos, perfis]) => perfis.includes(perfilAtivo))
-          .map(([pos]) => pos)
-        pP = posicoesCompativeis.includes(j.Posição)
-      }
-
+      const pP = filtrosPosicao.length === 0 || filtrosPosicao.includes(j.Posição)
       const idade = safeParseFloat(j.Idade)
       const pI = idade >= filtroIdade.min && idade <= filtroIdade.max
       const pM = safeParseFloat(j['Minutos jogados']) >= filtroMinutagem
       return pB && pT && pP && pI && pM
     })
 
-    // 2. Cálculo das notas
-    const dadosProcessados = filtrados.map(j => {
-      const dominant = getDominantPerfil(j, jogadores)
-      return {
-        ...j,
-        'Nota Perfil': perfilAtivo === 'nenhum' ? dominant.nota : calculateRating(j, jogadores, perfilAtivo),
-        'Perfil Nome': perfilAtivo === 'nenhum' ? dominant.perfil : perfilAtivo
-      }
-    })
-
-    // 3. Ordenação (Se perfil selecionado, ordena por Nota Perfil por padrão se não houver ordenação manual explícita)
-    const colunaOrdenacao = (perfilAtivo !== 'nenhum' && ordenacao.coluna === 'Index') ? 'Nota Perfil' : ordenacao.coluna
-    
-    dadosProcessados.sort((a, b) => {
-      const vA = safeParseFloat(a[colunaOrdenacao]), vB = safeParseFloat(b[colunaOrdenacao])
-      if (isNaN(vA)) return ordenacao.direcao === 'asc' ? String(a[colunaOrdenacao]).localeCompare(String(b[colunaOrdenacao])) : String(b[colunaOrdenacao]).localeCompare(String(a[colunaOrdenacao]))
+    filtrados.sort((a, b) => {
+      const vA = safeParseFloat(a[ordenacao.coluna]), vB = safeParseFloat(b[ordenacao.coluna])
+      if (isNaN(vA)) return ordenacao.direcao === 'asc' ? String(a[ordenacao.coluna]).localeCompare(String(b[ordenacao.coluna])) : String(b[ordenacao.coluna]).localeCompare(String(a[ordenacao.coluna]))
       return ordenacao.direcao === 'asc' ? vA - vB : vB - vA
     })
-    return dadosProcessados
-  }, [jogadores, busca, filtroTime, filtrosPosicao, filtroIdade, filtroMinutagem, ordenacao, jogadorReferencia, jogadoresSimilares, perfilAtivo])
+    return filtrados
+  }, [jogadores, busca, filtroTime, filtrosPosicao, filtroIdade, filtroMinutagem, ordenacao, jogadorReferencia, jogadoresSimilares])
 
   const times = useMemo(() => ['todos', ...new Set(jogadores.map(j => j.Time || j.Equipe).filter(Boolean))], [jogadores])
   const posicoes = useMemo(() => [...new Set(jogadores.map(j => j.Posição).filter(Boolean))], [jogadores])
@@ -228,13 +193,15 @@ export default function CentralDados() {
             <div><h1 className="text-4xl md:text-6xl font-black italic uppercase tracking-tighter leading-none">Central de <span className="text-emerald-500">Dados</span></h1></div>
           </div>
           <div className="flex flex-wrap gap-3">
-            <button onClick={() => router.push('/central-dados/goleiros')} className="px-6 py-3 bg-slate-900/80 border border-emerald-500/30 text-emerald-500 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500/20 transition-all shadow-[0_0_15px_rgba(16,185,129,0.1)]">Goleiros</button>
+            <button onClick={() => router.push('/central-dados/rankings')} className="px-6 py-3 bg-gradient-to-r from-emerald-500/20 to-emerald-500/5 border border-emerald-500/40 text-emerald-400 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:from-emerald-500/30 hover:to-emerald-500/10 transition-all shadow-[0_0_20px_rgba(16,185,129,0.1)]">Rankings</button>
+            <button onClick={() => router.push('/central-dados/goleiros')} className="px-6 py-3 bg-slate-900/80 border border-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500/20 transition-all">Goleiros</button>
             <button onClick={() => router.push('/central-dados/graficos')} className="px-6 py-3 bg-slate-900/80 border border-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500/20 transition-all">Gráficos</button>
             <button onClick={() => router.push('/central-dados/benchmark')} className="px-6 py-3 bg-slate-900/80 border border-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500/20 transition-all">Benchmark</button>
             <button onClick={exportarPDF} className="px-6 py-3 bg-emerald-500 text-slate-950 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-400 transition-all">PDF Clean</button>
           </div>
         </div>
 
+        {/* FILTROS */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
             <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Busca & Time</h3>
@@ -260,18 +227,21 @@ export default function CentralDados() {
             </div>
           </div>
           <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Perfil Técnico (Ranking Automático)</h3>
-            <select value={perfilAtivo} onChange={e => setPerfilAtivo(e.target.value)} className="w-full bg-slate-950 border border-emerald-500/50 rounded-xl p-3 text-[10px] font-black uppercase text-emerald-500 outline-none">
-              <option value="nenhum">SEM FILTRO DE PERFIL</option>
-              {Object.keys(PERFIL_WEIGHTS).map(p => <option key={p} value={p}>{p.toUpperCase()}</option>)}
-            </select>
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Resumo</h3>
+            <div className="space-y-3">
+              <div className="flex justify-between"><span className="text-[9px] text-slate-500 font-bold uppercase">Atletas</span><span className="text-emerald-500 font-black">{jogadoresFiltrados.length}</span></div>
+              <div className="flex justify-between"><span className="text-[9px] text-slate-500 font-bold uppercase">Métricas</span><span className="text-emerald-500 font-black">{metricasSelecionadas.length}</span></div>
+              <div className="flex justify-between"><span className="text-[9px] text-slate-500 font-bold uppercase">Referência</span><span className="text-emerald-500 font-black">{jogadorReferencia ? jogadorReferencia.Jogador : 'Nenhum'}</span></div>
+            </div>
           </div>
         </div>
 
+        {/* SELETOR DE MÉTRICAS */}
         <div className="bg-slate-900/40 p-8 rounded-[2rem] border border-slate-800/50 mb-8">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
             <div className="flex items-center gap-4">
               <h2 className="text-xl font-black italic uppercase">Escolher <span className="text-emerald-500">Métricas</span></h2>
+              <span className="bg-emerald-500 text-slate-950 text-[9px] font-black px-2 py-1 rounded-lg">{metricasSelecionadas.length} / 8</span>
               <div className="flex gap-2">
                 <input type="text" placeholder="SALVAR TEMPLATE..." value={nomeNovoTemplate} onChange={e => setNomeNovoTemplate(e.target.value)} className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-[8px] font-black uppercase tracking-widest outline-none w-32" />
                 <button onClick={salvarTemplate} className="p-1.5 bg-emerald-500 text-slate-950 rounded-lg hover:bg-emerald-400 transition-all"><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" /></svg></button>
@@ -285,26 +255,30 @@ export default function CentralDados() {
             </div>
           </div>
           
-          <div className="mb-6 flex flex-wrap gap-1">
-            {templates.map(t => (
-              <div key={t.id} className="flex items-center gap-1.5 bg-slate-800/50 border border-slate-700 rounded-lg px-2 py-1 group">
-                <button onClick={() => setMetricasSelecionadas(t.metricas)} className="text-[8px] font-black uppercase text-slate-400 hover:text-emerald-400">{t.nome}</button>
-                <button onClick={() => setTemplates(templates.filter(x => x.id !== t.id))} className="text-slate-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"><svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg></button>
-              </div>
-            ))}
-          </div>
+          {/* Templates salvos */}
+          {templates.length > 0 && (
+            <div className="mb-6 flex flex-wrap gap-1">
+              {templates.map(t => (
+                <div key={t.id} className="flex items-center gap-1.5 bg-slate-800/50 border border-slate-700 rounded-lg px-2 py-1 group">
+                  <button onClick={() => setMetricasSelecionadas(t.metricas)} className="text-[8px] font-black uppercase text-slate-400 hover:text-emerald-400">{t.nome}</button>
+                  <button onClick={() => setTemplates(templates.filter(x => x.id !== t.id))} className="text-slate-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"><svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg></button>
+                </div>
+              ))}
+            </div>
+          )}
 
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">{categoriasMetricas[abaAtiva]?.map(m => <button key={m} onClick={() => setMetricasSelecionadas(prev => prev.includes(m) ? prev.filter(x => x !== m) : (prev.length < 12 ? [...prev, m] : prev))} className={`p-3 rounded-xl border text-[9px] font-black uppercase transition-all text-left flex items-center justify-between ${metricasSelecionadas.includes(m) ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400' : 'bg-slate-950/50 border-slate-800 text-slate-500'}`}><span>{m}</span>{metricasSelecionadas.includes(m) && <div className="w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>}</button>)}</div>
         </div>
 
+        {/* TABELA DE ATLETAS */}
         <div className="bg-slate-900/40 rounded-[2rem] border border-slate-800/50 overflow-hidden">
           <div className="overflow-x-auto"><table className="w-full text-left border-collapse">
             <thead><tr className="bg-slate-950/50 border-b border-slate-800">
               <th className="p-6 text-[10px] font-black uppercase text-slate-500 cursor-pointer" onClick={() => handleOrdenacao('Jogador')}>Atleta</th>
-              <th className="p-6 text-[10px] font-black uppercase text-slate-500">Nota</th>
+              <th className="p-6 text-[10px] font-black uppercase text-slate-500">Evolução</th>
               <th className="p-6 text-[10px] font-black uppercase text-slate-500 cursor-pointer" onClick={() => handleOrdenacao('Time')}>Equipe</th>
               <th className="p-6 text-[10px] font-black uppercase text-slate-500">Pos</th>
-              {metricasSelecionadas.map(m => <th key={m} className={`p-6 text-[10px] font-black uppercase cursor-pointer transition-all ${m === 'Nota Perfil' ? 'text-emerald-500' : 'text-slate-500 hover:text-white'}`} onClick={() => handleOrdenacao(m)}>{m}</th>)}
+              {metricasSelecionadas.map(m => <th key={m} className="p-6 text-[10px] font-black uppercase text-slate-500 hover:text-white cursor-pointer transition-all" onClick={() => handleOrdenacao(m)}>{m}</th>)}
               <th className="p-6 text-[10px] font-black uppercase text-slate-500">Ações</th>
             </tr></thead>
             <tbody>{jogadoresFiltrados.map((j, idx) => (
@@ -314,31 +288,24 @@ export default function CentralDados() {
                     <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-[10px] font-black text-slate-600 group-hover:bg-emerald-500 group-hover:text-slate-950 transition-all">{j.Jogador.substring(0, 2).toUpperCase()}</div>
                     <div className="flex flex-col">
                       <span className="font-black italic uppercase text-sm group-hover:text-emerald-400 transition-colors">{j.Jogador}</span>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest">• {j.Idade} ANOS</span>
-                        {perfilAtivo !== 'nenhum' && (
-                          <span className="px-1.5 py-0.5 bg-emerald-500/10 border border-emerald-500/30 rounded text-[7px] font-black text-emerald-400 uppercase">{j['Perfil Nome']}</span>
-                        )}
-                      </div>
+                      <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest">• {j.Idade} ANOS</span>
                     </div>
                   </div>
                 </td>
                 <td className="p-6">
-                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black italic text-sm border ${safeParseFloat(j['Nota Perfil']) >= 7.5 ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : safeParseFloat(j['Nota Perfil']) >= 5 ? 'bg-blue-500/20 border-blue-500 text-blue-400' : 'bg-slate-800 border-slate-700 text-slate-500'}`}>
-                    {j['Nota Perfil']}
+                  <div className="w-24 h-8">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={j.historicoIndex}>
+                        <Line type="monotone" dataKey="val" stroke="#10b981" strokeWidth={2} dot={false} />
+                      </LineChart>
+                    </ResponsiveContainer>
                   </div>
                 </td>
                 <td className="p-6 text-[10px] font-black uppercase text-slate-400">{j.Time || j.Equipe}</td>
                 <td className="p-6"><span className="px-3 py-1 bg-slate-950 border border-slate-800 rounded-lg text-[9px] font-black text-slate-500">{j.Posição}</span></td>
                 {metricasSelecionadas.map(m => (
                   <td key={m} className="p-6">
-                    {m === 'Nota Perfil' ? (
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black italic text-sm border ${safeParseFloat(j['Nota Perfil']) >= 7.5 ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : safeParseFloat(j['Nota Perfil']) >= 5 ? 'bg-blue-500/20 border-blue-500 text-blue-400' : 'bg-slate-800 border-slate-700 text-slate-500'}`}>
-                        {j['Nota Perfil']}
-                      </div>
-                    ) : (
-                      <span className="text-xs font-black text-slate-400">{j[m] || '0'}</span>
-                    )}
+                    <span className="text-xs font-black text-slate-400">{j[m] || '0'}</span>
                   </td>
                 ))}
                 <td className="p-6">

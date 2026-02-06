@@ -7,15 +7,28 @@ export const LOGOS = {
   
   // Times do Paulistão e outras competições
   'Santos': '/club/logos/santos.png',
+  'Santos FC': '/club/logos/santos.png',
   'Palmeiras': '/club/logos/palmeiras.png',
+  'SE Palmeiras': '/club/logos/palmeiras.png',
   'Guarani': '/club/logos/guarani.png',
+  'Guarani FC': '/club/logos/guarani.png',
   'Mirassol': '/club/logos/mirassol.png',
+  'Mirassol FC': '/club/logos/mirassol.png',
   'Botafogo-SP': '/club/logos/botafogo-sp.png',
-  'Botafogo SP': '/club/logos/botafogo-sp.png', // Variação sem hífen
+  'Botafogo SP': '/club/logos/botafogo-sp.png',
+  'Botafogo-sp': '/club/logos/botafogo-sp.png',
   'EC Primavera': '/club/logos/primavera.png',
-  'Primavera': '/club/logos/primavera.png', // Variação curta
+  'Primavera': '/club/logos/primavera.png',
   'São Bernardo': '/club/logos/são-bernardo.png',
   'São Bernardo FC': '/club/logos/são-bernardo.png',
+  
+  // Novos adversários
+  'Nacional-AM': '/club/logos/Nacional-AM.png',
+  'Nacional AM': '/club/logos/Nacional-AM.png',
+  'Nacional': '/club/logos/Nacional-AM.png',
+  'RB Bragantino': '/club/logos/RB Bragantino.png',
+  'Red Bull Bragantino': '/club/logos/RB Bragantino.png',
+  'Bragantino': '/club/logos/RB Bragantino.png',
   
   // Adicione mais times conforme necessário:
   // 'Nome do Time': '/club/logos/nome-do-arquivo.png',
@@ -45,11 +58,15 @@ export const getLogo = (nomeTime) => {
     return LOGOS[chaveEncontrada]
   }
   
-  // Se não encontrar no mapeamento, tenta buscar pelo nome do arquivo (slug)
-  const slug = nomeNormalizado.toLowerCase()
-    .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Remove acentos
-    .replace(/\s+/g, '-') // Espaços para hífens
-    .replace(/[^\w\-]+/g, '') // Remove caracteres especiais
+  // Se não encontrar no mapeamento, tenta buscar pelo nome exato do arquivo
+  // Verifica variações comuns do nome
+  const variacoes = [
+    nomeNormalizado,                                    // Nome exato
+    nomeNormalizado.replace(/\s+/g, '-'),               // Espaços para hífens
+    nomeNormalizado.toLowerCase(),                      // Minúsculas
+    nomeNormalizado.toLowerCase().replace(/\s+/g, '-'), // Minúsculas com hífens
+  ]
   
-  return `/club/logos/${slug}.png`
+  // Retorna a primeira variação como tentativa
+  return `/club/logos/${nomeNormalizado}.png`
 }
