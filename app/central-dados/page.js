@@ -119,6 +119,10 @@ export default function CentralDados() {
     if (colunas.includes('Index')) {
       categorias['Geral'] = categorias['Geral'].filter(m => m !== 'Index'); categorias['Geral'].unshift('Index')
     }
+    // Adiciona Nota Perfil como métrica selecionável no início de Geral
+    categorias['Geral'] = categorias['Geral'].filter(m => m !== 'Nota Perfil');
+    categorias['Geral'].unshift('Nota Perfil');
+    
     return categorias
   }
 
@@ -256,11 +260,11 @@ export default function CentralDados() {
               <tr key={idx} className={`border-b border-slate-800/30 hover:bg-emerald-500/5 transition-all group ${jogadorReferencia?.Jogador === j.Jogador ? 'bg-emerald-500/10' : ''}`}>
                 <td className="p-6">
                   <div className="flex items-center gap-4">
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black italic text-lg border-2 shadow-2xl transition-all ${safeParseFloat(j['Nota Perfil']) >= 7.5 ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : safeParseFloat(j['Nota Perfil']) >= 5 ? 'bg-blue-500/20 border-blue-500 text-blue-400' : 'bg-slate-900 border-slate-800 text-slate-600'}`}>{j['Nota Perfil']}</div>
+                    <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-[10px] font-black text-slate-600 group-hover:bg-emerald-500 group-hover:text-slate-950 transition-all">{j.Jogador.substring(0, 2).toUpperCase()}</div>
                     <div className="flex flex-col">
                       <span className="font-black italic uppercase text-sm group-hover:text-emerald-400 transition-colors">{j.Jogador}</span>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="px-2 py-0.5 bg-slate-800 border border-slate-700 rounded text-[7px] font-black text-slate-400 uppercase tracking-tighter">{j['Perfil Nome']}</span>
+                        <span className="px-2 py-0.5 bg-slate-800 border border-slate-700 rounded text-[7px] font-black text-emerald-500 uppercase tracking-tighter">{j['Perfil Nome']}</span>
                         <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest">• {j.Idade} ANOS</span>
                       </div>
                     </div>
@@ -269,7 +273,17 @@ export default function CentralDados() {
                 <td className="p-6"><div className="w-24 h-10"><ResponsiveContainer width="100%" height="100%"><LineChart data={j.historicoIndex}><Line type="monotone" dataKey="val" stroke="#10b981" strokeWidth={3} dot={false} /></LineChart></ResponsiveContainer></div></td>
                 <td className="p-6 text-[10px] font-black uppercase text-slate-400">{j.Time || j.Equipe}</td>
                 <td className="p-6"><span className="px-3 py-1 bg-slate-950 border border-slate-800 rounded-lg text-[9px] font-black text-slate-500">{j.Posição}</span></td>
-                {metricasSelecionadas.map(m => <td key={m} className={`p-6 text-xs font-black ${m === 'Nota Perfil' ? 'text-emerald-400' : 'text-slate-400'}`}>{j[m] || '0'}</td>)}
+                {metricasSelecionadas.map(m => (
+                  <td key={m} className="p-6">
+                    {m === 'Nota Perfil' ? (
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black italic text-sm border ${safeParseFloat(j['Nota Perfil']) >= 7.5 ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : safeParseFloat(j['Nota Perfil']) >= 5 ? 'bg-blue-500/20 border-blue-500 text-blue-400' : 'bg-slate-800 border-slate-700 text-slate-500'}`}>
+                        {j['Nota Perfil']}
+                      </div>
+                    ) : (
+                      <span className="text-xs font-black text-slate-400">{j[m] || '0'}</span>
+                    )}
+                  </td>
+                ))}
                 <td className="p-6"><button onClick={() => encontrarSimilares(j)} className={`px-4 py-2 rounded-xl text-[8px] font-black uppercase transition-all ${jogadorReferencia?.Jogador === j.Jogador ? 'bg-emerald-500 text-slate-950' : 'bg-slate-900 border border-slate-800 text-slate-500 hover:border-emerald-500/50'}`}>{jogadorReferencia?.Jogador === j.Jogador ? 'Ativo' : 'Similar'}</button></td>
               </tr>
             ))}</tbody>
