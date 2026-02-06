@@ -29,10 +29,9 @@ export default function CentralDados() {
   
   const [jogadorReferencia, setJogadorReferencia] = useState(null)
   const [jogadoresSimilares, setJogadoresSimilares] = useState([])
-  const [ordenacao, setOrdenacao] = useState({ coluna: 'Nota Perfil', direcao: 'desc' })
+  const [ordenacao, setOrdenacao] = useState({ coluna: 'Index', direcao: 'desc' })
 
   const [metricasSelecionadas, setMetricasSelecionadas] = useState([
-    'Nota Perfil',
     'Index',
     'Minutos jogados',
     'Gols',
@@ -119,7 +118,7 @@ export default function CentralDados() {
     if (colunas.includes('Index')) {
       categorias['Geral'] = categorias['Geral'].filter(m => m !== 'Index'); categorias['Geral'].unshift('Index')
     }
-    // Adiciona Nota Perfil como métrica selecionável no início de Geral
+    // Adiciona Nota Perfil como métrica selecionável
     categorias['Geral'] = categorias['Geral'].filter(m => m !== 'Nota Perfil');
     categorias['Geral'].unshift('Nota Perfil');
     
@@ -128,6 +127,13 @@ export default function CentralDados() {
 
   const handleOrdenacao = (coluna) => {
     setOrdenacao(prev => ({ coluna, direcao: prev.coluna === coluna && prev.direcao === 'desc' ? 'asc' : 'desc' }))
+  }
+
+  const salvarTemplate = () => {
+    if (!nomeNovoTemplate) return
+    const novo = { id: Date.now(), nome: nomeNovoTemplate, metricas: [...metricasSelecionadas] }
+    setTemplates([...templates, novo])
+    setNomeNovoTemplate('')
   }
 
   const encontrarSimilares = (jogador) => {
@@ -139,7 +145,8 @@ export default function CentralDados() {
         const v1 = safeParseFloat(jogador[m]), v2 = safeParseFloat(j[m])
         dist += Math.pow(v1 === 0 ? v2 : Math.abs(v1 - v2) / v1, 2)
       })
-      return { ...j, scoreSimilaridade: 100 / (1 + Math.sqrt(dist)) }
+      const similaridade = 100 / (1 + Math.sqrt(dist))
+      return { ...j, scoreSimilaridade: similaridade }
     }).sort((a, b) => b.scoreSimilaridade - a.scoreSimilaridade).slice(0, 5)
     setJogadoresSimilares(scores)
   }
@@ -236,14 +243,32 @@ export default function CentralDados() {
         </div>
 
         <div className="bg-slate-900/40 p-8 rounded-[2rem] border border-slate-800/50 mb-8">
-          <div className="flex justify-between mb-8">
-            <h2 className="text-xl font-black italic uppercase">Escolher <span className="text-emerald-500">Métricas</span></h2>
-            <div className="flex gap-4">
-              <button onClick={() => setMetricasSelecionadas([])} className="text-[10px] font-black uppercase text-slate-500 hover:text-white">Desmarcar Tudo</button>
-              <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800">{Object.keys(categoriasMetricas).map(cat => <button key={cat} onClick={() => setAbaAtiva(cat)} className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase transition-all ${abaAtiva === cat ? 'bg-emerald-500 text-slate-950' : 'text-slate-500'}`}>{cat}</button>)}</div>
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
+            <div className="flex items-center gap-4">
+              <h2 className="text-xl font-black italic uppercase">Escolher <span className="text-emerald-500">Métricas</span></h2>
+              <div className="flex gap-2">
+                <input type="text" placeholder="SALVAR TEMPLATE..." value={nomeNovoTemplate} onChange={e => setNomeNovoTemplate(e.target.value)} className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-[8px] font-black uppercase tracking-widest outline-none w-32" />
+                <button onClick={salvarTemplate} className="p-1.5 bg-emerald-500 text-slate-950 rounded-lg hover:bg-emerald-400 transition-all"><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" /></svg></button>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button onClick={() => setMetricasSelecionadas([])} className="text-[9px] font-black uppercase text-slate-500 hover:text-white mr-4">Desmarcar Tudo</button>
+              <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 overflow-x-auto max-w-full custom-scrollbar">
+                {Object.keys(categoriasMetricas).map(cat => <button key={cat} onClick={() => setAbaAtiva(cat)} className={`px-3 py-1.5 rounded-lg text-[8px] font-black uppercase transition-all whitespace-nowrap ${abaAtiva === cat ? 'bg-emerald-500 text-slate-950' : 'text-slate-500'}`}>{cat}</button>)}
+              </div>
             </div>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">{categoriasMetricas[abaAtiva]?.map(m => <button key={m} onClick={() => setMetricasSelecionadas(prev => prev.includes(m) ? prev.filter(x => x !== m) : (prev.length < 8 ? [...prev, m] : prev))} className={`p-3 rounded-xl border text-[9px] font-black uppercase transition-all text-left flex items-center justify-between ${metricasSelecionadas.includes(m) ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400' : 'bg-slate-950/50 border-slate-800 text-slate-500'}`}><span>{m}</span>{metricasSelecionadas.includes(m) && <div className="w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>}</button>)}</div>
+          
+          <div className="mb-6 flex flex-wrap gap-1">
+            {templates.map(t => (
+              <div key={t.id} className="flex items-center gap-1.5 bg-slate-800/50 border border-slate-700 rounded-lg px-2 py-1 group">
+                <button onClick={() => setMetricasSelecionadas(t.metricas)} className="text-[8px] font-black uppercase text-slate-400 hover:text-emerald-400">{t.nome}</button>
+                <button onClick={() => setTemplates(templates.filter(x => x.id !== t.id))} className="text-slate-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"><svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg></button>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">{categoriasMetricas[abaAtiva]?.map(m => <button key={m} onClick={() => setMetricasSelecionadas(prev => prev.includes(m) ? prev.filter(x => x !== m) : (prev.length < 12 ? [...prev, m] : prev))} className={`p-3 rounded-xl border text-[9px] font-black uppercase transition-all text-left flex items-center justify-between ${metricasSelecionadas.includes(m) ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400' : 'bg-slate-950/50 border-slate-800 text-slate-500'}`}><span>{m}</span>{metricasSelecionadas.includes(m) && <div className="w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>}</button>)}</div>
         </div>
 
         <div className="bg-slate-900/40 rounded-[2rem] border border-slate-800/50 overflow-hidden">
@@ -253,7 +278,7 @@ export default function CentralDados() {
               <th className="p-6 text-[10px] font-black uppercase text-slate-500">Evolução</th>
               <th className="p-6 text-[10px] font-black uppercase text-slate-500 cursor-pointer" onClick={() => handleOrdenacao('Time')}>Equipe</th>
               <th className="p-6 text-[10px] font-black uppercase text-slate-500">Pos</th>
-              {metricasSelecionadas.map(m => <th key={m} className="p-6 text-[10px] font-black uppercase text-emerald-500 cursor-pointer" onClick={() => handleOrdenacao(m)}>{m}</th>)}
+              {metricasSelecionadas.map(m => <th key={m} className={`p-6 text-[10px] font-black uppercase cursor-pointer transition-all ${m === 'Nota Perfil' ? 'text-emerald-500' : 'text-slate-500 hover:text-white'}`} onClick={() => handleOrdenacao(m)}>{m}</th>)}
               <th className="p-6 text-[10px] font-black uppercase text-slate-500">Ações</th>
             </tr></thead>
             <tbody>{jogadoresFiltrados.map((j, idx) => (
@@ -264,8 +289,10 @@ export default function CentralDados() {
                     <div className="flex flex-col">
                       <span className="font-black italic uppercase text-sm group-hover:text-emerald-400 transition-colors">{j.Jogador}</span>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="px-2 py-0.5 bg-slate-800 border border-slate-700 rounded text-[7px] font-black text-emerald-500 uppercase tracking-tighter">{j['Perfil Nome']}</span>
                         <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest">• {j.Idade} ANOS</span>
+                        {perfilAtivo !== 'nenhum' && (
+                          <span className="px-1.5 py-0.5 bg-emerald-500/10 border border-emerald-500/30 rounded text-[7px] font-black text-emerald-400 uppercase">{j['Perfil Nome']}</span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -284,7 +311,24 @@ export default function CentralDados() {
                     )}
                   </td>
                 ))}
-                <td className="p-6"><button onClick={() => encontrarSimilares(j)} className={`px-4 py-2 rounded-xl text-[8px] font-black uppercase transition-all ${jogadorReferencia?.Jogador === j.Jogador ? 'bg-emerald-500 text-slate-950' : 'bg-slate-900 border border-slate-800 text-slate-500 hover:border-emerald-500/50'}`}>{jogadorReferencia?.Jogador === j.Jogador ? 'Ativo' : 'Similar'}</button></td>
+                <td className="p-6">
+                  <div className="flex items-center gap-3">
+                    {jogadorReferencia && j.Jogador !== jogadorReferencia.Jogador && (
+                      <div className="flex flex-col gap-1 w-16">
+                        <div className="flex justify-between text-[8px] font-black uppercase text-slate-500">
+                          <span>Sim</span>
+                          <span>{Math.round(j.scoreSimilaridade)}%</span>
+                        </div>
+                        <div className="h-1 bg-slate-800 rounded-full overflow-hidden">
+                          <div className="h-full bg-emerald-500 transition-all" style={{ width: `${j.scoreSimilaridade}%` }}></div>
+                        </div>
+                      </div>
+                    )}
+                    <button onClick={() => encontrarSimilares(j)} className={`px-4 py-2 rounded-xl text-[8px] font-black uppercase transition-all ${jogadorReferencia?.Jogador === j.Jogador ? 'bg-emerald-500 text-slate-950' : 'bg-slate-900 border border-slate-800 text-slate-500 hover:border-emerald-500/50'}`}>
+                      {jogadorReferencia?.Jogador === j.Jogador ? 'Ativo' : 'Similar'}
+                    </button>
+                  </div>
+                </td>
               </tr>
             ))}</tbody>
           </table></div>
