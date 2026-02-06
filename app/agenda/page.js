@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { getLogo, DEFAULT_LOGO } from '../logos'
+import { cleanData, normalizeTeamName } from '../utils/dataCleaner'
+import Papa from 'papaparse'
 
 const LOGOS_CAMPEONATOS = {
   'PAULISTA SÉRIE A1': '/competitions/paulista/logo.png',
@@ -32,51 +34,39 @@ export default function AgendaPage() {
         const response = await fetch(url)
         const csvText = await response.text()
         
-        const parseCSV = (text) => {
-          const rows = []; let currentRow = []; let currentField = ''; let inQuotes = false
-          for (let i = 0; i < text.length; i++) {
-            const char = text[i]; const nextChar = text[i + 1]
-            if (char === '"' && inQuotes && nextChar === '"') { currentField += '"'; i++ }
-            else if (char === '"') { inQuotes = !inQuotes }
-            else if (char === ',' && !inQuotes) { currentRow.push(currentField.trim()); currentField = '' }
-            else if ((char === '\r' || char === '\n') && !inQuotes) {
-              if (currentField || currentRow.length > 0) { currentRow.push(currentField.trim()); rows.push(currentRow); currentRow = []; currentField = '' }
-              if (char === '\r' && nextChar === '\n') i++
-            } else { currentField += char }
-          }
-          if (currentField || currentRow.length > 0) { currentRow.push(currentField.trim()); rows.push(currentRow) }
-          return rows
-        }
-
-        const rows = parseCSV(csvText)
-        if (rows.length === 0) return
-        const headers = rows[0]
-        const dataRows = rows.slice(1)
-
-        const parsedJogos = dataRows.map((row, index) => {
-          const data = {}
-          headers.forEach((header, i) => { data[header.trim()] = row[i] || "" })
-          const isMandante = data['Mandante'] === 'Grêmio Novorizontino'
-          return {
-            id: index,
-            data: data['Data'],
-            hora: data['Horário'],
-            mandante: data['Mandante'],
-            visitante: data['Visitante'],
-            golsMandanteNum: data['Gols Mandante'] || '0',
-            golsVisitanteNum: data['Gols Visitante'] || '0',
-            status: data['Resultado'] ? 'passado' : 'proximo',
-            campeonato: data['Competição'],
-            local: data['Local'] || (isMandante ? 'Jorjão' : 'Fora'),
-            escalaçaoIframe: data['código escalação'] || null,
-            golsMandante: data['Gols marcados mandante'] || "",
-            golsVisitante: data['Gols marcados VISITANTE'] || "",
-            logoMandante: getLogo(data['Mandante']),
-            logoVisitante: getLogo(data['Visitante']),
-            logoCampeonato: getLogoCampeonato(data['Competição'])
+        Papa.parse(csvText, {
+          header: true,
+          skipEmptyLines: true,
+          complete: (results) => {
+            const dadosLimpos = cleanData(results.data)
+            
+            const parsedJogos = dadosLimpos.map((data, index) => {
+              const mandanteNorm = normalizeTeamName(data['Mandante'])
+              const visitanteNorm = normalizeTeamName(data['Visitante'])
+              const isMandante = mandanteNorm === 'Grêmio Novorizontino'
+              
+              return {
+                id: index,
+                data: data['Data'],
+                hora: data['Horário'],
+                mandante: mandanteNorm,
+                visitante: visitanteNorm,
+                golsMandanteNum: data['Gols Mandante'] || '0',
+                golsVisitanteNum: data['Gols Visitante'] || '0',
+                status: data['Resultado'] ? 'passado' : 'proximo',
+                campeonato: data['Competição'],
+                local: data['Local'] || (isMandante ? 'Jorjão' : 'Fora'),
+                escalaçaoIframe: data['código escalação'] || null,
+                golsMandante: data['Gols marcados mandante'] || "",
+                golsVisitante: data['Gols marcados VISITANTE'] || "",
+                logoMandante: getLogo(mandanteNorm),
+                logoVisitante: getLogo(visitanteNorm),
+                logoCampeonato: getLogoCampeonato(data['Competição'])
+              }
+            })
+            setJogos(parsedJogos)
           }
         })
-        setJogos(parsedJogos)
       } catch (error) {
         console.error("Erro ao carregar agenda:", error)
       } finally {

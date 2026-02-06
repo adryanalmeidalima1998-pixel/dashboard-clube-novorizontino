@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Papa from 'papaparse'
+import { cleanData, normalizeTeamName, safeParseFloat } from '../utils/dataCleaner'
 
 export default function PlantelPage() {
   const router = useRouter()
@@ -23,17 +24,19 @@ export default function PlantelPage() {
           header: true,
           skipEmptyLines: true,
           complete: (results) => {
-            if (results.data.length > 0) {
-              const headers = Object.keys(results.data[0])
+            const dadosLimpos = cleanData(results.data).map(j => ({
+              ...j,
+              Time: normalizeTeamName(j.Time || j.Equipe)
+            }))
+            
+            if (dadosLimpos.length > 0) {
+              const headers = Object.keys(dadosLimpos[0])
               // Identificar colunas de metadados vs métricas
               const metaCols = ['№', 'Jogador', 'Idade', 'Altura', 'Nacionalidade', 'Posição', 'Time']
               const metricas = headers.filter(h => !metaCols.includes(h))
               setColunasMetricas(metricas)
               
-              const parsedData = results.data
-                .filter(row => row['Jogador'] && row['Jogador'].trim() !== "")
-              
-              setElenco(parsedData)
+              setElenco(dadosLimpos)
             }
             setLoading(false)
           }

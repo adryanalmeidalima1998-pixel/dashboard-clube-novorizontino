@@ -7,6 +7,7 @@ import Papa from 'papaparse'
 import { jsPDF } from 'jspdf'
 import 'jspdf-autotable'
 import { LineChart, Line, ResponsiveContainer } from 'recharts'
+import { cleanData, normalizeTeamName, safeParseFloat } from '../../utils/dataCleaner'
 
 const GOLEIROS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQlQGKcj7Dv6ziVn4MU-zs6PAJc5WFyjwr0aks9xNdG4rgRw4iwRNFws7lDGXtjNoQHGypQJ4ssSlqM/pub?output=csv";
 
@@ -46,14 +47,17 @@ export default function CentralGoleiros() {
         Papa.parse(csvText, {
           header: true, skipEmptyLines: true,
           complete: (results) => {
-            const dados = results.data.filter(j => j.Jogador && j.Jogador.trim())
-            const dadosComHistorico = dados.map(j => {
-              const valorAtual = parseValue(j['Index'])
+            const dadosLimpos = cleanData(results.data).map(j => ({
+              ...j,
+              Time: normalizeTeamName(j.Time || j.Equipe)
+            }))
+            const dadosComHistorico = dadosLimpos.map(j => {
+              const valorAtual = safeParseFloat(j['Index'])
               return { ...j, historicoIndex: [{ val: valorAtual * 0.9 }, { val: valorAtual * 1.1 }, { val: valorAtual * 0.95 }, { val: valorAtual * 1.05 }, { val: valorAtual }] }
             })
             setJogadores(dadosComHistorico)
-            if (dados.length > 0) {
-              const colunas = Object.keys(dados[0]).filter(col => col && col.trim())
+            if (dadosLimpos.length > 0) {
+              const colunas = Object.keys(dadosLimpos[0]).filter(col => col && col.trim())
               setTodasAsColunas(colunas)
               setCategoriasMetricas(categorizarMetricas(colunas))
             }

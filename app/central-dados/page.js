@@ -6,6 +6,7 @@ import Papa from 'papaparse'
 import { jsPDF } from 'jspdf'
 import 'jspdf-autotable'
 import { LineChart, Line, ResponsiveContainer } from 'recharts'
+import { cleanData, normalizeTeamName, safeParseFloat } from '../utils/dataCleaner'
 
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSVC0eenchMDxK3wsOTXjq9kQiy3aHTFl0X1o5vwJZR7RiZzg1Irxxe_SL2IDrqb3c1i7ZL2ugpBJkN/pub?output=csv";
 
@@ -73,11 +74,15 @@ export default function CentralDados() {
           header: true,
           skipEmptyLines: true,
           complete: (results) => {
-            const dados = results.data.filter(j => j.Jogador && j.Jogador.trim())
+            // Normalização Automática
+            const dadosLimpos = cleanData(results.data).map(j => ({
+              ...j,
+              Time: normalizeTeamName(j.Time || j.Equipe)
+            }))
             
             // Simular histórico para o gráfico de evolução
-            const dadosComHistorico = dados.map(j => {
-              const valorAtual = parseValue(j['Index'])
+            const dadosComHistorico = dadosLimpos.map(j => {
+              const valorAtual = safeParseFloat(j['Index'])
               return {
                 ...j,
                 historicoIndex: [
@@ -92,8 +97,8 @@ export default function CentralDados() {
 
             setJogadores(dadosComHistorico)
             
-            if (dados.length > 0) {
-              const colunas = Object.keys(dados[0]).filter(col => col && col.trim())
+            if (dadosLimpos.length > 0) {
+              const colunas = Object.keys(dadosLimpos[0]).filter(col => col && col.trim())
               setTodasAsColunas(colunas)
               setCategoriasMetricas(categorizarMetricas(colunas))
             }

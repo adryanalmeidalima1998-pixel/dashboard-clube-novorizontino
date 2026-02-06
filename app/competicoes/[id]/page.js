@@ -3,6 +3,8 @@
 import { useParams, useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { useState, useEffect } from 'react'
+import Papa from 'papaparse'
+import { cleanData } from '../../utils/dataCleaner'
 
 export default function CompeticaoPage() {
   const params = useParams()
@@ -21,17 +23,25 @@ export default function CompeticaoPage() {
         const response = await fetch(url)
         const csvText = await response.text()
         
-        const lines = csvText.split('\n').filter(line => line.trim() !== '')
-        const parsed = lines.slice(1).map(line => {
-          const values = line.split(',')
-          return {
-            nome: values[1]?.trim(),
-            gols: parseInt(values[2]?.trim()) || 0,
-            time: 'Competição'
+        Papa.parse(csvText, {
+          header: true,
+          skipEmptyLines: true,
+          complete: (results) => {
+            const dadosLimpos = cleanData(results.data)
+            const parsed = dadosLimpos.map(row => {
+              // Pegar o segundo e terceiro campos independentemente do nome da coluna se necessário, 
+              // mas PapaParse com header:true usará os nomes das colunas.
+              // Como o código original usava índices, vamos garantir a compatibilidade.
+              const keys = Object.keys(row)
+              return {
+                nome: row[keys[1]] || 'N/A',
+                gols: parseInt(row[keys[2]]) || 0,
+                time: 'Competição'
+              }
+            }).sort((a, b) => b.gols - a.gols)
+            setArtilheiros(parsed)
           }
-        }).sort((a, b) => b.gols - a.gols)
-
-        setArtilheiros(parsed)
+        })
       } catch (error) {
         console.error("Erro ao carregar artilheiros:", error)
       } finally {

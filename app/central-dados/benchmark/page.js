@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Papa from 'papaparse'
+import { cleanData, normalizeTeamName, safeParseFloat } from '../../utils/dataCleaner'
 
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSVC0eenchMDxK3wsOTXjq9kQiy3aHTFl0X1o5vwJZR7RiZzg1Irxxe_SL2IDrqb3c1i7ZL2ugpBJkN/pub?output=csv";
 
@@ -37,11 +38,14 @@ export default function BenchmarkPage() {
           header: true,
           skipEmptyLines: true,
           complete: (results) => {
-            const dados = results.data.filter(j => j.Jogador && j.Jogador.trim())
-            setJogadores(dados)
-            if (dados.length > 0) {
-              setJogadorSelecionado(dados[0])
-              const colunas = Object.keys(dados[0]).filter(col => col && col.trim() && !['Jogador', 'Time', 'Equipe', 'Posição', 'Número', 'Idade', 'Altura', 'Peso', 'Nacionalidade', '?', 'Liga', 'Temporada', '№'].includes(col))
+            const dadosLimpos = cleanData(results.data).map(j => ({
+              ...j,
+              Time: normalizeTeamName(j.Time || j.Equipe)
+            }))
+            setJogadores(dadosLimpos)
+            if (dadosLimpos.length > 0) {
+              setJogadorSelecionado(dadosLimpos[0])
+              const colunas = Object.keys(dadosLimpos[0]).filter(col => col && col.trim() && !['Jogador', 'Time', 'Equipe', 'Posição', 'Número', 'Idade', 'Altura', 'Peso', 'Nacionalidade', '?', 'Liga', 'Temporada', '№'].includes(col))
               setCategoriasMetricas(categorizarMetricas(colunas))
             }
             setCarregando(false)
