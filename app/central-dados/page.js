@@ -139,15 +139,25 @@ export default function CentralDados() {
   const encontrarSimilares = (jogador) => {
     if (jogadorReferencia?.Jogador === jogador.Jogador) { setJogadorReferencia(null); setJogadoresSimilares([]); return; }
     setJogadorReferencia(jogador)
+    
     const metricasCalculo = metricasSelecionadas.filter(m => !['Jogador', 'Time', 'Equipe', 'Posição', 'Nota Perfil'].includes(m))
+    
     const scores = jogadores.filter(j => j.Jogador !== jogador.Jogador && j.Posição === jogador.Posição).map(j => {
-      let dist = 0; metricasCalculo.forEach(m => {
+      let dist = 0;
+      metricasCalculo.forEach(m => {
         const v1 = safeParseFloat(jogador[m]), v2 = safeParseFloat(j[m])
         dist += Math.pow(v1 === 0 ? v2 : Math.abs(v1 - v2) / v1, 2)
       })
+      
+      // Inclui similaridade de Nota de Perfil Dominante no cálculo
+      const n1 = safeParseFloat(getDominantPerfil(jogador, jogadores).nota)
+      const n2 = safeParseFloat(getDominantPerfil(j, jogadores).nota)
+      dist += Math.pow(Math.abs(n1 - n2) / 10, 2)
+
       const similaridade = 100 / (1 + Math.sqrt(dist))
       return { ...j, scoreSimilaridade: similaridade }
     }).sort((a, b) => b.scoreSimilaridade - a.scoreSimilaridade).slice(0, 5)
+    
     setJogadoresSimilares(scores)
   }
 
@@ -218,6 +228,7 @@ export default function CentralDados() {
             <div><h1 className="text-4xl md:text-6xl font-black italic uppercase tracking-tighter leading-none">Central de <span className="text-emerald-500">Dados</span></h1></div>
           </div>
           <div className="flex flex-wrap gap-3">
+            <button onClick={() => router.push('/central-dados/goleiros')} className="px-6 py-3 bg-slate-900/80 border border-emerald-500/30 text-emerald-500 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500/20 transition-all shadow-[0_0_15px_rgba(16,185,129,0.1)]">Goleiros</button>
             <button onClick={() => router.push('/central-dados/graficos')} className="px-6 py-3 bg-slate-900/80 border border-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500/20 transition-all">Gráficos</button>
             <button onClick={() => router.push('/central-dados/benchmark')} className="px-6 py-3 bg-slate-900/80 border border-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500/20 transition-all">Benchmark</button>
             <button onClick={exportarPDF} className="px-6 py-3 bg-emerald-500 text-slate-950 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-400 transition-all">PDF Clean</button>
