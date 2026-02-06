@@ -145,7 +145,11 @@ export default function CentralDados() {
       if (!categorizado) categorias['Geral'].push(metrica)
     })
 
-    if (colunas.includes('Index')) categorias['Geral'].unshift('Index')
+    // Remove Index de Geral se já foi adicionado, depois adiciona no início
+    if (colunas.includes('Index')) {
+      categorias['Geral'] = categorias['Geral'].filter(m => m !== 'Index')
+      categorias['Geral'].unshift('Index')
+    }
     return categorias
   }
 
