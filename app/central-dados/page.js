@@ -7,7 +7,7 @@ import { jsPDF } from 'jspdf'
 import 'jspdf-autotable'
 import { LineChart, Line, ResponsiveContainer } from 'recharts'
 import { cleanData, normalizeTeamName, safeParseFloat } from '../utils/dataCleaner'
-import { calculateRating } from '../utils/ratingSystem'
+import { calculateRating, getPerfisForPosicao, getDominantPerfil } from '../utils/ratingSystem'
 import { PERFIL_WEIGHTS } from '../utils/perfilWeights'
 
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSVC0eenchMDxK3wsOTXjq9kQiy3aHTFl0X1o5vwJZR7RiZzg1Irxxe_SL2IDrqb3c1i7ZL2ugpBJkN/pub?output=csv";
@@ -25,7 +25,7 @@ export default function CentralDados() {
   const [filtrosPosicao, setFiltrosPosicao] = useState([])
   const [filtroIdade, setFiltroIdade] = useState({ min: 15, max: 45 })
   const [filtroMinutagem, setFiltroMinutagem] = useState(0)
-  const [perfilAtivo, setPerfilAtivo] = useState('Geral')
+  const [perfilAtivo, setPerfilAtivo] = useState('nenhum')
   
   const [jogadorReferencia, setJogadorReferencia] = useState(null)
   const [jogadoresSimilares, setJogadoresSimilares] = useState([])
@@ -152,17 +152,21 @@ export default function CentralDados() {
       return pB && pT && pP && pI && pM
     })
 
-    const dadosComNota = filtrados.map(j => ({
-      ...j,
-      'Nota Perfil': calculateRating(j, jogadores, perfilAtivo)
-    }))
+    const dadosProcessados = filtrados.map(j => {
+      const dominant = getDominantPerfil(j, jogadores)
+      return {
+        ...j,
+        'Nota Perfil': perfilAtivo === 'nenhum' ? dominant.nota : calculateRating(j, jogadores, perfilAtivo),
+        'Perfil Nome': perfilAtivo === 'nenhum' ? dominant.perfil : perfilAtivo
+      }
+    })
 
-    dadosComNota.sort((a, b) => {
+    dadosProcessados.sort((a, b) => {
       const vA = safeParseFloat(a[ordenacao.coluna]), vB = safeParseFloat(b[ordenacao.coluna])
       if (isNaN(vA)) return ordenacao.direcao === 'asc' ? String(a[ordenacao.coluna]).localeCompare(String(b[ordenacao.coluna])) : String(b[ordenacao.coluna]).localeCompare(String(a[ordenacao.coluna]))
       return ordenacao.direcao === 'asc' ? vA - vB : vB - vA
     })
-    return dadosComNota
+    return dadosProcessados
   }, [jogadores, busca, filtroTime, filtrosPosicao, filtroIdade, filtroMinutagem, ordenacao, jogadorReferencia, jogadoresSimilares, perfilAtivo])
 
   const times = useMemo(() => ['todos', ...new Set(jogadores.map(j => j.Time || j.Equipe).filter(Boolean))], [jogadores])
@@ -221,7 +225,7 @@ export default function CentralDados() {
           <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
             <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Perfil Técnico (Ranking)</h3>
             <select value={perfilAtivo} onChange={e => setPerfilAtivo(e.target.value)} className="w-full bg-slate-950 border border-emerald-500/50 rounded-xl p-3 text-[10px] font-black uppercase text-emerald-500 outline-none">
-              <option value="Geral">PERFIL GERAL</option>
+              <option value="nenhum">SEM FILTRO DE PERFIL</option>
               {Object.keys(PERFIL_WEIGHTS).map(p => <option key={p} value={p}>{p.toUpperCase()}</option>)}
             </select>
           </div>
@@ -253,7 +257,13 @@ export default function CentralDados() {
                 <td className="p-6">
                   <div className="flex items-center gap-4">
                     <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black italic text-lg border-2 shadow-2xl transition-all ${safeParseFloat(j['Nota Perfil']) >= 7.5 ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : safeParseFloat(j['Nota Perfil']) >= 5 ? 'bg-blue-500/20 border-blue-500 text-blue-400' : 'bg-slate-900 border-slate-800 text-slate-600'}`}>{j['Nota Perfil']}</div>
-                    <div className="flex flex-col"><span className="font-black italic uppercase text-sm group-hover:text-emerald-400 transition-colors">{j.Jogador}</span><span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">{j.Nacionalidade} • {j.Idade} ANOS</span></div>
+                    <div className="flex flex-col">
+                      <span className="font-black italic uppercase text-sm group-hover:text-emerald-400 transition-colors">{j.Jogador}</span>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="px-2 py-0.5 bg-slate-800 border border-slate-700 rounded text-[7px] font-black text-slate-400 uppercase tracking-tighter">{j['Perfil Nome']}</span>
+                        <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest">• {j.Idade} ANOS</span>
+                      </div>
+                    </div>
                   </div>
                 </td>
                 <td className="p-6"><div className="w-24 h-10"><ResponsiveContainer width="100%" height="100%"><LineChart data={j.historicoIndex}><Line type="monotone" dataKey="val" stroke="#10b981" strokeWidth={3} dot={false} /></LineChart></ResponsiveContainer></div></td>

@@ -68,3 +68,23 @@ export const getRankingByPerfil = (atletas, perfilNome) => {
     }))
     .sort((a, b) => b.notaPerfil - a.notaPerfil);
 };
+
+/**
+ * Identifica o perfil dominante de um atleta (aquele em que ele tem a maior nota)
+ */
+export const getDominantPerfil = (atleta, todosAtletas) => {
+  const perfisPossiveis = getPerfisForPosicao(atleta.Posição);
+  
+  let melhorPerfil = 'Geral';
+  let maiorNota = 0;
+
+  perfisPossiveis.forEach(perfil => {
+    const nota = calculateRating(atleta, todosAtletas, perfil);
+    if (nota > maiorNota) {
+      maiorNota = nota;
+      melhorPerfil = perfil;
+    }
+  });
+
+  return { perfil: melhorPerfil, nota: maiorNota };
+};
