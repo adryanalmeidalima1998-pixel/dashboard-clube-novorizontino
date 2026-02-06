@@ -45,6 +45,11 @@ export const getLogo = (nomeTime) => {
     return LOGOS[chaveEncontrada]
   }
   
-  // Se não encontrar, retorna o padrão
-  return DEFAULT_LOGO
+  // Se não encontrar no mapeamento, tenta buscar pelo nome do arquivo (slug)
+  const slug = nomeNormalizado.toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Remove acentos
+    .replace(/\s+/g, '-') // Espaços para hífens
+    .replace(/[^\w\-]+/g, '') // Remove caracteres especiais
+  
+  return `/club/logos/${slug}.png`
 }

@@ -134,7 +134,7 @@ export default function AgendaPage() {
                         {jogo.mandante}
                       </span>
                       <div className="w-16 h-16 md:w-20 md:h-20 bg-slate-950 rounded-[2rem] p-3 border border-slate-800 group-hover:border-emerald-500/20 transition-all shadow-inner flex items-center justify-center">
-                        <img src={jogo.logoMandante} alt={jogo.mandante} className="w-full h-full object-contain" onError={handleImageError} />
+                        <img src={jogo.logoMandante} alt={jogo.mandante} className="w-full h-full object-contain" onError={(e) => { e.target.onerror = null; e.target.src = DEFAULT_LOGO; }} />
                       </div>
                     </div>
 
@@ -159,7 +159,7 @@ export default function AgendaPage() {
                         {jogo.visitante}
                       </span>
                       <div className="w-16 h-16 md:w-20 md:h-20 bg-slate-950 rounded-[2rem] p-3 border border-slate-800 group-hover:border-emerald-500/20 transition-all shadow-inner flex items-center justify-center">
-                        <img src={jogo.logoVisitante} alt={jogo.visitante} className="w-full h-full object-contain" onError={handleImageError} />
+                        <img src={jogo.logoVisitante} alt={jogo.visitante} className="w-full h-full object-contain" onError={(e) => { e.target.onerror = null; e.target.src = DEFAULT_LOGO; }} />
                       </div>
                     </div>
                   </div>

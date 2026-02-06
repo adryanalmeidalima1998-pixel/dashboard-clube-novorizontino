@@ -73,7 +73,7 @@ export default function Home() {
             {[
               { id: 'serie-b', name: 'Série B', color: 'slate' },
               { id: 'paulista', name: 'Paulistão', color: 'emerald' },
-              { id: 'copa-brasil', name: 'Copa Brasil', color: 'slate' },
+              { id: 'copa-do-brasil', name: 'Copa do Brasil', color: 'slate' },
               { id: 'copa-sul-sudeste', name: 'Sul-Sudeste', color: 'slate' }
             ].map((comp) => (
               <Link 

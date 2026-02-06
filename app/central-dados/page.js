@@ -8,7 +8,7 @@ import 'jspdf-autotable'
 import { LineChart, Line, ResponsiveContainer } from 'recharts'
 import { cleanData, normalizeTeamName, safeParseFloat } from '../utils/dataCleaner'
 import { calculateRating, getPerfisForPosicao, getDominantPerfil } from '../utils/ratingSystem'
-import { PERFIL_WEIGHTS } from '../utils/perfilWeights'
+import { PERFIL_WEIGHTS, POSICAO_TO_PERFIS } from '../utils/perfilWeights'
 
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSVC0eenchMDxK3wsOTXjq9kQiy3aHTFl0X1o5vwJZR7RiZzg1Irxxe_SL2IDrqb3c1i7ZL2ugpBJkN/pub?output=csv";
 
@@ -153,16 +153,28 @@ export default function CentralDados() {
 
   const jogadoresFiltrados = useMemo(() => {
     if (jogadorReferencia) return [jogadorReferencia, ...jogadoresSimilares]
+    
+    // 1. Filtragem por posição baseada no perfil se houver perfil selecionado
     let filtrados = jogadores.filter(j => {
       const pB = (j.Jogador || '').toLowerCase().includes(busca.toLowerCase())
       const pT = filtroTime === 'todos' || j.Time === filtroTime || j.Equipe === filtroTime
-      const pP = filtrosPosicao.length === 0 || filtrosPosicao.includes(j.Posição)
+      
+      // Se houver perfil ativo, filtrar apenas jogadores que podem ter aquele perfil
+      let pP = filtrosPosicao.length === 0 || filtrosPosicao.includes(j.Posição)
+      if (perfilAtivo !== 'nenhum' && perfilAtivo !== 'Geral') {
+        const posicoesCompativeis = Object.entries(POSICAO_TO_PERFIS)
+          .filter(([pos, perfis]) => perfis.includes(perfilAtivo))
+          .map(([pos]) => pos)
+        pP = posicoesCompativeis.includes(j.Posição)
+      }
+
       const idade = safeParseFloat(j.Idade)
       const pI = idade >= filtroIdade.min && idade <= filtroIdade.max
       const pM = safeParseFloat(j['Minutos jogados']) >= filtroMinutagem
       return pB && pT && pP && pI && pM
     })
 
+    // 2. Cálculo das notas
     const dadosProcessados = filtrados.map(j => {
       const dominant = getDominantPerfil(j, jogadores)
       return {
@@ -172,9 +184,12 @@ export default function CentralDados() {
       }
     })
 
+    // 3. Ordenação (Se perfil selecionado, ordena por Nota Perfil por padrão se não houver ordenação manual explícita)
+    const colunaOrdenacao = (perfilAtivo !== 'nenhum' && ordenacao.coluna === 'Index') ? 'Nota Perfil' : ordenacao.coluna
+    
     dadosProcessados.sort((a, b) => {
-      const vA = safeParseFloat(a[ordenacao.coluna]), vB = safeParseFloat(b[ordenacao.coluna])
-      if (isNaN(vA)) return ordenacao.direcao === 'asc' ? String(a[ordenacao.coluna]).localeCompare(String(b[ordenacao.coluna])) : String(b[ordenacao.coluna]).localeCompare(String(a[ordenacao.coluna]))
+      const vA = safeParseFloat(a[colunaOrdenacao]), vB = safeParseFloat(b[colunaOrdenacao])
+      if (isNaN(vA)) return ordenacao.direcao === 'asc' ? String(a[colunaOrdenacao]).localeCompare(String(b[colunaOrdenacao])) : String(b[colunaOrdenacao]).localeCompare(String(a[colunaOrdenacao]))
       return ordenacao.direcao === 'asc' ? vA - vB : vB - vA
     })
     return dadosProcessados
@@ -234,7 +249,7 @@ export default function CentralDados() {
             </div>
           </div>
           <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Perfil Técnico (Ranking)</h3>
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Perfil Técnico (Ranking Automático)</h3>
             <select value={perfilAtivo} onChange={e => setPerfilAtivo(e.target.value)} className="w-full bg-slate-950 border border-emerald-500/50 rounded-xl p-3 text-[10px] font-black uppercase text-emerald-500 outline-none">
               <option value="nenhum">SEM FILTRO DE PERFIL</option>
               {Object.keys(PERFIL_WEIGHTS).map(p => <option key={p} value={p}>{p.toUpperCase()}</option>)}
@@ -275,7 +290,7 @@ export default function CentralDados() {
           <div className="overflow-x-auto"><table className="w-full text-left border-collapse">
             <thead><tr className="bg-slate-950/50 border-b border-slate-800">
               <th className="p-6 text-[10px] font-black uppercase text-slate-500 cursor-pointer" onClick={() => handleOrdenacao('Jogador')}>Atleta</th>
-              <th className="p-6 text-[10px] font-black uppercase text-slate-500">Evolução</th>
+              <th className="p-6 text-[10px] font-black uppercase text-slate-500">Nota</th>
               <th className="p-6 text-[10px] font-black uppercase text-slate-500 cursor-pointer" onClick={() => handleOrdenacao('Time')}>Equipe</th>
               <th className="p-6 text-[10px] font-black uppercase text-slate-500">Pos</th>
               {metricasSelecionadas.map(m => <th key={m} className={`p-6 text-[10px] font-black uppercase cursor-pointer transition-all ${m === 'Nota Perfil' ? 'text-emerald-500' : 'text-slate-500 hover:text-white'}`} onClick={() => handleOrdenacao(m)}>{m}</th>)}
@@ -297,7 +312,11 @@ export default function CentralDados() {
                     </div>
                   </div>
                 </td>
-                <td className="p-6"><div className="w-24 h-10"><ResponsiveContainer width="100%" height="100%"><LineChart data={j.historicoIndex}><Line type="monotone" dataKey="val" stroke="#10b981" strokeWidth={3} dot={false} /></LineChart></ResponsiveContainer></div></td>
+                <td className="p-6">
+                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black italic text-sm border ${safeParseFloat(j['Nota Perfil']) >= 7.5 ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : safeParseFloat(j['Nota Perfil']) >= 5 ? 'bg-blue-500/20 border-blue-500 text-blue-400' : 'bg-slate-800 border-slate-700 text-slate-500'}`}>
+                    {j['Nota Perfil']}
+                  </div>
+                </td>
                 <td className="p-6 text-[10px] font-black uppercase text-slate-400">{j.Time || j.Equipe}</td>
                 <td className="p-6"><span className="px-3 py-1 bg-slate-950 border border-slate-800 rounded-lg text-[9px] font-black text-slate-500">{j.Posição}</span></td>
                 {metricasSelecionadas.map(m => (
