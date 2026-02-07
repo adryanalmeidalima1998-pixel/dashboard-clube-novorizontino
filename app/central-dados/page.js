@@ -172,6 +172,7 @@ export default function CentralDados() {
   }
 
   const jogadoresFiltrados = useMemo(() => {
+    // Se estiver no modo Find Similar, a lista é fixa (referência + similares)
     if (jogadorReferencia) {
       const lista = [jogadorReferencia, ...jogadoresSimilares];
       return [...lista].sort((a, b) => {
@@ -193,7 +194,7 @@ export default function CentralDados() {
       const timeJogador = (j.Time || j.Equipe || '');
       const pT = filtroTime === 'todos' || timeJogador === filtroTime;
       
-      // FILTRO DE POSIÇÃO CORRIGIDO: Comparação exata e normalizada
+      // FILTRO DE POSIÇÃO: Comparação exata e normalizada
       const posJogador = (j.Posição || '').trim().toUpperCase();
       const pP = filtrosPosicao.length === 0 || filtrosPosicao.some(p => p.trim().toUpperCase() === posJogador);
       
@@ -205,23 +206,24 @@ export default function CentralDados() {
       return pB && pT && pP && pI && pM;
     });
 
-    // ORDENAÇÃO CORRIGIDA: Forçar safeParseFloat para todas as métricas na comparação
+    // ORDENAÇÃO: Forçar safeParseFloat para todas as métricas na comparação
     return filtrados.sort((a, b) => {
       const vA = safeParseFloat(a[ordenacao.coluna]);
       const vB = safeParseFloat(b[ordenacao.coluna]);
       
-      // Se ambos não forem números válidos (ex: colunas de texto como Nome), usar localeCompare
-      // Verificamos se o valor original contém letras para decidir se é texto
-      const isTextA = isNaN(vA) || (typeof a[ordenacao.coluna] === 'string' && /[a-zA-Z]/.test(a[ordenacao.coluna]) && !a[ordenacao.coluna].includes('%'));
-      const isTextB = isNaN(vB) || (typeof b[ordenacao.coluna] === 'string' && /[a-zA-Z]/.test(b[ordenacao.coluna]) && !b[ordenacao.coluna].includes('%'));
-
-      if (isTextA || isTextB) {
+      // Se a coluna for 'Jogador', 'Time' ou 'Posição', usar localeCompare
+      if (['Jogador', 'Time', 'Equipe', 'Posição'].includes(ordenacao.coluna)) {
         const sA = String(a[ordenacao.coluna] || '');
         const sB = String(b[ordenacao.coluna] || '');
         return ordenacao.direcao === 'asc' ? sA.localeCompare(sB) : sB.localeCompare(sA);
       }
-      
-      return ordenacao.direcao === 'asc' ? vA - vB : vB - vA;
+
+      // Para métricas numéricas
+      if (ordenacao.direcao === 'asc') {
+        return vA - vB;
+      } else {
+        return vB - vA;
+      }
     });
   }, [jogadores, busca, filtroTime, filtrosPosicao, filtroIdade, filtroMinutagem, ordenacao, jogadorReferencia, jogadoresSimilares])
 
@@ -231,7 +233,6 @@ export default function CentralDados() {
   }, [jogadores])
 
   const posicoes = useMemo(() => {
-    // Pegar posições únicas do CSV e normalizar para exibição
     const uniquePos = new Set(jogadores.map(j => (j.Posição || '').trim().toUpperCase()).filter(Boolean));
     return Array.from(uniquePos).sort();
   }, [jogadores])
