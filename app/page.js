@@ -144,8 +144,35 @@ export default function Home() {
           </div>
         </Link>
 
+        {/* CENTRAL DE SCOUTING - NOVO CARD */}
+        <Link href="/central-scouting" className="bg-slate-900/40 backdrop-blur-md rounded-[2.5rem] p-8 border border-slate-800/50 group hover:border-emerald-500/30 transition-all duration-500 flex flex-col justify-between overflow-hidden relative shadow-2xl">
+          <div className="absolute -right-4 -top-4 w-32 h-32 bg-emerald-500/5 rounded-full blur-3xl group-hover:bg-emerald-500/10 transition-all"></div>
+          
+          <div>
+            <div className="flex items-center gap-3 mb-8">
+              <div className="w-1.5 h-6 bg-emerald-500 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.5)]"></div>
+              <h2 className="text-slate-400 font-black text-[10px] uppercase tracking-[0.2em]">Mercado & Perfis</h2>
+            </div>
+            
+            <div className="flex items-center gap-6 mb-8">
+              <div className="w-20 h-20 bg-slate-950 rounded-[2rem] flex items-center justify-center border border-slate-800 group-hover:border-emerald-500/30 transition-all duration-500 shadow-inner">
+                <svg className="w-10 h-10 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+              </div>
+              <div>
+                <span className="block text-3xl font-black italic uppercase tracking-tighter text-white group-hover:text-emerald-400 transition-colors">Scouting</span>
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Análise de Perfil & Percentil</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-slate-950/80 p-5 rounded-2xl border border-slate-800 group-hover:bg-emerald-500 transition-all duration-500 flex items-center justify-between shadow-xl">
+            <span className="text-xs font-black uppercase tracking-widest group-hover:text-slate-950">Central de Scouting</span>
+            <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform group-hover:text-slate-950" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
+          </div>
+        </Link>
+
         {/* CENTRAL DE DADOS - FULL WIDTH DESIGN */}
-        <Link href="/central-dados" className="bg-slate-900/40 backdrop-blur-md rounded-[3rem] p-10 border border-slate-800/50 lg:col-span-3 group hover:border-emerald-500/30 transition-all duration-700 overflow-hidden relative shadow-2xl">
+        <Link href="/central-dados" className="bg-slate-900/40 backdrop-blur-md rounded-[3rem] p-10 border border-slate-800/50 lg:col-span-2 group hover:border-emerald-500/30 transition-all duration-700 overflow-hidden relative shadow-2xl">
           <div className="absolute right-0 top-0 w-1/2 h-full bg-gradient-to-l from-emerald-500/[0.03] to-transparent"></div>
           <div className="absolute -left-20 -bottom-20 w-64 h-64 bg-emerald-500/[0.02] rounded-full blur-3xl"></div>
           
