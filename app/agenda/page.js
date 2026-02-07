@@ -135,52 +135,45 @@ export default function AgendaPage() {
               </div>
 
               <div className="bg-slate-900/20 rounded-3xl border border-slate-800/50 overflow-hidden">
-                <table className="w-full text-left border-collapse table-fixed">
-                  <thead>
-                    <tr className="bg-slate-950/40 border-b border-slate-800/50">
-                      <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-500 w-[15%]">Data</th>
-                      <th className="px-4 py-4 text-[9px] font-black uppercase tracking-widest text-slate-500 w-[10%] text-center">Hora</th>
-                      <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-500 w-[30%]">Adversário</th>
-                      <th className="px-2 py-4 text-[9px] font-black uppercase tracking-widest text-slate-500 text-center w-[8%]">TV</th>
-                      <th className="px-2 py-4 text-[9px] font-black uppercase tracking-widest text-slate-500 text-center w-[8%]">Local</th>
-                      <th className="px-4 py-4 text-[9px] font-black uppercase tracking-widest text-slate-500 text-center w-[14%]">Resultado</th>
-                      <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-500 w-[15%]">Competição</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {jogosAgrupados[mes].map((jogo) => (
-                      <use key={jogo.id}>
-                        <tr 
-                          onClick={() => toggleExpandir(jogo.id)}
-                          className={`border-b border-slate-800/30 hover:bg-white/[0.02] transition-colors group cursor-pointer ${jogoExpandido === jogo.id ? 'bg-white/[0.03]' : ''}`}
-                        >
-                          <td className="px-6 py-4 w-[15%]">
-                            <span className="text-[11px] font-black italic text-slate-300 group-hover:text-brand-yellow transition-colors">{jogo.data}</span>
-                          </td>
-                          <td className="px-4 py-4 text-center w-[10%]">
-                            <span className="text-[10px] font-bold text-slate-500">{jogo.hora}</span>
-                          </td>
-                          <td className="px-6 py-4 w-[30%]">
-                            <div className="flex items-center gap-3">
+                <div className="w-full overflow-x-auto">
+                  <div className="min-w-[800px]">
+                    {/* CABEÇALHO FIXO */}
+                    <div className="grid grid-cols-[15%_10%_30%_8%_8%_14%_15%] bg-slate-950/40 border-b border-slate-800/50 px-6 py-4">
+                      <div className="text-[9px] font-black uppercase tracking-widest text-slate-500">Data</div>
+                      <div className="text-[9px] font-black uppercase tracking-widest text-slate-500 text-center">Hora</div>
+                      <div className="text-[9px] font-black uppercase tracking-widest text-slate-500">Adversário</div>
+                      <div className="text-[9px] font-black uppercase tracking-widest text-slate-500 text-center">TV</div>
+                      <div className="text-[9px] font-black uppercase tracking-widest text-slate-500 text-center">Local</div>
+                      <div className="text-[9px] font-black uppercase tracking-widest text-slate-500 text-center">Resultado</div>
+                      <div className="text-[9px] font-black uppercase tracking-widest text-slate-500">Competição</div>
+                    </div>
+
+                    {/* CORPO DA TABELA */}
+                    <div className="divide-y divide-slate-800/30">
+                      {jogosAgrupados[mes].map((jogo) => (
+                        <div key={jogo.id} className="group">
+                          <div 
+                            onClick={() => toggleExpandir(jogo.id)}
+                            className={`grid grid-cols-[15%_10%_30%_8%_8%_14%_15%] items-center px-6 py-4 hover:bg-white/[0.02] transition-colors cursor-pointer ${jogoExpandido === jogo.id ? 'bg-white/[0.03]' : ''}`}
+                          >
+                            <div className="text-[11px] font-black italic text-slate-300 group-hover:text-brand-yellow transition-colors">{jogo.data}</div>
+                            <div className="text-[10px] font-bold text-slate-500 text-center">{jogo.hora}</div>
+                            <div className="flex items-center gap-3 overflow-hidden">
                               <div className="w-6 h-6 bg-slate-950 rounded-lg p-1 border border-slate-800 flex items-center justify-center shadow-inner flex-shrink-0">
                                 <img src={jogo.logoAdversario} alt={jogo.adversario} className="w-full h-full object-contain" onError={(e) => { e.target.onerror = null; e.target.src = DEFAULT_LOGO; }} />
                               </div>
                               <span className="text-[11px] font-black uppercase italic tracking-tight text-white truncate">{jogo.adversario}</span>
                             </div>
-                          </td>
-                          <td className="px-2 py-4 text-center w-[8%]">
-                            {jogo.tv ? (
-                              <div className="flex justify-center">
+                            <div className="flex justify-center">
+                              {jogo.tv ? (
                                 <svg className="w-4 h-4 text-slate-600 group-hover:text-brand-yellow transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-                              </div>
-                            ) : <span className="text-slate-800">-</span>}
-                          </td>
-                          <td className="px-2 py-4 text-center w-[8%]">
-                            <span className={`text-[10px] font-black rounded-md px-2 py-1 ${jogo.local === 'C' ? 'text-emerald-500 bg-emerald-500/5' : 'text-slate-500 bg-slate-500/5'}`}>
-                              {jogo.local}
-                            </span>
-                          </td>
-                          <td className="px-4 py-4 text-center w-[14%]">
+                              ) : <span className="text-slate-800">-</span>}
+                            </div>
+                            <div className="text-center">
+                              <span className={`text-[10px] font-black rounded-md px-2 py-1 ${jogo.local === 'C' ? 'text-emerald-500 bg-emerald-500/5' : 'text-slate-500 bg-slate-500/5'}`}>
+                                {jogo.local}
+                              </span>
+                            </div>
                             <div className="flex items-center justify-center gap-2">
                               {jogo.resultado && (jogo.resultado.includes('-') || ['V', 'E', 'D'].includes(jogo.resultado)) ? (
                                 <>
@@ -197,16 +190,13 @@ export default function AgendaPage() {
                                 <span className="text-[10px] font-black text-slate-600 italic uppercase">Agendado</span>
                               )}
                             </div>
-                          </td>
-                          <td className="px-6 py-4 w-[15%]">
-                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-500 group-hover:text-slate-300 transition-colors truncate block">{jogo.competicao}</span>
-                          </td>
-                        </tr>
-                        {jogoExpandido === jogo.id && (
-                          <tr className="bg-slate-950/60 border-b border-slate-800/50 animate-in fade-in slide-in-from-top-2 duration-300">
-                            <td colSpan="7" className="px-8 py-8">
+                            <div className="text-[9px] font-black uppercase tracking-widest text-slate-500 group-hover:text-slate-300 transition-colors truncate">{jogo.competicao}</div>
+                          </div>
+
+                          {/* EXPANSÃO */}
+                          {jogoExpandido === jogo.id && (
+                            <div className="bg-slate-950/60 border-t border-slate-800/50 px-8 py-8 animate-in fade-in slide-in-from-top-2 duration-300">
                               <div className="flex flex-col gap-8">
-                                {/* SEÇÃO DE GOLS */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-12 border-b border-slate-800/50 pb-8">
                                   <div className="space-y-4">
                                     <div className="flex items-center gap-3">
@@ -228,7 +218,6 @@ export default function AgendaPage() {
                                   </div>
                                 </div>
 
-                                {/* SEÇÃO DE ESCALAÇÃO */}
                                 {jogo.escalacaoCode ? (
                                   <div className="space-y-6">
                                     <div className="flex items-center gap-3">
@@ -248,7 +237,6 @@ export default function AgendaPage() {
                                   </div>
                                 )}
 
-                                {/* EVENTOS ADICIONAIS */}
                                 {jogo.eventos && (
                                   <div className="pt-4">
                                     <div className="flex items-center gap-3 mb-4">
@@ -261,13 +249,13 @@ export default function AgendaPage() {
                                   </div>
                                 )}
                               </div>
-                            </td>
-                          </tr>
-                        )}
-                      </use>
-                    ))}
-                  </tbody>
-                </table>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           ))}
@@ -305,15 +293,6 @@ export default function AgendaPage() {
         .sofascore-embed-container iframe {
           width: 100% !important;
           max-width: 100% !important;
-        }
-        table {
-          table-layout: fixed !important;
-          width: 100% !important;
-        }
-        th, td {
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
         }
       `}</style>
     </div>
