@@ -60,7 +60,7 @@ export default function AgendaPage() {
                 mandante: mandanteNorm,
                 visitante: visitanteNorm,
                 adversario: adversario,
-                logoAdversario: data['LOGO ADVERSÁRIO'] || getLogo(adversario),
+                logoAdversario: getLogo(adversario),
                 local: data['Local'] === 'Jorjão' || isMandante ? 'C' : 'F',
                 resultado: resultadoExibicao,
                 golsM: golsM,
@@ -135,16 +135,16 @@ export default function AgendaPage() {
               </div>
 
               <div className="bg-slate-900/20 rounded-3xl border border-slate-800/50 overflow-hidden">
-                <table className="w-full text-left border-collapse table-fixed">
+                <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-950/40 border-b border-slate-800/50">
                       <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-500 w-[15%]">Data</th>
-                      <th className="px-4 py-4 text-[9px] font-black uppercase tracking-widest text-slate-500 w-[10%] text-center">Hora</th>
+                      <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-500 w-[10%]">Hora</th>
                       <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-500 w-[30%]">Adversário</th>
-                      <th className="px-2 py-4 text-[9px] font-black uppercase tracking-widest text-slate-500 text-center w-[8%]">TV</th>
-                      <th className="px-2 py-4 text-[9px] font-black uppercase tracking-widest text-slate-500 text-center w-[8%]">Local</th>
-                      <th className="px-4 py-4 text-[9px] font-black uppercase tracking-widest text-slate-500 text-center w-[14%]">Resultado</th>
-                      <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-500 w-[15%]">Competição</th>
+                      <th className="px-4 py-4 text-[9px] font-black uppercase tracking-widest text-slate-500 text-center w-[5%]">TV</th>
+                      <th className="px-4 py-4 text-[9px] font-black uppercase tracking-widest text-slate-500 text-center w-[5%]">Local</th>
+                      <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-500 text-center w-[15%]">Resultado</th>
+                      <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-500 w-[20%]">Competição</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -154,13 +154,13 @@ export default function AgendaPage() {
                           onClick={() => toggleExpandir(jogo.id)}
                           className={`border-b border-slate-800/30 hover:bg-white/[0.02] transition-colors group cursor-pointer ${jogoExpandido === jogo.id ? 'bg-white/[0.03]' : ''}`}
                         >
-                          <td className="px-6 py-4">
+                          <td className="px-6 py-4 w-[15%]">
                             <span className="text-[11px] font-black italic text-slate-300 group-hover:text-brand-yellow transition-colors">{jogo.data}</span>
                           </td>
-                          <td className="px-4 py-4 text-center">
+                          <td className="px-6 py-4 w-[10%]">
                             <span className="text-[10px] font-bold text-slate-500">{jogo.hora}</span>
                           </td>
-                          <td className="px-6 py-4">
+                          <td className="px-6 py-4 w-[30%]">
                             <div className="flex items-center gap-3">
                               <div className="w-6 h-6 bg-slate-950 rounded-lg p-1 border border-slate-800 flex items-center justify-center shadow-inner flex-shrink-0">
                                 <img src={jogo.logoAdversario} alt={jogo.adversario} className="w-full h-full object-contain" onError={(e) => { e.target.onerror = null; e.target.src = DEFAULT_LOGO; }} />
@@ -168,19 +168,19 @@ export default function AgendaPage() {
                               <span className="text-[11px] font-black uppercase italic tracking-tight text-white truncate">{jogo.adversario}</span>
                             </div>
                           </td>
-                          <td className="px-2 py-4 text-center">
+                          <td className="px-4 py-4 text-center w-[5%]">
                             {jogo.tv ? (
                               <div className="flex justify-center">
                                 <svg className="w-4 h-4 text-slate-600 group-hover:text-brand-yellow transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
                               </div>
-                            ) : <span className="text-slate-800">-</span>}
+                            ) : '-'}
                           </td>
-                          <td className="px-2 py-4 text-center">
+                          <td className="px-4 py-4 text-center w-[5%]">
                             <span className={`text-[10px] font-black rounded-md px-2 py-1 ${jogo.local === 'C' ? 'text-emerald-500 bg-emerald-500/5' : 'text-slate-500 bg-slate-500/5'}`}>
                               {jogo.local}
                             </span>
                           </td>
-                          <td className="px-4 py-4 text-center">
+                          <td className="px-6 py-4 text-center w-[15%]">
                             <div className="flex items-center justify-center gap-2">
                               {jogo.resultado && (jogo.resultado.includes('-') || ['V', 'E', 'D'].includes(jogo.resultado)) ? (
                                 <>
@@ -198,7 +198,7 @@ export default function AgendaPage() {
                               )}
                             </div>
                           </td>
-                          <td className="px-6 py-4">
+                          <td className="px-6 py-4 w-[20%]">
                             <span className="text-[9px] font-black uppercase tracking-widest text-slate-500 group-hover:text-slate-300 transition-colors truncate block">{jogo.competicao}</span>
                           </td>
                         </tr>
