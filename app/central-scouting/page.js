@@ -48,14 +48,14 @@ export default function CentralScouting() {
         
         {/* HEADER */}
         <div className="flex items-center gap-6 mb-16">
-          <button onClick={() => router.push('/')} className="p-4 bg-slate-900/80 hover:bg-emerald-500/20 rounded-2xl border border-slate-800 transition-all group">
-            <svg className="w-6 h-6 text-slate-500 group-hover:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <button onClick={() => router.push('/')} className="p-4 bg-slate-900/80 hover:bg-brand-yellow/20 rounded-2xl border border-slate-800 transition-all group">
+            <svg className="w-6 h-6 text-slate-500 group-hover:text-brand-yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
           </button>
           <div>
             <h1 className="text-4xl md:text-6xl font-black italic tracking-tighter uppercase leading-none bg-gradient-to-r from-white via-white to-slate-500 bg-clip-text text-transparent">
-              Central de <span className="text-emerald-500">Scouting</span>
+              Central de <span className="text-brand-yellow">Scouting</span>
             </h1>
             <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.3em] mt-3 ml-1">Inteligência de Mercado & Análise de Perfil</p>
           </div>
@@ -67,17 +67,17 @@ export default function CentralScouting() {
             <button
               key={item.id}
               onClick={() => router.push(item.rota)}
-              className="group relative bg-slate-900/40 backdrop-blur-xl p-10 rounded-[3rem] border border-slate-800/50 text-left hover:border-emerald-500/50 transition-all duration-500 overflow-hidden"
+              className="group relative bg-slate-900/40 backdrop-blur-xl p-10 rounded-[3rem] border border-slate-800/50 text-left hover:border-brand-yellow/50 transition-all duration-500 overflow-hidden"
             >
               {/* Efeito de Glow no Hover */}
-              <div className="absolute -right-20 -top-20 w-64 h-64 bg-emerald-500/5 rounded-full blur-[80px] group-hover:bg-emerald-500/10 transition-all duration-700"></div>
+              <div className="absolute -right-20 -top-20 w-64 h-64 bg-brand-yellow/5 rounded-full blur-[80px] group-hover:bg-brand-yellow/10 transition-all duration-700"></div>
               
               <div className="relative z-10">
-                <div className="w-16 h-16 bg-slate-950 rounded-2xl flex items-center justify-center border border-slate-800 mb-8 group-hover:scale-110 group-hover:border-emerald-500/30 transition-all duration-500 text-emerald-500">
+                <div className="w-16 h-16 bg-slate-950 rounded-2xl flex items-center justify-center border border-slate-800 mb-8 group-hover:scale-110 group-hover:border-brand-yellow/30 transition-all duration-500 text-brand-yellow">
                   {item.icon}
                 </div>
                 
-                <h2 className="text-2xl font-black italic uppercase tracking-tighter mb-4 group-hover:text-emerald-400 transition-colors">
+                <h2 className="text-2xl font-black italic uppercase tracking-tighter mb-4 group-hover:text-brand-yellow transition-colors">
                   {item.titulo}
                 </h2>
                 
@@ -85,7 +85,7 @@ export default function CentralScouting() {
                   {item.descricao}
                 </p>
                 
-                <div className="mt-10 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-emerald-500 opacity-0 group-hover:opacity-100 transition-all translate-x-[-10px] group-hover:translate-x-0">
+                <div className="mt-10 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-brand-yellow opacity-0 group-hover:opacity-100 transition-all translate-x-[-10px] group-hover:translate-x-0">
                   Acessar Ferramenta
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M17 8l4 4m0 0l-4 4m4-4H3" />
@@ -99,7 +99,7 @@ export default function CentralScouting() {
         {/* FOOTER INFO */}
         <div className="mt-20 p-8 bg-slate-950/50 rounded-[2.5rem] border border-slate-900 flex flex-col md:flex-row items-center justify-between gap-8">
           <div className="flex items-center gap-4">
-            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+            <div className="w-2 h-2 bg-brand-yellow rounded-full animate-pulse"></div>
             <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Motor de Percentis Ativo (Laterais v1.0)</span>
           </div>
           <div className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">

@@ -47,24 +47,20 @@ export default function RankingsPage() {
     carregarDados()
   }, [])
 
-  // Posições compatíveis com o perfil selecionado
   const posicoesCompativeis = useMemo(() => {
     return Object.entries(POSICAO_TO_PERFIS)
       .filter(([pos, perfis]) => perfis.includes(perfilAtivo))
       .map(([pos]) => pos)
   }, [perfilAtivo])
 
-  // Métricas do perfil selecionado (para exibir na tabela)
   const metricasPerfil = useMemo(() => {
     return Object.keys(PERFIL_WEIGHTS[perfilAtivo] || {})
   }, [perfilAtivo])
 
-  // Pesos do perfil selecionado
   const pesosPerfil = useMemo(() => {
     return PERFIL_WEIGHTS[perfilAtivo] || {}
   }, [perfilAtivo])
 
-  // Jogadores filtrados, com nota calculada e ordenados
   const jogadoresRankeados = useMemo(() => {
     let filtrados = jogadores.filter(j => {
       const pB = (j.Jogador || '').toLowerCase().includes(busca.toLowerCase())
@@ -105,7 +101,6 @@ export default function RankingsPage() {
     setOrdenacao(prev => ({ coluna, direcao: prev.coluna === coluna && prev.direcao === 'desc' ? 'asc' : 'desc' }))
   }
 
-  // Agrupar perfis por categoria (usando prefixo correto)
   const perfisPorCategoria = useMemo(() => {
     const ordemCategorias = [
       { key: 'Goleiro', label: 'Goleiros' },
@@ -127,7 +122,7 @@ export default function RankingsPage() {
   }, [])
 
   const getNotaColor = (nota) => {
-    if (nota >= 8) return 'bg-emerald-500/20 border-emerald-500 text-emerald-400'
+    if (nota >= 8) return 'bg-brand-yellow/20 border-brand-yellow text-brand-yellow'
     if (nota >= 6.5) return 'bg-blue-500/20 border-blue-500 text-blue-400'
     if (nota >= 5) return 'bg-amber-500/20 border-amber-500 text-amber-400'
     return 'bg-slate-800 border-slate-700 text-slate-500'
@@ -141,7 +136,7 @@ export default function RankingsPage() {
   }
 
   const getRankBadge = (idx) => {
-    if (idx === 0) return 'bg-amber-500 text-slate-950'
+    if (idx === 0) return 'bg-brand-yellow text-slate-950'
     if (idx === 1) return 'bg-slate-400 text-slate-950'
     if (idx === 2) return 'bg-amber-700 text-white'
     return 'bg-slate-800 text-slate-500'
@@ -159,7 +154,7 @@ export default function RankingsPage() {
     doc.save(`ranking-${perfilAtivo.toLowerCase().replace(/\s/g, '-')}.pdf`)
   }
 
-  if (carregando) return <div className="min-h-screen bg-[#0a0c10] flex items-center justify-center text-emerald-500">Processando Rankings...</div>
+  if (carregando) return <div className="min-h-screen bg-[#0a0c10] flex items-center justify-center text-brand-yellow">Processando Rankings...</div>
 
   return (
     <div className="min-h-screen bg-[#0a0c10] text-white p-4 md:p-8 font-sans">
@@ -168,22 +163,22 @@ export default function RankingsPage() {
         {/* HEADER */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-12">
           <div className="flex items-center gap-6">
-            <button onClick={() => router.push('/central-dados')} className="p-4 bg-slate-900/80 hover:bg-emerald-500/20 rounded-2xl border border-slate-800 transition-all group"><svg className="w-6 h-6 text-slate-500 group-hover:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button>
+            <button onClick={() => router.push('/central-dados')} className="p-4 bg-slate-900/80 hover:bg-brand-yellow/20 rounded-2xl border border-slate-800 transition-all group"><svg className="w-6 h-6 text-slate-500 group-hover:text-brand-yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button>
             <div>
               <h1 className="text-4xl md:text-6xl font-black italic uppercase tracking-tighter leading-none">
-                <span className="text-emerald-500">Rankings</span> por Perfil
+                <span className="text-brand-yellow">Rankings</span> por Perfil
               </h1>
               <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-2">Inteligência de Scout baseada em Z-Score</p>
             </div>
           </div>
           <div className="flex flex-wrap gap-3">
-            <button onClick={exportarPDF} className="px-6 py-3 bg-emerald-500 text-slate-950 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-400 transition-all">Exportar PDF</button>
+            <button onClick={exportarPDF} className="px-6 py-3 bg-brand-yellow text-slate-950 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-yellow/80 transition-all">Exportar PDF</button>
           </div>
         </div>
 
         {/* SELETOR DE PERFIL */}
         <div className="bg-slate-900/40 p-8 rounded-[2rem] border border-slate-800/50 mb-8">
-          <h2 className="text-lg font-black italic uppercase mb-6">Selecionar <span className="text-emerald-500">Perfil Técnico</span></h2>
+          <h2 className="text-lg font-black italic uppercase mb-6">Selecionar <span className="text-brand-yellow">Perfil Técnico</span></h2>
           <div className="space-y-4">
             {Object.entries(perfisPorCategoria).map(([categoria, perfis]) => (
               <div key={categoria}>
@@ -195,8 +190,8 @@ export default function RankingsPage() {
                       onClick={() => { setPerfilAtivo(perfil); setOrdenacao({ coluna: 'nota', direcao: 'desc' }); }}
                       className={`px-4 py-2.5 rounded-xl text-[9px] font-black uppercase transition-all border ${
                         perfilAtivo === perfil
-                          ? 'bg-emerald-500 text-slate-950 border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.3)]'
-                          : 'bg-slate-950/50 border-slate-800 text-slate-500 hover:border-emerald-500/30 hover:text-emerald-400'
+                          ? 'bg-brand-yellow text-slate-950 border-brand-yellow shadow-[0_0_20px_rgba(251,191,36,0.3)]'
+                          : 'bg-slate-950/50 border-slate-800 text-slate-500 hover:border-brand-yellow/30 hover:text-brand-yellow'
                       }`}
                     >
                       {perfil}
@@ -209,10 +204,10 @@ export default function RankingsPage() {
         </div>
 
         {/* INFO DO PERFIL SELECIONADO */}
-        <div className="bg-slate-900/40 p-6 rounded-[2rem] border border-emerald-500/20 mb-8">
+        <div className="bg-slate-900/40 p-6 rounded-[2rem] border border-brand-yellow/20 mb-8">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div>
-              <h3 className="text-2xl font-black italic uppercase text-emerald-400">{perfilAtivo}</h3>
+              <h3 className="text-2xl font-black italic uppercase text-brand-yellow">{perfilAtivo}</h3>
               <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mt-1">
                 Posições compatíveis: {posicoesCompativeis.join(', ')} | {jogadoresRankeados.length} atletas encontrados
               </p>
@@ -220,9 +215,9 @@ export default function RankingsPage() {
             </div>
             <div className="flex flex-wrap gap-3">
               {metricasPerfil.map(m => (
-                <div key={m} className="bg-slate-950 border border-emerald-500/30 rounded-xl px-4 py-2 flex flex-col items-center">
+                <div key={m} className="bg-slate-950 border border-brand-yellow/30 rounded-xl px-4 py-2 flex flex-col items-center">
                   <span className="text-[8px] font-black uppercase text-slate-500 tracking-widest">{m}</span>
-                  <span className="text-emerald-400 font-black text-lg">{Math.round(pesosPerfil[m] * 100)}%</span>
+                  <span className="text-brand-yellow font-black text-lg">{Math.round(pesosPerfil[m] * 100)}%</span>
                 </div>
               ))}
             </div>
@@ -233,94 +228,74 @@ export default function RankingsPage() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
             <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Buscar Atleta</h3>
-            <input type="text" placeholder="NOME DO ATLETA..." value={busca} onChange={e => setBusca(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none" />
+            <input type="text" placeholder="NOME DO ATLETA..." value={busca} onChange={e => setBusca(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50" />
           </div>
           <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
             <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Filtrar Time</h3>
-            <select value={filtroTime} onChange={e => setFiltroTime(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none">{times.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}</select>
+            <select value={filtroTime} onChange={e => setFiltroTime(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50">{times.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}</select>
           </div>
           <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Idade (Min - Max)</h3>
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Idade</h3>
             <div className="flex gap-4">
-              <input type="number" value={filtroIdade.min} onChange={e => setFiltroIdade({...filtroIdade, min: parseInt(e.target.value)})} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-[10px] font-bold" />
-              <input type="number" value={filtroIdade.max} onChange={e => setFiltroIdade({...filtroIdade, max: parseInt(e.target.value)})} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-[10px] font-bold" />
+              <input type="number" value={filtroIdade.min} onChange={e => setFiltroIdade({...filtroIdade, min: parseInt(e.target.value)})} className="w-1/2 bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50" />
+              <input type="number" value={filtroIdade.max} onChange={e => setFiltroIdade({...filtroIdade, max: parseInt(e.target.value)})} className="w-1/2 bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50" />
             </div>
           </div>
           <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Minutagem Mínima</h3>
-            <input type="number" value={filtroMinutagem} onChange={e => setFiltroMinutagem(parseInt(e.target.value))} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-[10px] font-bold" />
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Minutos Mínimos</h3>
+            <input type="number" value={filtroMinutagem} onChange={e => setFiltroMinutagem(parseInt(e.target.value))} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50" />
           </div>
         </div>
 
         {/* TABELA DE RANKING */}
-        <div className="bg-slate-900/40 rounded-[2rem] border border-slate-800/50 overflow-hidden">
-          <div className="overflow-x-auto"><table className="w-full text-left border-collapse">
-            <thead><tr className="bg-slate-950/50 border-b border-slate-800">
-              <th className="p-5 text-[10px] font-black uppercase text-slate-500 w-12">#</th>
-              <th className="p-5 text-[10px] font-black uppercase text-slate-500 cursor-pointer" onClick={() => handleOrdenacao('Jogador')}>Atleta</th>
-              <th className="p-5 text-[10px] font-black uppercase text-emerald-500 cursor-pointer" onClick={() => handleOrdenacao('nota')}>
-                Nota {ordenacao.coluna === 'nota' ? (ordenacao.direcao === 'desc' ? '↓' : '↑') : ''}
-              </th>
-              <th className="p-5 text-[10px] font-black uppercase text-slate-500">Nível</th>
-              <th className="p-5 text-[10px] font-black uppercase text-slate-500 cursor-pointer" onClick={() => handleOrdenacao('Time')}>Equipe</th>
-              <th className="p-5 text-[10px] font-black uppercase text-slate-500">Pos</th>
-              <th className="p-5 text-[10px] font-black uppercase text-slate-500">Perfil Dominante</th>
-              {metricasPerfil.map(m => (
-                <th key={m} className="p-5 text-[10px] font-black uppercase text-slate-500 hover:text-white cursor-pointer transition-all" onClick={() => handleOrdenacao(m)}>
-                  {m} <span className="text-emerald-500/50">({Math.round(pesosPerfil[m] * 100)}%)</span>
-                </th>
-              ))}
-            </tr></thead>
-            <tbody>{jogadoresRankeados.map((j, idx) => (
-              <tr key={idx} className="border-b border-slate-800/30 hover:bg-emerald-500/5 transition-all group">
-                <td className="p-5">
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black ${getRankBadge(idx)}`}>
-                    {idx + 1}
-                  </div>
-                </td>
-                <td className="p-5">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-[10px] font-black text-slate-600 group-hover:bg-emerald-500 group-hover:text-slate-950 transition-all">{j.ID_ATLETA || j.Jogador.substring(0, 2).toUpperCase()}</div>
-                    <div className="flex flex-col">
-                      <span className="font-black italic uppercase text-sm group-hover:text-emerald-400 transition-colors">{j.Jogador}</span>
-                      <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest">• {j.Idade} ANOS</span>
-                      {j.ID_ATLETA && <span className="text-[7px] font-bold text-slate-700 uppercase tracking-widest">{j.ID_ATLETA}</span>}
-                    </div>
-                  </div>
-                </td>
-                <td className="p-5">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-black italic text-lg border ${getNotaColor(j.nota)}`}>
-                    {j.nota}
-                  </div>
-                </td>
-                <td className="p-5">
-                  <span className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase border ${getNotaColor(j.nota)}`}>
-                    {getNotaLabel(j.nota)}
-                  </span>
-                </td>
-                <td className="p-5 text-[10px] font-black uppercase text-slate-400">{j.Time || j.Equipe}</td>
-                <td className="p-5"><span className="px-3 py-1 bg-slate-950 border border-slate-800 rounded-lg text-[9px] font-black text-slate-500">{j.Posição}</span></td>
-                <td className="p-5">
-                  <span className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase ${j.perfilDominante === perfilAtivo ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' : 'bg-slate-800/50 border border-slate-700 text-slate-500'}`}>
-                    {j.perfilDominante}
-                  </span>
-                </td>
-                {metricasPerfil.map(m => (
-                  <td key={m} className="p-5">
-                    <span className="text-xs font-black text-slate-400">{j[m] || '0'}</span>
-                  </td>
+        <div className="bg-slate-900/40 rounded-[2rem] border border-slate-800/50 overflow-hidden shadow-2xl">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-800/50 bg-slate-950/50">
+                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-500">Rank</th>
+                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-500">Atleta</th>
+                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-500">Equipe</th>
+                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-500 text-center">Nota</th>
+                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-500 text-center">Status</th>
+                  {metricasPerfil.map(m => (
+                    <th key={m} onClick={() => handleOrdenacao(m)} className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-500 cursor-pointer hover:text-brand-yellow transition-colors text-center">
+                      {m} {ordenacao.coluna === m && (ordenacao.direcao === 'asc' ? '↑' : '↓')}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {jogadoresRankeados.map((j, idx) => (
+                  <tr key={j.Jogador} className="border-b border-slate-800/30 hover:bg-white/5 transition-colors group">
+                    <td className="p-6">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black italic text-sm ${getRankBadge(idx)}`}>
+                        {idx + 1}
+                      </div>
+                    </td>
+                    <td className="p-6">
+                      <div className="font-black italic uppercase text-sm group-hover:text-brand-yellow transition-colors">{j.Jogador}</div>
+                      <div className="text-[8px] font-bold uppercase tracking-widest text-slate-500 mt-1">{j.Posição}</div>
+                    </td>
+                    <td className="p-6 text-[10px] font-black uppercase text-slate-400">{j.Time}</td>
+                    <td className="p-6 text-center">
+                      <div className="text-2xl font-black italic text-white">{j.nota.toFixed(1)}</div>
+                    </td>
+                    <td className="p-6 text-center">
+                      <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase border ${getNotaColor(j.nota)}`}>
+                        {getNotaLabel(j.nota)}
+                      </span>
+                    </td>
+                    {metricasPerfil.map(m => (
+                      <td key={m} className="p-6 text-center">
+                        <span className="text-sm font-black italic text-slate-400">{j[m] || '0'}</span>
+                      </td>
+                    ))}
+                  </tr>
                 ))}
-              </tr>
-            ))}</tbody>
-          </table></div>
-        </div>
-
-        {/* LEGENDA */}
-        <div className="mt-6 flex flex-wrap gap-4 justify-center">
-          <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-emerald-500/30 border border-emerald-500"></div><span className="text-[9px] font-black uppercase text-slate-500">Elite (8+)</span></div>
-          <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-blue-500/30 border border-blue-500"></div><span className="text-[9px] font-black uppercase text-slate-500">Bom (6.5-8)</span></div>
-          <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-amber-500/30 border border-amber-500"></div><span className="text-[9px] font-black uppercase text-slate-500">Regular (5-6.5)</span></div>
-          <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-slate-700 border border-slate-600"></div><span className="text-[9px] font-black uppercase text-slate-500">Abaixo (&lt;5)</span></div>
+              </tbody>
+            </table>
+          </div>
         </div>
 
       </div>

@@ -110,17 +110,11 @@ export default function BenchmarkPage() {
 
   const jogadoresFiltrados = useMemo(() => {
     return jogadores.filter(j => {
-      // 1. Filtro de Time
       const timeAtleta = (j.Time || j.Equipe || '').trim();
       const passaTime = filtroTime === 'Todas' || timeAtleta.toLowerCase() === filtroTime.toLowerCase();
-      
-      // 2. Filtro de Busca
       const nomeAtleta = (j.Jogador || '').trim();
       const passaBusca = nomeAtleta.toLowerCase().includes(busca.toLowerCase());
-      
-      // 3. Filtro de Posição
       const passaPosicao = filtrosPosicao.length === 0 || filtrosPosicao.includes(j.Posição);
-      
       return passaTime && passaBusca && passaPosicao;
     });
   }, [jogadores, busca, filtroTime, filtrosPosicao])
@@ -153,7 +147,7 @@ export default function BenchmarkPage() {
   if (carregando) return (
     <div className="min-h-screen bg-[#0a0c10] text-white flex items-center justify-center">
       <div className="text-center">
-        <div className="w-16 h-16 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin mx-auto mb-4"></div>
+        <div className="w-16 h-16 border-4 border-brand-yellow/20 border-t-brand-yellow rounded-full animate-spin mx-auto mb-4"></div>
         <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 animate-pulse italic">Calculando Benchmarks...</span>
       </div>
     </div>
@@ -165,12 +159,12 @@ export default function BenchmarkPage() {
         
         {/* HEADER */}
         <div className="flex items-center gap-6 mb-12">
-          <button onClick={() => router.push('/central-dados')} className="p-4 bg-slate-900/80 hover:bg-emerald-500/20 rounded-2xl border border-slate-800 transition-all group">
-            <svg className="w-6 h-6 text-slate-500 group-hover:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+          <button onClick={() => router.push('/central-dados')} className="p-4 bg-slate-900/80 hover:bg-brand-yellow/20 rounded-2xl border border-slate-800 transition-all group">
+            <svg className="w-6 h-6 text-slate-500 group-hover:text-brand-yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
           </button>
           <div>
             <h1 className="text-4xl md:text-5xl font-black italic tracking-tighter uppercase leading-none bg-gradient-to-r from-white via-white to-slate-500 bg-clip-text text-transparent">
-              Benchmark <span className="text-emerald-500">Performance</span>
+              Benchmark <span className="text-brand-yellow">Performance</span>
             </h1>
             <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-2">Comparação Técnica com a Média da Liga</p>
           </div>
@@ -180,16 +174,16 @@ export default function BenchmarkPage() {
         <div className="bg-slate-900/40 backdrop-blur-md p-8 rounded-[2.5rem] border border-slate-800/50 shadow-2xl mb-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
             <div className="flex flex-col gap-2">
-              <h2 className="text-xl font-black italic uppercase tracking-tighter">Configurar <span className="text-emerald-500">Benchmark</span></h2>
+              <h2 className="text-xl font-black italic uppercase tracking-tighter">Configurar <span className="text-brand-yellow">Benchmark</span></h2>
               <div className="flex gap-2">
                 <input 
                   type="text" 
                   placeholder="NOME DO TEMPLATE..." 
                   value={nomeNovoTemplate} 
                   onChange={e => setNomeNovoTemplate(e.target.value)} 
-                  className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-[10px] font-black uppercase outline-none focus:border-emerald-500/50"
+                  className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-[10px] font-black uppercase outline-none focus:border-brand-yellow/50"
                 />
-                <button onClick={salvarTemplate} className="bg-emerald-500 text-slate-950 px-4 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-emerald-400 transition-all">Salvar</button>
+                <button onClick={salvarTemplate} className="bg-brand-yellow text-slate-950 px-4 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-brand-yellow/80 transition-all">Salvar</button>
               </div>
             </div>
             
@@ -197,7 +191,7 @@ export default function BenchmarkPage() {
               <div className="flex items-center gap-4 mb-1">
                 <button 
                   onClick={() => setMetricasBenchmark([])}
-                  className="text-[10px] font-black uppercase text-slate-500 hover:text-emerald-400 transition-colors ml-1"
+                  className="text-[10px] font-black uppercase text-slate-500 hover:text-brand-yellow transition-colors ml-1"
                 >
                   [ Desmarcar Tudo ]
                 </button>
@@ -206,7 +200,7 @@ export default function BenchmarkPage() {
                   <button 
                     key={cat} 
                     onClick={() => setAbaAtiva(cat)}
-                    className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${abaAtiva === cat ? 'bg-emerald-500 text-slate-950' : 'text-slate-500 hover:text-slate-300'}`}
+                    className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${abaAtiva === cat ? 'bg-brand-yellow text-slate-950' : 'text-slate-500 hover:text-slate-300'}`}
                   >
                     {cat}
                   </button>
@@ -218,7 +212,7 @@ export default function BenchmarkPage() {
                   <button 
                     key={t.id} 
                     onClick={() => setMetricasBenchmark(t.metricas)}
-                    className="px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-[8px] font-black uppercase text-slate-400 hover:text-emerald-400 hover:border-emerald-500/50 transition-all"
+                    className="px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-[8px] font-black uppercase text-slate-400 hover:text-brand-yellow hover:border-brand-yellow/50 transition-all"
                   >
                     {t.nome}
                   </button>
@@ -235,10 +229,10 @@ export default function BenchmarkPage() {
                   if (metricasBenchmark.includes(metrica)) setMetricasBenchmark(metricasBenchmark.filter(m => m !== metrica))
                   else setMetricasBenchmark([...metricasBenchmark, metrica])
                 }}
-                className={`p-3 rounded-xl border text-[9px] font-black uppercase tracking-widest transition-all text-left flex items-center justify-between group ${metricasBenchmark.includes(metrica) ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400' : 'bg-slate-950/50 border-slate-800 text-slate-500 hover:border-slate-600'}`}
+                className={`p-3 rounded-xl border text-[9px] font-black uppercase tracking-widest transition-all text-left flex items-center justify-between group ${metricasBenchmark.includes(metrica) ? 'bg-brand-yellow/10 border-brand-yellow text-brand-yellow' : 'bg-slate-950/50 border-slate-800 text-slate-500 hover:border-slate-600'}`}
               >
                 <span className="truncate mr-2">{metrica}</span>
-                {metricasBenchmark.includes(metrica) && <div className="w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>}
+                {metricasBenchmark.includes(metrica) && <div className="w-2 h-2 bg-brand-yellow rounded-full shadow-[0_0_8px_rgba(251,191,36,0.8)]"></div>}
               </button>
             ))}
           </div>
@@ -246,136 +240,127 @@ export default function BenchmarkPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           
-          {/* SIDEBAR FILTROS */}
+          {/* SIDEBAR SELEÇÃO */}
           <div className="lg:col-span-1 space-y-6">
-            <div className="bg-slate-900/40 backdrop-blur-md p-6 rounded-3xl border border-slate-800/50 shadow-2xl">
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Filtros de Contexto</h3>
-              <div className="space-y-3">
-                <input 
-                  type="text" 
-                  placeholder="BUSCAR ATLETA..." 
-                  value={busca}
-                  onChange={(e) => setBusca(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black uppercase tracking-widest focus:border-emerald-500/50 outline-none"
-                />
-                <select value={filtroTime} onChange={(e) => setFiltroTime(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black uppercase tracking-widest focus:outline-none">
+            <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Filtros</h3>
+              <div className="space-y-4">
+                <input type="text" placeholder="BUSCAR ATLETA..." value={busca} onChange={e => setBusca(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black uppercase outline-none focus:border-brand-yellow/50" />
+                <select value={filtroTime} onChange={e => setFiltroTime(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black uppercase outline-none focus:border-brand-yellow/50">
                   {times.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
                 </select>
-                <div className="flex flex-wrap gap-1 max-h-[150px] overflow-y-auto custom-scrollbar p-1">
+                <div className="flex flex-wrap gap-1 max-h-[100px] overflow-y-auto p-1 custom-scrollbar">
                   {posicoes.map(p => (
-                    <button key={p} onClick={() => togglePosicao(p)} className={`px-2 py-1 rounded text-[8px] font-black uppercase border ${filtrosPosicao.includes(p) ? 'bg-emerald-500 text-slate-950 border-emerald-500' : 'bg-slate-900 text-slate-500 border-slate-800'}`}>{p}</button>
+                    <button key={p} onClick={() => togglePosicao(p)} className={`px-2 py-1 rounded text-[8px] font-black uppercase border transition-all ${filtrosPosicao.includes(p) ? 'bg-brand-yellow text-slate-950 border-brand-yellow' : 'bg-slate-900 text-slate-500 border-slate-800 hover:border-slate-600'}`}>{p}</button>
                   ))}
                 </div>
               </div>
             </div>
 
-            <div className="bg-slate-900/40 backdrop-blur-md p-6 rounded-3xl border border-slate-800/50 shadow-2xl">
+            <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
               <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Atletas ({jogadoresFiltrados.length})</h3>
-              <div className="space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
+              <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                 {jogadoresFiltrados.map(j => (
                   <button 
                     key={j.Jogador}
                     onClick={() => setJogadorSelecionado(j)}
-                    className={`w-full p-4 rounded-2xl text-left transition-all border ${jogadorSelecionado?.Jogador === j.Jogador ? 'bg-emerald-500 border-emerald-500 text-slate-950' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-700'}`}
+                    className={`w-full p-4 rounded-2xl text-left transition-all border ${jogadorSelecionado?.Jogador === j.Jogador ? 'bg-brand-yellow border-brand-yellow text-slate-950' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-700'}`}
                   >
                     <div className="font-black italic uppercase text-[11px] tracking-tighter">{j.Jogador}</div>
-                    <div className="text-[8px] font-bold uppercase tracking-widest opacity-60 mt-1">{j.Posição} • {j.Time || j.Equipe}</div>
+                    <div className="text-[8px] font-bold uppercase tracking-widest opacity-60 mt-1">{j.Time || j.Equipe}</div>
                   </button>
                 ))}
-                {jogadoresFiltrados.length === 0 && <p className="text-[10px] text-slate-600 font-black uppercase text-center py-8">Nenhum atleta encontrado</p>}
               </div>
             </div>
           </div>
 
-          {/* MAIN CONTENT */}
-          <div className="lg:col-span-3 space-y-6">
-            {jogadorSelecionado && (
-              <div className="bg-slate-900/40 backdrop-blur-md rounded-[3rem] p-10 border border-slate-800/50 shadow-2xl">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-12">
-                  <div className="flex items-center gap-6">
-                    <div className="w-20 h-20 bg-slate-950 rounded-[2rem] flex items-center justify-center border border-slate-800 shadow-[0_0_30px_rgba(16,185,129,0.1)]">
-                      <span className="text-emerald-500 font-black italic text-2xl">{jogadorSelecionado.Jogador.substring(0, 2).toUpperCase()}</span>
+          {/* ÁREA DE BENCHMARK */}
+          <div className="lg:col-span-3 space-y-8">
+            {jogadorSelecionado ? (
+              <>
+                {/* CARD DO ATLETA */}
+                <div className="bg-slate-900/40 rounded-[3rem] p-10 border border-slate-800/50 shadow-2xl relative overflow-hidden">
+                  <div className="absolute right-0 top-0 w-1/3 h-full bg-gradient-to-l from-brand-yellow/[0.03] to-transparent"></div>
+                  <div className="flex flex-col md:flex-row items-center gap-10 relative z-10">
+                    <div className="w-32 h-32 bg-slate-950 rounded-[2.5rem] border-2 border-brand-yellow flex items-center justify-center text-4xl font-black italic text-brand-yellow shadow-[0_0_30px_rgba(251,191,36,0.2)]">
+                      {jogadorSelecionado.Jogador.substring(0, 2).toUpperCase()}
                     </div>
-                    <div>
-                      <div className="flex items-center gap-3 mb-1">
-                        <div className="w-1.5 h-4 bg-emerald-500 rounded-full"></div>
-                        <span className="text-emerald-500 text-[10px] font-black uppercase tracking-[0.3em]">Perfil de Benchmark</span>
+                    <div className="text-center md:text-left">
+                      <h2 className="text-5xl font-black italic uppercase tracking-tighter mb-2">{jogadorSelecionado.Jogador}</h2>
+                      <div className="flex flex-wrap justify-center md:justify-start gap-4">
+                        <span className="px-4 py-1.5 bg-slate-950 border border-slate-800 rounded-full text-[10px] font-black uppercase tracking-widest text-slate-400">{jogadorSelecionado.Time || jogadorSelecionado.Equipe}</span>
+                        <span className="px-4 py-1.5 bg-brand-yellow/10 border border-brand-yellow/30 rounded-full text-[10px] font-black uppercase tracking-widest text-brand-yellow">{jogadorSelecionado.Posição}</span>
+                        <span className="px-4 py-1.5 bg-slate-950 border border-slate-800 rounded-full text-[10px] font-black uppercase tracking-widest text-slate-400">{jogadorSelecionado.Idade} ANOS</span>
                       </div>
-                      <h2 className="text-5xl font-black italic uppercase tracking-tighter text-white leading-none">{jogadorSelecionado.Jogador}</h2>
-                      <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-2">{jogadorSelecionado.Posição} • {jogadorSelecionado.Time || jogadorSelecionado.Equipe}</p>
                     </div>
-                  </div>
-
-                  <div className="bg-slate-950/50 p-4 rounded-2xl border border-slate-800">
-                    <label className="text-[8px] font-black text-slate-600 uppercase tracking-widest block mb-2 ml-1">Referência de Comparação</label>
-                    <select 
-                      value={posicaoReferencia} 
-                      onChange={(e) => setPosicaoReferencia(e.target.value)}
-                      className="bg-transparent text-[10px] font-black uppercase tracking-widest text-emerald-500 outline-none cursor-pointer"
-                    >
-                      <option value="MESMA">Média da Posição ({jogadorSelecionado.Posição})</option>
-                      <option value="LIGA">Média Geral da Liga</option>
-                      {posicoes.map(p => <option key={p} value={p}>Média de {p}</option>)}
-                    </select>
+                    <div className="md:ml-auto text-center md:text-right">
+                      <span className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-1">Referência de Média</span>
+                      <select 
+                        value={posicaoReferencia} 
+                        onChange={e => setPosicaoReferencia(e.target.value)}
+                        className="bg-slate-950 border border-brand-yellow/30 rounded-xl px-4 py-2 text-[10px] font-black uppercase outline-none text-brand-yellow"
+                      >
+                        <option value="MESMA">MESMA POSIÇÃO ({jogadorSelecionado.Posição})</option>
+                        <option value="LIGA">MÉDIA DA LIGA (GERAL)</option>
+                        {posicoes.map(p => <option key={p} value={p}>{p.toUpperCase()}</option>)}
+                      </select>
+                    </div>
                   </div>
                 </div>
 
+                {/* GRID DE MÉTRICAS */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {metricasBenchmark.map((metrica, idx) => {
-                    const valorAtleta = parseValue(jogadorSelecionado[metrica])
-                    const valorMedia = mediaReferencia[metrica] || 0
-                    const diferenca = valorMedia === 0 ? 0 : ((valorAtleta - valorMedia) / valorMedia) * 100
-                    const isPositive = diferenca >= 0
+                  {metricasBenchmark.map(m => {
+                    const valAtleta = parseValue(jogadorSelecionado[m])
+                    const valMedia = mediaReferencia[m] || 0
+                    const diff = valMedia === 0 ? 0 : ((valAtleta - valMedia) / valMedia) * 100
+                    const percent = Math.min(Math.max((valAtleta / (valMedia * 2 || 1)) * 50, 5), 95)
 
                     return (
-                      <div key={idx} className="bg-slate-950/50 p-8 rounded-[2rem] border border-slate-800/50 group hover:border-emerald-500/30 transition-all duration-500">
+                      <div key={m} className="bg-slate-900/40 rounded-[2rem] p-8 border border-slate-800/50 hover:border-brand-yellow/20 transition-all group shadow-xl">
                         <div className="flex justify-between items-start mb-6">
                           <div>
-                            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-1">{metrica}</span>
-                            <div className="text-3xl font-black italic text-white group-hover:text-emerald-400 transition-colors">{jogadorSelecionado[metrica] || '0'}</div>
+                            <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">{m}</h4>
+                            <div className="text-3xl font-black italic text-white group-hover:text-brand-yellow transition-colors">{valAtleta}</div>
                           </div>
-                          <div className={`px-3 py-1.5 rounded-xl text-[10px] font-black ${isPositive ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
-                            {isPositive ? '+' : ''}{diferenca.toFixed(1)}%
+                          <div className={`text-right ${diff >= 0 ? 'text-brand-yellow' : 'text-red-500'}`}>
+                            <span className="text-[10px] font-black uppercase block mb-1">vs Média</span>
+                            <span className="text-lg font-black italic">{diff >= 0 ? '+' : ''}{diff.toFixed(1)}%</span>
                           </div>
                         </div>
-
-                        <div className="space-y-3">
-                          <div className="flex justify-between text-[8px] font-black uppercase tracking-widest">
-                            <span className="text-slate-600">Atleta</span>
-                            <span className="text-slate-600">Média Ref.</span>
-                          </div>
-                          <div className="relative h-3 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
-                            {/* Barra da Média */}
-                            <div 
-                              className="absolute top-0 bottom-0 bg-slate-700/50 border-r-2 border-white/20 z-10"
-                              style={{ width: '50%' }}
-                            ></div>
-                            {/* Barra do Atleta */}
-                            <div 
-                              className={`absolute top-0 bottom-0 transition-all duration-1000 ${isPositive ? 'bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)]' : 'bg-red-500/50'}`}
-                              style={{ width: `${Math.min(Math.max((valorAtleta / (valorMedia || 1)) * 50, 5), 100)}%` }}
-                            ></div>
-                          </div>
-                          <div className="flex justify-between text-[9px] font-black text-slate-400">
-                            <span>{valorAtleta.toFixed(1)}</span>
-                            <span>{valorMedia.toFixed(1)}</span>
-                          </div>
+                        
+                        <div className="relative h-3 bg-slate-950 rounded-full border border-slate-800 overflow-hidden">
+                          <div className="absolute top-0 left-1/2 w-0.5 h-full bg-slate-700 z-10"></div>
+                          <div 
+                            className={`absolute top-0 h-full transition-all duration-1000 ${diff >= 0 ? 'bg-brand-yellow shadow-[0_0_15px_rgba(251,191,36,0.4)]' : 'bg-red-500'}`}
+                            style={{ 
+                              left: diff >= 0 ? '50%' : `${Math.max(50 + (diff/2), 0)}%`,
+                              width: `${Math.abs(diff/2)}%`,
+                              maxWidth: '50%'
+                            }}
+                          ></div>
+                        </div>
+                        <div className="flex justify-between mt-3 text-[8px] font-black uppercase tracking-widest text-slate-600">
+                          <span>Abaixo da Média</span>
+                          <span>Acima da Média</span>
                         </div>
                       </div>
                     )
                   })}
                 </div>
-              </div>
+              </>
+            ) : (
+              <div className="h-full flex items-center justify-center text-slate-600 font-black italic uppercase tracking-widest">Selecione um atleta para iniciar o benchmark</div>
             )}
           </div>
         </div>
-      </div>
 
+      </div>
       <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #0a0c10; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #10b981; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #fbbf24; }
       `}</style>
     </div>
   )

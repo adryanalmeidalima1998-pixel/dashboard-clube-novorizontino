@@ -35,8 +35,8 @@ ChartJS.register(
 )
 
 const CORES_JOGADORES = [
-  '#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6',
-  '#ec4899', '#14b8a6', '#f97316', '#06b6d4', '#84cc16'
+  '#fbbf24', '#d4af37', '#e2e8f0', '#3b82f6', '#ef4444',
+  '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#06b6d4'
 ]
 
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSVC0eenchMDxK3wsOTXjq9kQiy3aHTFl0X1o5vwJZR7RiZzg1Irxxe_SL2IDrqb3c1i7ZL2ugpBJkN/pub?output=csv";
@@ -130,7 +130,6 @@ export default function GraficosPage() {
   const posicoes = useMemo(() => [...new Set(jogadores.map(j => j.Posição).filter(Boolean))], [jogadores])
 
   const jogadoresFiltrados = useMemo(() => {
-    // 1. Primeiro, filtramos estritamente pela equipe selecionada (Filtro Soberano)
     let baseFiltrada = jogadores;
     if (filtroTime !== 'Todos') {
       baseFiltrada = baseFiltrada.filter(j => {
@@ -138,17 +137,11 @@ export default function GraficosPage() {
         return timeAtleta === filtroTime;
       });
     }
-
-    // 2. Agora aplicamos os demais filtros sobre a base que já respeita a equipe
     return baseFiltrada.filter(j => {
-      // Multi-seleção de Posições
       const passaPosicao = filtrosPosicao.length === 0 || filtrosPosicao.includes(j.Posição);
-      
-      // Filtros numéricos
       const idade = parseValue(j.Idade);
       const passaIdade = idade >= filtroIdade.min && idade <= filtroIdade.max;
       const passaMinutagem = parseValue(j['Minutos jogados']) >= filtroMinutagem;
-      
       return passaPosicao && passaIdade && passaMinutagem;
     });
   }, [jogadores, filtroTime, filtrosPosicao, filtroIdade, filtroMinutagem])
@@ -205,7 +198,7 @@ export default function GraficosPage() {
     setNomeNovoTemplate('')
   }
 
-  if (carregando) return <div className="min-h-screen bg-[#0a0c10] flex items-center justify-center text-emerald-500">Carregando Gráficos...</div>
+  if (carregando) return <div className="min-h-screen bg-[#0a0c10] flex items-center justify-center text-brand-yellow">Carregando Gráficos...</div>
 
   return (
     <div className="min-h-screen bg-[#0a0c10] text-white p-4 md:p-8 font-sans">
@@ -214,12 +207,12 @@ export default function GraficosPage() {
         {/* HEADER */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-12">
           <div className="flex items-center gap-6">
-            <button onClick={() => router.push('/central-dados')} className="p-4 bg-slate-900/80 hover:bg-emerald-500/20 rounded-2xl border border-slate-800 transition-all group"><svg className="w-6 h-6 text-slate-500 group-hover:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button>
-            <div><h1 className="text-4xl md:text-6xl font-black italic uppercase tracking-tighter leading-none">Gráficos de <span className="text-emerald-500">Performance</span></h1></div>
+            <button onClick={() => router.push('/central-dados')} className="p-4 bg-slate-900/80 hover:bg-brand-yellow/20 rounded-2xl border border-slate-800 transition-all group"><svg className="w-6 h-6 text-slate-500 group-hover:text-brand-yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button>
+            <div><h1 className="text-4xl md:text-6xl font-black italic uppercase tracking-tighter leading-none">Gráficos de <span className="text-brand-yellow">Performance</span></h1></div>
           </div>
           <div className="flex gap-3">
-            <button onClick={() => setTipoGrafico(tipoGrafico === 'radar' ? 'dispersao' : 'radar')} className="px-6 py-3 bg-slate-900/80 border border-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500/20 transition-all">{tipoGrafico === 'radar' ? 'Ver Dispersão' : 'Ver Radar'}</button>
-            <button onClick={exportarPDF} className="px-6 py-3 bg-emerald-500 text-slate-950 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-400 transition-all">PDF Clean</button>
+            <button onClick={() => setTipoGrafico(tipoGrafico === 'radar' ? 'dispersao' : 'radar')} className="px-6 py-3 bg-slate-900/80 border border-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-yellow/20 transition-all">{tipoGrafico === 'radar' ? 'Ver Dispersão' : 'Ver Radar'}</button>
+            <button onClick={exportarPDF} className="px-6 py-3 bg-brand-yellow text-slate-950 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-yellow/80 transition-all">PDF Clean</button>
           </div>
         </div>
 
@@ -227,16 +220,16 @@ export default function GraficosPage() {
         <div className="bg-slate-900/40 backdrop-blur-md p-8 rounded-[2.5rem] border border-slate-800/50 shadow-2xl mb-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
             <div className="flex flex-col gap-2">
-              <h2 className="text-xl font-black italic uppercase tracking-tighter">Configurar <span className="text-emerald-500">Métricas</span></h2>
+              <h2 className="text-xl font-black italic uppercase tracking-tighter">Configurar <span className="text-brand-yellow">Métricas</span></h2>
               <div className="flex gap-2">
                 <input 
                   type="text" 
                   placeholder="NOME DO TEMPLATE..." 
                   value={nomeNovoTemplate} 
                   onChange={e => setNomeNovoTemplate(e.target.value)} 
-                  className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-[10px] font-black uppercase outline-none focus:border-emerald-500/50"
+                  className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-[10px] font-black uppercase outline-none focus:border-brand-yellow/50"
                 />
-                <button onClick={salvarTemplate} className="bg-emerald-500 text-slate-950 px-4 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-emerald-400 transition-all">Salvar</button>
+                <button onClick={salvarTemplate} className="bg-brand-yellow text-slate-950 px-4 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-brand-yellow/80 transition-all">Salvar</button>
               </div>
             </div>
             
@@ -245,156 +238,155 @@ export default function GraficosPage() {
                 <button 
                   onClick={() => {
                     if (tipoGrafico === 'radar') setMetricasRadar([])
-                    else { setMetricaX(''); setMetricaY(''); }
+                    else { setMetricaX(''); setMetricaY('') }
                   }}
-                  className="text-[10px] font-black uppercase text-slate-500 hover:text-emerald-400 transition-colors ml-1"
+                  className="text-[9px] font-black uppercase text-slate-500 hover:text-brand-yellow transition-all"
                 >
                   [ Desmarcar Tudo ]
                 </button>
-                <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 overflow-x-auto custom-scrollbar flex-1">
+                <div className="flex flex-wrap gap-2 bg-slate-950 p-1 rounded-xl border border-slate-800 overflow-x-auto custom-scrollbar max-w-[500px]">
                   {Object.keys(categoriasMetricas).map(cat => (
-                  <button 
-                    key={cat} 
-                    onClick={() => setAbaAtiva(cat)}
-                    className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${abaAtiva === cat ? 'bg-emerald-500 text-slate-950' : 'text-slate-500 hover:text-slate-300'}`}
-                  >
-                    {cat}
-                  </button>
-                ))}
+                    <button key={cat} onClick={() => setAbaAtiva(cat)} className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${abaAtiva === cat ? 'bg-brand-yellow text-slate-950' : 'text-slate-500 hover:text-slate-300'}`}>{cat}</button>
+                  ))}
                 </div>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1 max-h-[60px] overflow-y-auto custom-scrollbar">
                 {templates.filter(t => t.tipo === tipoGrafico).map(t => (
-                  <button 
-                    key={t.id} 
-                    onClick={() => {
-                      if (tipoGrafico === 'radar') setMetricasRadar(t.metricas)
-                      else { setMetricaX(t.metricas[0]); setMetricaY(t.metricas[1]); }
-                    }}
-                    className="px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-[8px] font-black uppercase text-slate-400 hover:text-emerald-400 hover:border-emerald-500/50 transition-all"
-                  >
-                    {t.nome}
-                  </button>
+                  <button key={t.id} onClick={() => {
+                    if (t.tipo === 'radar') setMetricasRadar(t.metricas)
+                    else { setMetricaX(t.metricas[0]); setMetricaY(t.metricas[1]) }
+                  }} className="text-[8px] font-black uppercase bg-slate-800 px-2 py-1 rounded border border-slate-700 hover:border-brand-yellow/50 hover:text-brand-yellow transition-all">{t.nome}</button>
                 ))}
               </div>
             </div>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-            {categoriasMetricas[abaAtiva]?.map(metrica => {
-              const isSelected = tipoGrafico === 'radar' ? metricasRadar.includes(metrica) : (metricaX === metrica || metricaY === metrica)
-              return (
-                <button 
-                  key={metrica}
-                  onClick={() => {
-                    if (tipoGrafico === 'radar') {
-                      if (metricasRadar.includes(metrica)) setMetricasRadar(metricasRadar.filter(m => m !== metrica))
-                      else if (metricasRadar.length < 8) setMetricasRadar([...metricasRadar, metrica])
-                    } else {
-                      // Lógica para dispersão: alterna entre X e Y
-                      if (metricaX === metrica) return
-                      setMetricaY(metricaX)
-                      setMetricaX(metrica)
-                    }
-                  }}
-                  className={`p-3 rounded-xl border text-[9px] font-black uppercase tracking-widest transition-all text-left flex items-center justify-between group ${isSelected ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400' : 'bg-slate-950/50 border-slate-800 text-slate-500 hover:border-slate-600'}`}
-                >
-                  <span className="truncate mr-2">{metrica}</span>
-                  {isSelected && <div className="w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>}
-                </button>
-              )
-            })}
+            {categoriasMetricas[abaAtiva]?.map(metrica => (
+              <button 
+                key={metrica} 
+                onClick={() => {
+                  if (tipoGrafico === 'radar') {
+                    setMetricasRadar(prev => prev.includes(metrica) ? prev.filter(x => x !== metrica) : (prev.length < 10 ? [...prev, metrica] : prev))
+                  } else {
+                    if (metricaX === metrica) setMetricaX('')
+                    else if (metricaY === metrica) setMetricaY('')
+                    else if (!metricaX) setMetricaX(metrica)
+                    else setMetricaY(metrica)
+                  }
+                }} 
+                className={`p-3 rounded-xl border text-[9px] font-black uppercase tracking-widest transition-all text-left flex items-center justify-between group ${
+                  (tipoGrafico === 'radar' ? metricasRadar.includes(metrica) : (metricaX === metrica || metricaY === metrica)) 
+                  ? 'bg-brand-yellow/10 border-brand-yellow text-brand-yellow' 
+                  : 'bg-slate-950/50 border-slate-800 text-slate-500 hover:border-slate-600'
+                }`}
+              >
+                <span className="truncate mr-2">{metrica}</span>
+                {(tipoGrafico === 'radar' ? metricasRadar.includes(metrica) : (metricaX === metrica || metricaY === metrica)) && (
+                  <div className="flex items-center gap-1">
+                    {tipoGrafico === 'dispersao' && <span className="text-[8px] font-black">{metricaX === metrica ? 'X' : 'Y'}</span>}
+                    <div className="w-2 h-2 bg-brand-yellow rounded-full shadow-[0_0_8px_rgba(251,191,36,0.8)]"></div>
+                  </div>
+                )}
+              </button>
+            ))}
           </div>
-          {tipoGrafico === 'dispersao' && (
-            <div className="mt-4 flex gap-4 text-[10px] font-black uppercase text-slate-500">
-              <div className="flex items-center gap-2"><div className="w-2 h-2 bg-emerald-500 rounded-full"></div> Eixo X: {metricaX}</div>
-              <div className="flex items-center gap-2"><div className="w-2 h-2 bg-blue-500 rounded-full"></div> Eixo Y: {metricaY}</div>
-            </div>
-          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Sidebar Filtros */}
-          <div className="space-y-6">
+          
+          {/* SIDEBAR FILTROS */}
+          <div className="lg:col-span-1 space-y-6">
             <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Filtros Atletas</h3>
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Filtros de Base</h3>
               <div className="space-y-4">
-                <select value={filtroTime} onChange={e => setFiltroTime(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black uppercase outline-none">{times.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}</select>
-                <div className="flex flex-wrap gap-1 max-h-[100px] overflow-y-auto p-1">
-                  {posicoes.map(p => <button key={p} onClick={() => setFiltrosPosicao(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p])} className={`px-2 py-1 rounded text-[8px] font-black uppercase border transition-all ${filtrosPosicao.includes(p) ? 'bg-emerald-500 text-slate-950 border-emerald-500' : 'bg-slate-900 text-slate-500 border-slate-800'}`}>{p}</button>)}
+                <div>
+                  <label className="text-[8px] font-black text-slate-600 uppercase block mb-1">Equipe (Soberano)</label>
+                  <select value={filtroTime} onChange={e => setFiltroTime(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50">{times.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}</select>
                 </div>
-                <div className="flex gap-2">
-                  <input type="number" value={filtroIdade.min} onChange={e => setFiltroIdade({...filtroIdade, min: parseInt(e.target.value)})} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-[10px] font-bold" placeholder="Idade Min" />
-                  <input type="number" value={filtroIdade.max} onChange={e => setFiltroIdade({...filtroIdade, max: parseInt(e.target.value)})} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-[10px] font-bold" placeholder="Idade Max" />
+                <div>
+                  <label className="text-[8px] font-black text-slate-600 uppercase block mb-1">Posições (Multi)</label>
+                  <div className="flex flex-wrap gap-1 max-h-[100px] overflow-y-auto p-1 custom-scrollbar">
+                    {posicoes.map(p => (
+                      <button key={p} onClick={() => setFiltrosPosicao(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p])} className={`px-2 py-1 rounded text-[8px] font-black uppercase border transition-all ${filtrosPosicao.includes(p) ? 'bg-brand-yellow text-slate-950 border-brand-yellow' : 'bg-slate-900 text-slate-500 border-slate-800 hover:border-slate-600'}`}>{p}</button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex gap-4">
+                  <div className="flex-1">
+                    <label className="text-[8px] font-black text-slate-600 uppercase block mb-1">Idade Min</label>
+                    <input type="number" value={filtroIdade.min} onChange={e => setFiltroIdade({...filtroIdade, min: parseInt(e.target.value)})} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-[10px] font-bold focus:border-brand-yellow/50 outline-none" />
+                  </div>
+                  <div className="flex-1">
+                    <label className="text-[8px] font-black text-slate-600 uppercase block mb-1">Idade Max</label>
+                    <input type="number" value={filtroIdade.max} onChange={e => setFiltroIdade({...filtroIdade, max: parseInt(e.target.value)})} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-[10px] font-bold focus:border-brand-yellow/50 outline-none" />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[8px] font-black text-slate-600 uppercase block mb-1">Minutos Mínimos</label>
+                  <input type="number" value={filtroMinutagem} onChange={e => setFiltroMinutagem(parseInt(e.target.value))} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-[10px] font-bold focus:border-brand-yellow/50 outline-none" />
                 </div>
               </div>
             </div>
 
             <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Selecionar Atletas ({jogadoresSelecionados.length})</h3>
-              <div className="max-h-[300px] overflow-y-auto space-y-1 pr-2 custom-scrollbar">
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Atletas ({jogadoresFiltrados.length})</h3>
+              <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                 {jogadoresFiltrados.map(j => (
-                  <label key={j.Jogador} className="flex items-center p-2 hover:bg-slate-800 rounded cursor-pointer transition-colors">
-                    <input type="checkbox" checked={jogadoresSelecionados.includes(j.Jogador)} onChange={e => {
-                      if (e.target.checked) setJogadoresSelecionados([...jogadoresSelecionados, j.Jogador])
-                      else setJogadoresSelecionados(jogadoresSelecionados.filter(x => x !== j.Jogador))
-                    }} className="mr-3 accent-emerald-500" />
-                    <span className="text-[10px] font-black uppercase truncate">{j.Jogador}</span>
-                  </label>
+                  <button 
+                    key={j.Jogador}
+                    onClick={() => {
+                      if (jogadoresSelecionados.includes(j.Jogador)) setJogadoresSelecionados(jogadoresSelecionados.filter(x => x !== j.Jogador))
+                      else if (jogadoresSelecionados.length < 10) setJogadoresSelecionados([...jogadoresSelecionados, j.Jogador])
+                    }}
+                    className={`w-full p-4 rounded-2xl text-left transition-all border ${jogadoresSelecionados.includes(j.Jogador) ? 'bg-brand-yellow border-brand-yellow text-slate-950' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-700'}`}
+                  >
+                    <div className="font-black italic uppercase text-[11px] tracking-tighter">{j.Jogador}</div>
+                    <div className="text-[8px] font-bold uppercase tracking-widest opacity-60 mt-1">{j.Time || j.Equipe}</div>
+                  </button>
                 ))}
               </div>
             </div>
           </div>
 
-          {/* Área do Gráfico */}
+          {/* ÁREA DO GRÁFICO */}
           <div className="lg:col-span-3">
-            <div className="bg-slate-900/40 p-8 rounded-[2rem] border border-slate-800/50 h-[600px] relative">
+            <div className="bg-slate-900/40 rounded-[3rem] p-10 border border-slate-800/50 shadow-2xl flex items-center justify-center min-h-[600px]">
               {tipoGrafico === 'radar' ? (
-                radarData && <Radar data={radarData} options={{ 
-                  responsive: true, 
-                  maintainAspectRatio: false, 
-                  scales: { 
-                    r: { 
-                      beginAtZero: true, 
-                      max: 2.0, 
-                      ticks: { display: false },
-                      grid: { color: '#1e293b' },
-                      angleLines: { color: '#1e293b' },
-                      pointLabels: { color: '#94a3b8', font: { size: 10, weight: 'bold' } }
-                    } 
-                  },
-                  plugins: {
-                    legend: { position: 'bottom', labels: { color: '#fff', font: { size: 10, weight: 'bold' } } }
-                  }
-                }} />
+                radarData ? (
+                  <Radar 
+                    data={radarData} 
+                    options={{
+                      scales: { r: { min: 0, max: 2, ticks: { display: false }, grid: { color: '#1e293b' }, angleLines: { color: '#1e293b' }, pointLabels: { color: '#64748b', font: { size: 10, weight: '900' } } } },
+                      plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 10, weight: '900' }, padding: 20 } } }
+                    }} 
+                  />
+                ) : <div className="text-slate-600 font-black italic uppercase tracking-widest">Selecione atletas e métricas para o radar</div>
               ) : (
-                scatterData && <Scatter data={scatterData} options={{
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  scales: {
-                    x: { title: { display: true, text: metricaX, color: '#94a3b8' }, grid: { color: '#1e293b' }, ticks: { color: '#64748b' } },
-                    y: { title: { display: true, text: metricaY, color: '#94a3b8' }, grid: { color: '#1e293b' }, ticks: { color: '#64748b' } }
-                  },
-                  plugins: {
-                    tooltip: {
-                      callbacks: {
-                        label: (ctx) => `${ctx.raw.jogador}: (${ctx.raw.x}, ${ctx.raw.y})`
-                      }
+                <Scatter 
+                  data={scatterData}
+                  options={{
+                    scales: {
+                      x: { title: { display: true, text: metricaX.toUpperCase(), color: '#64748b', font: { size: 10, weight: '900' } }, grid: { color: '#1e293b' }, ticks: { color: '#475569' } },
+                      y: { title: { display: true, text: metricaY.toUpperCase(), color: '#64748b', font: { size: 10, weight: '900' } }, grid: { color: '#1e293b' }, ticks: { color: '#475569' } }
                     },
-                    legend: { display: false }
-                  }
-                }} />
+                    plugins: {
+                      tooltip: { callbacks: { label: (ctx) => ctx.raw.jogador + ': ' + ctx.raw.x + ' / ' + ctx.raw.y } },
+                      legend: { display: false }
+                    }
+                  }}
+                />
               )}
             </div>
           </div>
         </div>
-      </div>
 
+      </div>
       <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #0a0c10; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #10b981; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #fbbf24; }
       `}</style>
     </div>
   )

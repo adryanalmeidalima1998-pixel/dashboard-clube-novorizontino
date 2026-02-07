@@ -32,15 +32,15 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0c10] text-white flex items-center justify-center p-6 font-sans selection:bg-emerald-500/30">
+    <div className="min-h-screen bg-[#0a0c10] text-white flex items-center justify-center p-6 font-sans selection:bg-brand-yellow/30">
       <div className="w-full max-w-md">
         {/* LOGO E HEADER */}
         <div className="text-center mb-12">
           <div className="relative w-32 h-32 mx-auto mb-8 group">
-            <div className="absolute inset-0 bg-emerald-500/20 rounded-full blur-2xl group-hover:bg-emerald-500/40 transition-all duration-500"></div>
+            <div className="absolute inset-0 bg-brand-yellow/20 rounded-full blur-2xl group-hover:bg-brand-yellow/40 transition-all duration-500"></div>
             <div className="relative bg-slate-900 p-4 rounded-full border border-slate-800 shadow-2xl">
               <img 
-                src="/logos/novorizontino.png" 
+                src="/club/escudonovorizontino.png" 
                 alt="Novorizontino Logo" 
                 className="w-full h-full object-contain"
                 onError={(e) => {
@@ -50,7 +50,7 @@ export default function LoginPage() {
             </div>
           </div>
           <h1 className="text-4xl font-black italic tracking-tighter uppercase leading-none bg-gradient-to-r from-white via-white to-slate-500 bg-clip-text text-transparent">
-            Performance <span className="text-emerald-500">Hub</span>
+            Performance <span className="text-brand-yellow">Hub</span>
           </h1>
           <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-4 italic">Acesso Restrito à Comissão Técnica</p>
         </div>
@@ -65,7 +65,7 @@ export default function LoginPage() {
                 placeholder="USUÁRIO" 
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-[10px] font-black uppercase tracking-widest focus:border-emerald-500/50 outline-none transition-all"
+                className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-[10px] font-black uppercase tracking-widest focus:border-brand-yellow/50 outline-none transition-all"
                 required
               />
             </div>
@@ -76,7 +76,7 @@ export default function LoginPage() {
                 placeholder="SENHA" 
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-[10px] font-black uppercase tracking-widest focus:border-emerald-500/50 outline-none transition-all"
+                className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-[10px] font-black uppercase tracking-widest focus:border-brand-yellow/50 outline-none transition-all"
                 required
               />
             </div>
@@ -90,7 +90,7 @@ export default function LoginPage() {
             <button 
               type="submit"
               disabled={carregando}
-              className="w-full bg-emerald-500 hover:bg-emerald-400 disabled:bg-slate-800 disabled:text-slate-600 text-slate-950 font-black italic uppercase text-[11px] tracking-widest py-5 rounded-2xl transition-all shadow-[0_0_30px_rgba(16,185,129,0.2)] active:scale-95"
+              className="w-full bg-brand-yellow hover:bg-brand-yellow/80 disabled:bg-slate-800 disabled:text-slate-600 text-slate-950 font-black italic uppercase text-[11px] tracking-widest py-5 rounded-2xl transition-all shadow-[0_0_30px_rgba(251,191,36,0.2)] active:scale-95"
             >
               {carregando ? 'AUTENTICANDO...' : 'ENTRAR NO SISTEMA'}
             </button>
