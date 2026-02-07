@@ -60,9 +60,12 @@ export default function CentralDados() {
           header: true,
           skipEmptyLines: true,
           complete: (results) => {
+            // Garantir que os dados brutos sejam limpos e normalizados
             const dadosLimpos = cleanData(results.data).map(j => ({
               ...j,
-              Time: normalizeTeamName(j.Time || j.Equipe || '')
+              Time: normalizeTeamName(j.Time || j.Equipe || ''),
+              // Forçar normalização da posição aqui para evitar erros de comparação
+              Posição: (j.Posição || '').trim().toUpperCase()
             }))
             
             const dadosComHistorico = dadosLimpos.map(j => {
@@ -150,7 +153,7 @@ export default function CentralDados() {
     }
     
     const scores = jogadores
-      .filter(j => j.Jogador !== jogador.Jogador && (j.Posição || '').trim().toUpperCase() === (jogador.Posição || '').trim().toUpperCase())
+      .filter(j => j.Jogador !== jogador.Jogador && j.Posição === jogador.Posição)
       .map(j => {
         let somaDiferencasQuadradas = 0;
         metricasCalculo.forEach(m => {
@@ -171,59 +174,59 @@ export default function CentralDados() {
     setJogadoresSimilares(scores)
   }
 
+  // LÓGICA DE FILTRAGEM E ORDENAÇÃO REESCRITA PARA MÁXIMA RIGIDEZ
   const jogadoresFiltrados = useMemo(() => {
-    // Se estiver no modo Find Similar, a lista é fixa (referência + similares)
     if (jogadorReferencia) {
-      const lista = [jogadorReferencia, ...jogadoresSimilares];
-      return [...lista].sort((a, b) => {
-        const vA = safeParseFloat(a[ordenacao.coluna]);
-        const vB = safeParseFloat(b[ordenacao.coluna]);
-        if (isNaN(vA) || isNaN(vB)) {
-          const sA = String(a[ordenacao.coluna] || '');
-          const sB = String(b[ordenacao.coluna] || '');
-          return ordenacao.direcao === 'asc' ? sA.localeCompare(sB) : sB.localeCompare(sA);
-        }
-        return ordenacao.direcao === 'asc' ? vA - vB : vB - vA;
-      });
+      return [jogadorReferencia, ...jogadoresSimilares];
     }
     
-    let filtrados = jogadores.filter(j => {
-      const nomeJogador = (j.Jogador || '').toLowerCase();
-      const pB = nomeJogador.includes(busca.toLowerCase());
+    let base = [...jogadores];
+
+    // 1. FILTRAGEM
+    let filtrados = base.filter(j => {
+      // Busca por nome
+      if (busca && !(j.Jogador || '').toLowerCase().includes(busca.toLowerCase())) return false;
       
-      const timeJogador = (j.Time || j.Equipe || '');
-      const pT = filtroTime === 'todos' || timeJogador === filtroTime;
+      // Filtro de Time
+      if (filtroTime !== 'todos' && (j.Time || j.Equipe) !== filtroTime) return false;
       
-      // FILTRO DE POSIÇÃO: Comparação exata e normalizada
-      const posJogador = (j.Posição || '').trim().toUpperCase();
-      const pP = filtrosPosicao.length === 0 || filtrosPosicao.some(p => p.trim().toUpperCase() === posJogador);
+      // FILTRO DE POSIÇÃO (CRÍTICO)
+      if (filtrosPosicao.length > 0) {
+        const posJ = (j.Posição || '').trim().toUpperCase();
+        if (!filtrosPosicao.includes(posJ)) return false;
+      }
       
+      // Filtro de Idade
       const idade = safeParseFloat(j.Idade);
-      const pI = (idade === 0 && filtroIdade.min === 15) || (idade >= filtroIdade.min && idade <= filtroIdade.max);
+      if (idade < filtroIdade.min || idade > filtroIdade.max) {
+        // Exceção: se idade for 0 (não preenchida), só mostra se o range incluir o mínimo padrão
+        if (idade === 0 && filtroIdade.min > 15) return false;
+      }
       
-      const pM = safeParseFloat(j['Minutos jogados']) >= filtroMinutagem;
+      // Filtro de Minutagem
+      if (safeParseFloat(j['Minutos jogados']) < filtroMinutagem) return false;
       
-      return pB && pT && pP && pI && pM;
+      return true;
     });
 
-    // ORDENAÇÃO: Forçar safeParseFloat para todas as métricas na comparação
+    // 2. ORDENAÇÃO
     return filtrados.sort((a, b) => {
-      const vA = safeParseFloat(a[ordenacao.coluna]);
-      const vB = safeParseFloat(b[ordenacao.coluna]);
-      
-      // Se a coluna for 'Jogador', 'Time' ou 'Posição', usar localeCompare
-      if (['Jogador', 'Time', 'Equipe', 'Posição'].includes(ordenacao.coluna)) {
-        const sA = String(a[ordenacao.coluna] || '');
-        const sB = String(b[ordenacao.coluna] || '');
-        return ordenacao.direcao === 'asc' ? sA.localeCompare(sB) : sB.localeCompare(sA);
+      const col = ordenacao.coluna;
+      const dir = ordenacao.direcao;
+
+      // Tratamento especial para colunas de texto
+      if (['Jogador', 'Time', 'Equipe', 'Posição'].includes(col)) {
+        const valA = String(a[col] || '').toLowerCase();
+        const valB = String(b[col] || '').toLowerCase();
+        return dir === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
       }
 
-      // Para métricas numéricas
-      if (ordenacao.direcao === 'asc') {
-        return vA - vB;
-      } else {
-        return vB - vA;
-      }
+      // Métricas numéricas
+      const numA = safeParseFloat(a[col]);
+      const numB = safeParseFloat(b[col]);
+
+      if (dir === 'asc') return numA - numB;
+      return numB - numA;
     });
   }, [jogadores, busca, filtroTime, filtrosPosicao, filtroIdade, filtroMinutagem, ordenacao, jogadorReferencia, jogadoresSimilares])
 
@@ -283,7 +286,7 @@ export default function CentralDados() {
             <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Posições (Multi)</h3>
             <div className="flex flex-wrap gap-1 max-h-[100px] overflow-y-auto p-1 custom-scrollbar">
               {posicoes.map(p => (
-                <button key={p} onClick={() => setFiltrosPosicao(prev => prev.some(x => x.trim().toUpperCase() === p) ? prev.filter(x => x.trim().toUpperCase() !== p) : [...prev, p])} className={`px-2 py-1 rounded text-[8px] font-black uppercase border transition-all ${filtrosPosicao.some(x => x.trim().toUpperCase() === p) ? 'bg-brand-yellow text-slate-950 border-brand-yellow' : 'bg-slate-900 text-slate-500 border-slate-800 hover:border-slate-600'}`}>{p}</button>
+                <button key={p} onClick={() => setFiltrosPosicao(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p])} className={`px-2 py-1 rounded text-[8px] font-black uppercase border transition-all ${filtrosPosicao.includes(p) ? 'bg-brand-yellow text-slate-950 border-brand-yellow' : 'bg-slate-900 text-slate-500 border-slate-800 hover:border-slate-600'}`}>{p}</button>
               ))}
             </div>
           </div>
