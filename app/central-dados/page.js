@@ -60,11 +60,9 @@ export default function CentralDados() {
           header: true,
           skipEmptyLines: true,
           complete: (results) => {
-            // Garantir que os dados brutos sejam limpos e normalizados
             const dadosLimpos = cleanData(results.data).map(j => ({
               ...j,
               Time: normalizeTeamName(j.Time || j.Equipe || ''),
-              // Forçar normalização da posição aqui para evitar erros de comparação
               Posição: (j.Posição || '').trim().toUpperCase()
             }))
             
@@ -174,61 +172,59 @@ export default function CentralDados() {
     setJogadoresSimilares(scores)
   }
 
-  // LÓGICA DE FILTRAGEM E ORDENAÇÃO REESCRITA PARA MÁXIMA RIGIDEZ
+  // LÓGICA DE FILTRAGEM E ORDENAÇÃO CORRIGIDA
   const jogadoresFiltrados = useMemo(() => {
+    // IMPORTANTE: Se não houver métricas selecionadas E nenhum filtro ativo, retornamos lista vazia
+    // Isso evita o "travamento" visual de atletas quando tudo é desmarcado
+    if (metricasSelecionadas.length === 0 && filtrosPosicao.length === 0 && !busca && filtroTime === 'todos') {
+      return [];
+    }
+
     if (jogadorReferencia) {
       return [jogadorReferencia, ...jogadoresSimilares];
     }
     
-    let base = [...jogadores];
-
-    // 1. FILTRAGEM
-    let filtrados = base.filter(j => {
-      // Busca por nome
-      if (busca && !(j.Jogador || '').toLowerCase().includes(busca.toLowerCase())) return false;
-      
-      // Filtro de Time
-      if (filtroTime !== 'todos' && (j.Time || j.Equipe) !== filtroTime) return false;
-      
-      // FILTRO DE POSIÇÃO (CRÍTICO)
+    let filtrados = jogadores.filter(j => {
+      // 1. Filtro de Posição (OBRIGATÓRIO se houver seleção)
       if (filtrosPosicao.length > 0) {
         const posJ = (j.Posição || '').trim().toUpperCase();
         if (!filtrosPosicao.includes(posJ)) return false;
       }
       
-      // Filtro de Idade
+      // 2. Busca por nome
+      if (busca && !(j.Jogador || '').toLowerCase().includes(busca.toLowerCase())) return false;
+      
+      // 3. Filtro de Time
+      if (filtroTime !== 'todos' && (j.Time || j.Equipe) !== filtroTime) return false;
+      
+      // 4. Filtro de Idade
       const idade = safeParseFloat(j.Idade);
       if (idade < filtroIdade.min || idade > filtroIdade.max) {
-        // Exceção: se idade for 0 (não preenchida), só mostra se o range incluir o mínimo padrão
         if (idade === 0 && filtroIdade.min > 15) return false;
       }
       
-      // Filtro de Minutagem
+      // 5. Filtro de Minutagem
       if (safeParseFloat(j['Minutos jogados']) < filtroMinutagem) return false;
       
       return true;
     });
 
-    // 2. ORDENAÇÃO
+    // ORDENAÇÃO
     return filtrados.sort((a, b) => {
       const col = ordenacao.coluna;
       const dir = ordenacao.direcao;
 
-      // Tratamento especial para colunas de texto
       if (['Jogador', 'Time', 'Equipe', 'Posição'].includes(col)) {
         const valA = String(a[col] || '').toLowerCase();
         const valB = String(b[col] || '').toLowerCase();
         return dir === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
       }
 
-      // Métricas numéricas
       const numA = safeParseFloat(a[col]);
       const numB = safeParseFloat(b[col]);
-
-      if (dir === 'asc') return numA - numB;
-      return numB - numA;
+      return dir === 'asc' ? numA - numB : numB - numA;
     });
-  }, [jogadores, busca, filtroTime, filtrosPosicao, filtroIdade, filtroMinutagem, ordenacao, jogadorReferencia, jogadoresSimilares])
+  }, [jogadores, busca, filtroTime, filtrosPosicao, filtroIdade, filtroMinutagem, ordenacao, jogadorReferencia, jogadoresSimilares, metricasSelecionadas])
 
   const times = useMemo(() => {
     const uniqueTimes = new Set(jogadores.map(j => j.Time || j.Equipe).filter(Boolean));
@@ -356,43 +352,51 @@ export default function CentralDados() {
                 </tr>
               </thead>
               <tbody>
-                {jogadoresFiltrados.map(j => (
-                  <tr key={j.Jogador} className={`border-b border-slate-800/30 hover:bg-white/5 transition-colors group ${jogadorReferencia?.Jogador === j.Jogador ? 'bg-brand-yellow/5' : ''}`}>
-                    <td className="p-6">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-center text-[10px] font-black italic text-brand-yellow">
-                          {(j.Jogador || '??').substring(0, 2).toUpperCase()}
-                        </div>
-                        <div>
-                          <div className="font-black italic uppercase text-sm group-hover:text-brand-yellow transition-colors flex items-center gap-2">
-                            {j.Jogador}
-                            {j.scoreSimilaridade !== undefined && <span className="text-[9px] bg-brand-yellow text-slate-950 px-2 py-0.5 rounded-full not-italic">{j.scoreSimilaridade.toFixed(1)}% MATCH</span>}
-                          </div>
-                          <div className="text-[8px] font-bold uppercase tracking-widest text-slate-500 mt-1">{j.Posição} • {j.Time || j.Equipe}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="p-6">
-                      <div className="w-24 h-8">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={j.historicoIndex}>
-                            <Line type="monotone" dataKey="val" stroke="#fbbf24" strokeWidth={2} dot={false} />
-                          </LineChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </td>
-                    {metricasSelecionadas.map(m => (
-                      <td key={m} className="p-6">
-                        <span className={`text-sm font-black italic ${m === 'Index' ? 'text-brand-yellow' : 'text-slate-400'}`}>{j[m] || '0'}</span>
-                      </td>
-                    ))}
-                    <td className="p-6 text-center">
-                      <button onClick={() => encontrarSimilares(j)} className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border ${jogadorReferencia?.Jogador === j.Jogador ? 'bg-brand-yellow text-slate-950 border-brand-yellow' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-brand-yellow/50 hover:text-brand-yellow'}`}>
-                        {jogadorReferencia?.Jogador === j.Jogador ? 'FECHAR' : 'FIND SIMILAR'}
-                      </button>
+                {jogadoresFiltrados.length === 0 ? (
+                  <tr>
+                    <td colSpan={metricasSelecionadas.length + 3} className="p-12 text-center text-slate-500 font-black uppercase tracking-widest italic">
+                      Selecione métricas ou filtros para visualizar os atletas
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  jogadoresFiltrados.map(j => (
+                    <tr key={j.Jogador} className={`border-b border-slate-800/30 hover:bg-white/5 transition-colors group ${jogadorReferencia?.Jogador === j.Jogador ? 'bg-brand-yellow/5' : ''}`}>
+                      <td className="p-6">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-center text-[10px] font-black italic text-brand-yellow">
+                            {(j.Jogador || '??').substring(0, 2).toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="font-black italic uppercase text-sm group-hover:text-brand-yellow transition-colors flex items-center gap-2">
+                              {j.Jogador}
+                              {j.scoreSimilaridade !== undefined && <span className="text-[9px] bg-brand-yellow text-slate-950 px-2 py-0.5 rounded-full not-italic">{j.scoreSimilaridade.toFixed(1)}% MATCH</span>}
+                            </div>
+                            <div className="text-[8px] font-bold uppercase tracking-widest text-slate-500 mt-1">{j.Posição} • {j.Time || j.Equipe}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-6">
+                        <div className="w-24 h-8">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={j.historicoIndex}>
+                              <Line type="monotone" dataKey="val" stroke="#fbbf24" strokeWidth={2} dot={false} />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </td>
+                      {metricasSelecionadas.map(m => (
+                        <td key={m} className="p-6">
+                          <span className={`text-sm font-black italic ${m === 'Index' ? 'text-brand-yellow' : 'text-slate-400'}`}>{j[m] || '0'}</span>
+                        </td>
+                      ))}
+                      <td className="p-6 text-center">
+                        <button onClick={() => encontrarSimilares(j)} className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border ${jogadorReferencia?.Jogador === j.Jogador ? 'bg-brand-yellow text-slate-950 border-brand-yellow' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-brand-yellow/50 hover:text-brand-yellow'}`}>
+                          {jogadorReferencia?.Jogador === j.Jogador ? 'FECHAR' : 'FIND SIMILAR'}
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
