@@ -141,32 +141,27 @@ export default function CentralDados() {
     }
     setJogadorReferencia(jogador)
     
-    // Filtramos métricas que são numéricas e relevantes para comparação
     const metricasCalculo = metricasSelecionadas.filter(m => 
       !['Jogador', 'Time', 'Equipe', 'Posição', 'Index'].includes(m)
     )
     
-    // Se não houver métricas selecionadas além das básicas, usamos o Index
     if (metricasCalculo.length === 0 && metricasSelecionadas.includes('Index')) {
       metricasCalculo.push('Index')
     }
     
     const scores = jogadores
-      .filter(j => j.Jogador !== jogador.Jogador && j.Posição === jogador.Posição)
+      .filter(j => j.Jogador !== jogador.Jogador && (j.Posição || '').trim().toUpperCase() === (jogador.Posição || '').trim().toUpperCase())
       .map(j => {
         let somaDiferencasQuadradas = 0;
         metricasCalculo.forEach(m => {
           const v1 = safeParseFloat(jogador[m]);
           const v2 = safeParseFloat(j[m]);
-          
-          // Normalização simples: diferença relativa ou absoluta se v1 for zero
           const diff = v1 === 0 ? v2 : Math.abs(v1 - v2) / (Math.abs(v1) || 1);
           somaDiferencasQuadradas += Math.pow(diff, 2);
         });
         
-        // Se não houver métricas, a distância é 0, o que daria 100% (ajustado pelo length)
         const dist = metricasCalculo.length > 0 ? Math.sqrt(somaDiferencasQuadradas / metricasCalculo.length) : 0;
-        const similaridade = Math.max(0, 100 - (dist * 50)); // Ajuste de sensibilidade
+        const similaridade = Math.max(0, 100 - (dist * 50));
         
         return { ...j, scoreSimilaridade: similaridade }
       })
@@ -177,14 +172,11 @@ export default function CentralDados() {
   }
 
   const jogadoresFiltrados = useMemo(() => {
-    // Se estiver no modo de similaridade, mostramos apenas o referência + similares
     if (jogadorReferencia) {
       const lista = [jogadorReferencia, ...jogadoresSimilares];
-      // Aplicamos a ordenação na lista de similares também
       return [...lista].sort((a, b) => {
         const vA = safeParseFloat(a[ordenacao.coluna]);
         const vB = safeParseFloat(b[ordenacao.coluna]);
-        
         if (isNaN(vA) || isNaN(vB)) {
           const sA = String(a[ordenacao.coluna] || '');
           const sB = String(b[ordenacao.coluna] || '');
@@ -201,9 +193,9 @@ export default function CentralDados() {
       const timeJogador = (j.Time || j.Equipe || '');
       const pT = filtroTime === 'todos' || timeJogador === filtroTime;
       
-      // Correção do filtro de posição: trim e tratamento de strings
-      const posJogador = (j.Posição || '').trim();
-      const pP = filtrosPosicao.length === 0 || filtrosPosicao.includes(posJogador);
+      // FILTRO DE POSIÇÃO CORRIGIDO: Comparação exata e normalizada
+      const posJogador = (j.Posição || '').trim().toUpperCase();
+      const pP = filtrosPosicao.length === 0 || filtrosPosicao.some(p => p.trim().toUpperCase() === posJogador);
       
       const idade = safeParseFloat(j.Idade);
       const pI = (idade === 0 && filtroIdade.min === 15) || (idade >= filtroIdade.min && idade <= filtroIdade.max);
@@ -213,13 +205,17 @@ export default function CentralDados() {
       return pB && pT && pP && pI && pM;
     });
 
-    // Ordenação consistente
+    // ORDENAÇÃO CORRIGIDA: Forçar safeParseFloat para todas as métricas na comparação
     return filtrados.sort((a, b) => {
       const vA = safeParseFloat(a[ordenacao.coluna]);
       const vB = safeParseFloat(b[ordenacao.coluna]);
       
-      // Se não for número, ordena como string
-      if (isNaN(vA) || isNaN(vB) || (typeof a[ordenacao.coluna] === 'string' && a[ordenacao.coluna].includes('/'))) {
+      // Se ambos não forem números válidos (ex: colunas de texto como Nome), usar localeCompare
+      // Verificamos se o valor original contém letras para decidir se é texto
+      const isTextA = isNaN(vA) || (typeof a[ordenacao.coluna] === 'string' && /[a-zA-Z]/.test(a[ordenacao.coluna]) && !a[ordenacao.coluna].includes('%'));
+      const isTextB = isNaN(vB) || (typeof b[ordenacao.coluna] === 'string' && /[a-zA-Z]/.test(b[ordenacao.coluna]) && !b[ordenacao.coluna].includes('%'));
+
+      if (isTextA || isTextB) {
         const sA = String(a[ordenacao.coluna] || '');
         const sB = String(b[ordenacao.coluna] || '');
         return ordenacao.direcao === 'asc' ? sA.localeCompare(sB) : sB.localeCompare(sA);
@@ -235,7 +231,8 @@ export default function CentralDados() {
   }, [jogadores])
 
   const posicoes = useMemo(() => {
-    const uniquePos = new Set(jogadores.map(j => (j.Posição || '').trim()).filter(Boolean));
+    // Pegar posições únicas do CSV e normalizar para exibição
+    const uniquePos = new Set(jogadores.map(j => (j.Posição || '').trim().toUpperCase()).filter(Boolean));
     return Array.from(uniquePos).sort();
   }, [jogadores])
 
@@ -285,7 +282,7 @@ export default function CentralDados() {
             <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Posições (Multi)</h3>
             <div className="flex flex-wrap gap-1 max-h-[100px] overflow-y-auto p-1 custom-scrollbar">
               {posicoes.map(p => (
-                <button key={p} onClick={() => setFiltrosPosicao(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p])} className={`px-2 py-1 rounded text-[8px] font-black uppercase border transition-all ${filtrosPosicao.includes(p) ? 'bg-brand-yellow text-slate-950 border-brand-yellow' : 'bg-slate-900 text-slate-500 border-slate-800 hover:border-slate-600'}`}>{p}</button>
+                <button key={p} onClick={() => setFiltrosPosicao(prev => prev.some(x => x.trim().toUpperCase() === p) ? prev.filter(x => x.trim().toUpperCase() !== p) : [...prev, p])} className={`px-2 py-1 rounded text-[8px] font-black uppercase border transition-all ${filtrosPosicao.some(x => x.trim().toUpperCase() === p) ? 'bg-brand-yellow text-slate-950 border-brand-yellow' : 'bg-slate-900 text-slate-500 border-slate-800 hover:border-slate-600'}`}>{p}</button>
               ))}
             </div>
           </div>
