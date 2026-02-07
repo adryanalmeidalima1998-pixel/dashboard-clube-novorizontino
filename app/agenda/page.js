@@ -12,6 +12,7 @@ export default function AgendaPage() {
   const router = useRouter()
   const [jogos, setJogos] = useState([])
   const [loading, setLoading] = useState(true)
+  const [jogoExpandido, setJogoExpandido] = useState(null)
 
   useEffect(() => {
     async function loadData() {
@@ -47,6 +48,8 @@ export default function AgendaPage() {
                 id: index,
                 data: dataStr,
                 hora: data['Horário'] || '--:--',
+                mandante: mandanteNorm,
+                visitante: visitanteNorm,
                 adversario: adversario,
                 logoAdversario: getLogo(adversario),
                 local: data['Local'] === 'Jorjão' || isMandante ? 'C' : 'F',
@@ -54,11 +57,14 @@ export default function AgendaPage() {
                 competicao: data['Competição'] || 'Competição',
                 tv: data['TV'] || data['Transmissão'] || '',
                 mesAno: mesAno,
+                artilheirosMandante: data['Gols marcados mandante'] || '',
+                artilheirosVisitante: data['Gols marcados VISITANTE'] || '',
+                eventos: data['eventos'] || data['Eventos'] || '',
+                escalacaoCode: data['código escalação'] || '',
                 timestamp: new Date(dataStr.split('/').reverse().join('-')).getTime() || 0
               }
             })
             
-            // Ordenar por data
             setJogos(parsedJogos.sort((a, b) => a.timestamp - b.timestamp))
           }
         })
@@ -80,6 +86,10 @@ export default function AgendaPage() {
     return grupos
   }, [jogos])
 
+  const toggleExpandir = (id) => {
+    setJogoExpandido(jogoExpandido === id ? null : id)
+  }
+
   if (loading) return (
     <div className="min-h-screen bg-[#0a0c10] text-white flex items-center justify-center font-sans">
       <div className="text-center">
@@ -100,7 +110,7 @@ export default function AgendaPage() {
           </button>
           <div>
             <h1 className="text-3xl font-black italic tracking-tighter uppercase leading-none">Calendário <span className="text-brand-yellow">2026</span></h1>
-            <p className="text-slate-500 text-[9px] font-bold uppercase tracking-widest mt-1">Tabela de Jogos e Resultados</p>
+            <p className="text-slate-500 text-[9px] font-bold uppercase tracking-widest mt-1">Tabela de Jogos e Detalhes Técnicos</p>
           </div>
         </div>
 
@@ -128,49 +138,95 @@ export default function AgendaPage() {
                   </thead>
                   <tbody>
                     {jogosAgrupados[mes].map((jogo) => (
-                      <tr key={jogo.id} className="border-b border-slate-800/30 hover:bg-white/[0.02] transition-colors group">
-                        <td className="px-6 py-4">
-                          <span className="text-[11px] font-black italic text-slate-300 group-hover:text-brand-yellow transition-colors">{jogo.data}</span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="text-[10px] font-bold text-slate-500">{jogo.hora}</span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-6 h-6 bg-slate-950 rounded-lg p-1 border border-slate-800 flex items-center justify-center shadow-inner">
-                              <img src={jogo.logoAdversario} alt={jogo.adversario} className="w-full h-full object-contain" onError={(e) => { e.target.onerror = null; e.target.src = DEFAULT_LOGO; }} />
+                      <use key={jogo.id}>
+                        <tr 
+                          onClick={() => toggleExpandir(jogo.id)}
+                          className={`border-b border-slate-800/30 hover:bg-white/[0.02] transition-colors group cursor-pointer ${jogoExpandido === jogo.id ? 'bg-white/[0.03]' : ''}`}
+                        >
+                          <td className="px-6 py-4">
+                            <span className="text-[11px] font-black italic text-slate-300 group-hover:text-brand-yellow transition-colors">{jogo.data}</span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="text-[10px] font-bold text-slate-500">{jogo.hora}</span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-6 h-6 bg-slate-950 rounded-lg p-1 border border-slate-800 flex items-center justify-center shadow-inner">
+                                <img src={jogo.logoAdversario} alt={jogo.adversario} className="w-full h-full object-contain" onError={(e) => { e.target.onerror = null; e.target.src = DEFAULT_LOGO; }} />
+                              </div>
+                              <span className="text-[11px] font-black uppercase italic tracking-tight text-white">{jogo.adversario}</span>
                             </div>
-                            <span className="text-[11px] font-black uppercase italic tracking-tight text-white">{jogo.adversario}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-4 text-center">
-                          {jogo.tv ? (
-                            <div className="flex justify-center">
-                              <svg className="w-4 h-4 text-slate-600 group-hover:text-brand-yellow transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                          </td>
+                          <td className="px-4 py-4 text-center">
+                            {jogo.tv ? (
+                              <div className="flex justify-center">
+                                <svg className="w-4 h-4 text-slate-600 group-hover:text-brand-yellow transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                              </div>
+                            ) : '-'}
+                          </td>
+                          <td className="px-4 py-4 text-center">
+                            <span className={`text-[10px] font-black rounded-md px-2 py-1 ${jogo.local === 'C' ? 'text-emerald-500 bg-emerald-500/5' : 'text-slate-500 bg-slate-500/5'}`}>
+                              {jogo.local}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              {jogo.resultado && jogo.resultado.includes('-') && !jogo.resultado.includes('NaN') ? (
+                                <>
+                                  <div className={`w-2 h-2 rounded-full ${parseInt(jogo.resultado.split('-')[0]) > parseInt(jogo.resultado.split('-')[1]) ? 'bg-emerald-500' : parseInt(jogo.resultado.split('-')[0]) < parseInt(jogo.resultado.split('-')[1]) ? 'bg-red-500' : 'bg-brand-yellow'}`}></div>
+                                  <span className="text-xs font-black italic text-white tracking-widest">{jogo.resultado}</span>
+                                </>
+                              ) : (
+                                <span className="text-[10px] font-black text-slate-600 italic uppercase">Agendado</span>
+                              )}
                             </div>
-                          ) : '-'}
-                        </td>
-                        <td className="px-4 py-4 text-center">
-                          <span className={`text-[10px] font-black rounded-md px-2 py-1 ${jogo.local === 'C' ? 'text-emerald-500 bg-emerald-500/5' : 'text-slate-500 bg-slate-500/5'}`}>
-                            {jogo.local}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <div className="flex items-center justify-center gap-2">
-                            {jogo.resultado.includes('-') ? (
-                              <>
-                                <div className={`w-2 h-2 rounded-full ${jogo.resultado.split('-')[0] > jogo.resultado.split('-')[1] ? 'bg-emerald-500' : jogo.resultado.split('-')[0] < jogo.resultado.split('-')[1] ? 'bg-red-500' : 'bg-brand-yellow'}`}></div>
-                                <span className="text-xs font-black italic text-white tracking-widest">{jogo.resultado}</span>
-                              </>
-                            ) : (
-                              <span className="text-[10px] font-black text-slate-600 italic uppercase">Agendado</span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="text-[9px] font-black uppercase tracking-widest text-slate-500 group-hover:text-slate-300 transition-colors">{jogo.competicao}</span>
-                        </td>
-                      </tr>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-500 group-hover:text-slate-300 transition-colors">{jogo.competicao}</span>
+                          </td>
+                        </tr>
+                        {jogoExpandido === jogo.id && (
+                          <tr className="bg-slate-950/60 border-b border-slate-800/50 animate-in fade-in slide-in-from-top-2 duration-300">
+                            <td colSpan="7" className="px-8 py-8">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                                <div className="space-y-6">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-1 h-4 bg-brand-yellow rounded-full"></div>
+                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-white">Artilheiros e Gols</h4>
+                                  </div>
+                                  <div className="grid grid-cols-2 gap-8">
+                                    <div>
+                                      <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-2">{jogo.mandante}</p>
+                                      <p className="text-[11px] font-bold text-slate-300 italic leading-relaxed">{jogo.artilheirosMandante || 'Nenhum gol registrado'}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-2">{jogo.visitante}</p>
+                                      <p className="text-[11px] font-bold text-slate-300 italic leading-relaxed">{jogo.artilheirosVisitante || 'Nenhum gol registrado'}</p>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="space-y-6">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-1 h-4 bg-emerald-500 rounded-full"></div>
+                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-white">Eventos Importantes</h4>
+                                  </div>
+                                  <p className="text-[11px] font-bold text-slate-400 italic leading-relaxed">
+                                    {jogo.eventos || 'Nenhum evento adicional registrado para esta partida.'}
+                                  </p>
+                                  {jogo.escalacaoCode && (
+                                    <button 
+                                      onClick={(e) => { e.stopPropagation(); /* lógica para abrir modal se necessário */ }}
+                                      className="mt-4 px-4 py-2 bg-slate-900 border border-slate-800 rounded-xl text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-brand-yellow hover:border-brand-yellow/30 transition-all"
+                                    >
+                                      Ver Escalação Completa
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </use>
                     ))}
                   </tbody>
                 </table>
@@ -180,20 +236,20 @@ export default function AgendaPage() {
         </div>
 
         {/* FOOTER */}
-        <div className="mt-12 pt-8 border-t border-slate-800/50 flex justify-between items-center">
-          <p className="text-[9px] font-bold text-slate-600 uppercase tracking-widest">© 2026 Grêmio Novorizontino • Departamento de Análise</p>
-          <div className="flex gap-4">
+        <div className="mt-12 pt-8 border-t border-slate-800/50 flex flex-col md:flex-row justify-between items-center gap-6">
+          <p className="text-[9px] font-bold text-slate-600 uppercase tracking-widest">© 2026 Grêmio Novorizontino • Departamento de Análise de Desempenho</p>
+          <div className="flex gap-6">
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-              <span className="text-[8px] font-black uppercase text-slate-500">Vitória</span>
+              <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
+              <span className="text-[8px] font-black uppercase text-slate-500 tracking-widest">Vitória</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-brand-yellow"></div>
-              <span className="text-[8px] font-black uppercase text-slate-500">Empate</span>
+              <div className="w-2 h-2 rounded-full bg-brand-yellow shadow-[0_0_8px_rgba(251,191,36,0.5)]"></div>
+              <span className="text-[8px] font-black uppercase text-slate-500 tracking-widest">Empate</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-red-500"></div>
-              <span className="text-[8px] font-black uppercase text-slate-500">Derrota</span>
+              <div className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]"></div>
+              <span className="text-[8px] font-black uppercase text-slate-500 tracking-widest">Derrota</span>
             </div>
           </div>
         </div>
@@ -203,6 +259,11 @@ export default function AgendaPage() {
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
+        @keyframes in {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-in { animation: in 0.3s ease-out fill-mode-forwards; }
       `}</style>
     </div>
   )
