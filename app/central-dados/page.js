@@ -62,7 +62,7 @@ export default function CentralDados() {
           complete: (results) => {
             const dadosLimpos = cleanData(results.data).map(j => ({
               ...j,
-              Time: normalizeTeamName(j.Time || j.Equipe)
+              Time: normalizeTeamName(j.Time || j.Equipe || '')
             }))
             
             const dadosComHistorico = dadosLimpos.map(j => {
@@ -120,7 +120,10 @@ export default function CentralDados() {
   }
 
   const handleOrdenacao = (coluna) => {
-    setOrdenacao(prev => ({ coluna, direcao: prev.coluna === coluna && prev.direcao === 'desc' ? 'asc' : 'desc' }))
+    setOrdenacao(prev => ({ 
+      coluna, 
+      direcao: prev.coluna === coluna && prev.direcao === 'desc' ? 'asc' : 'desc' 
+    }))
   }
 
   const salvarTemplate = () => {
@@ -131,53 +134,121 @@ export default function CentralDados() {
   }
 
   const encontrarSimilares = (jogador) => {
-    if (jogadorReferencia?.Jogador === jogador.Jogador) { setJogadorReferencia(null); setJogadoresSimilares([]); return; }
+    if (jogadorReferencia?.Jogador === jogador.Jogador) { 
+      setJogadorReferencia(null); 
+      setJogadoresSimilares([]); 
+      return; 
+    }
     setJogadorReferencia(jogador)
     
-    const metricasCalculo = metricasSelecionadas.filter(m => !['Jogador', 'Time', 'Equipe', 'Posição'].includes(m))
+    // Filtramos métricas que são numéricas e relevantes para comparação
+    const metricasCalculo = metricasSelecionadas.filter(m => 
+      !['Jogador', 'Time', 'Equipe', 'Posição', 'Index'].includes(m)
+    )
     
-    const scores = jogadores.filter(j => j.Jogador !== jogador.Jogador && j.Posição === jogador.Posição).map(j => {
-      let dist = 0;
-      metricasCalculo.forEach(m => {
-        const v1 = safeParseFloat(jogador[m]), v2 = safeParseFloat(j[m])
-        dist += Math.pow(v1 === 0 ? v2 : Math.abs(v1 - v2) / (v1 || 1), 2)
+    // Se não houver métricas selecionadas além das básicas, usamos o Index
+    if (metricasCalculo.length === 0 && metricasSelecionadas.includes('Index')) {
+      metricasCalculo.push('Index')
+    }
+    
+    const scores = jogadores
+      .filter(j => j.Jogador !== jogador.Jogador && j.Posição === jogador.Posição)
+      .map(j => {
+        let somaDiferencasQuadradas = 0;
+        metricasCalculo.forEach(m => {
+          const v1 = safeParseFloat(jogador[m]);
+          const v2 = safeParseFloat(j[m]);
+          
+          // Normalização simples: diferença relativa ou absoluta se v1 for zero
+          const diff = v1 === 0 ? v2 : Math.abs(v1 - v2) / (Math.abs(v1) || 1);
+          somaDiferencasQuadradas += Math.pow(diff, 2);
+        });
+        
+        // Se não houver métricas, a distância é 0, o que daria 100% (ajustado pelo length)
+        const dist = metricasCalculo.length > 0 ? Math.sqrt(somaDiferencasQuadradas / metricasCalculo.length) : 0;
+        const similaridade = Math.max(0, 100 - (dist * 50)); // Ajuste de sensibilidade
+        
+        return { ...j, scoreSimilaridade: similaridade }
       })
-      const similaridade = 100 / (1 + Math.sqrt(dist))
-      return { ...j, scoreSimilaridade: similaridade }
-    }).sort((a, b) => b.scoreSimilaridade - a.scoreSimilaridade).slice(0, 5)
+      .sort((a, b) => b.scoreSimilaridade - a.scoreSimilaridade)
+      .slice(0, 5)
     
     setJogadoresSimilares(scores)
   }
 
   const jogadoresFiltrados = useMemo(() => {
-    if (jogadorReferencia) return [jogadorReferencia, ...jogadoresSimilares]
+    // Se estiver no modo de similaridade, mostramos apenas o referência + similares
+    if (jogadorReferencia) {
+      const lista = [jogadorReferencia, ...jogadoresSimilares];
+      // Aplicamos a ordenação na lista de similares também
+      return [...lista].sort((a, b) => {
+        const vA = safeParseFloat(a[ordenacao.coluna]);
+        const vB = safeParseFloat(b[ordenacao.coluna]);
+        
+        if (isNaN(vA) || isNaN(vB)) {
+          const sA = String(a[ordenacao.coluna] || '');
+          const sB = String(b[ordenacao.coluna] || '');
+          return ordenacao.direcao === 'asc' ? sA.localeCompare(sB) : sB.localeCompare(sA);
+        }
+        return ordenacao.direcao === 'asc' ? vA - vB : vB - vA;
+      });
+    }
     
     let filtrados = jogadores.filter(j => {
-      const pB = (j.Jogador || '').toLowerCase().includes(busca.toLowerCase())
-      const pT = filtroTime === 'todos' || j.Time === filtroTime || j.Equipe === filtroTime
-      const pP = filtrosPosicao.length === 0 || filtrosPosicao.includes(j.Posição)
-      const idade = safeParseFloat(j.Idade)
-      const pI = idade >= filtroIdade.min && idade <= filtroIdade.max
-      const pM = safeParseFloat(j['Minutos jogados']) >= filtroMinutagem
-      return pB && pT && pP && pI && pM
-    })
+      const nomeJogador = (j.Jogador || '').toLowerCase();
+      const pB = nomeJogador.includes(busca.toLowerCase());
+      
+      const timeJogador = (j.Time || j.Equipe || '');
+      const pT = filtroTime === 'todos' || timeJogador === filtroTime;
+      
+      // Correção do filtro de posição: trim e tratamento de strings
+      const posJogador = (j.Posição || '').trim();
+      const pP = filtrosPosicao.length === 0 || filtrosPosicao.includes(posJogador);
+      
+      const idade = safeParseFloat(j.Idade);
+      const pI = (idade === 0 && filtroIdade.min === 15) || (idade >= filtroIdade.min && idade <= filtroIdade.max);
+      
+      const pM = safeParseFloat(j['Minutos jogados']) >= filtroMinutagem;
+      
+      return pB && pT && pP && pI && pM;
+    });
 
-    filtrados.sort((a, b) => {
-      const vA = safeParseFloat(a[ordenacao.coluna]), vB = safeParseFloat(b[ordenacao.coluna])
-      if (isNaN(vA)) return ordenacao.direcao === 'asc' ? String(a[ordenacao.coluna]).localeCompare(String(b[ordenacao.coluna])) : String(b[ordenacao.coluna]).localeCompare(String(a[ordenacao.coluna]))
-      return ordenacao.direcao === 'asc' ? vA - vB : vB - vA
-    })
-    return filtrados
+    // Ordenação consistente
+    return filtrados.sort((a, b) => {
+      const vA = safeParseFloat(a[ordenacao.coluna]);
+      const vB = safeParseFloat(b[ordenacao.coluna]);
+      
+      // Se não for número, ordena como string
+      if (isNaN(vA) || isNaN(vB) || (typeof a[ordenacao.coluna] === 'string' && a[ordenacao.coluna].includes('/'))) {
+        const sA = String(a[ordenacao.coluna] || '');
+        const sB = String(b[ordenacao.coluna] || '');
+        return ordenacao.direcao === 'asc' ? sA.localeCompare(sB) : sB.localeCompare(sA);
+      }
+      
+      return ordenacao.direcao === 'asc' ? vA - vB : vB - vA;
+    });
   }, [jogadores, busca, filtroTime, filtrosPosicao, filtroIdade, filtroMinutagem, ordenacao, jogadorReferencia, jogadoresSimilares])
 
-  const times = useMemo(() => ['todos', ...new Set(jogadores.map(j => j.Time || j.Equipe).filter(Boolean))], [jogadores])
-  const posicoes = useMemo(() => [...new Set(jogadores.map(j => j.Posição).filter(Boolean))], [jogadores])
+  const times = useMemo(() => {
+    const uniqueTimes = new Set(jogadores.map(j => j.Time || j.Equipe).filter(Boolean));
+    return ['todos', ...Array.from(uniqueTimes).sort()];
+  }, [jogadores])
+
+  const posicoes = useMemo(() => {
+    const uniquePos = new Set(jogadores.map(j => (j.Posição || '').trim()).filter(Boolean));
+    return Array.from(uniquePos).sort();
+  }, [jogadores])
 
   const exportarPDF = () => {
     const doc = new jsPDF('l', 'mm', 'a4')
     doc.text('RELATÓRIO TÉCNICO - NOVORIZONTINO', 14, 20)
     const head = [['Jogador', 'Time', 'Posição', ...metricasSelecionadas]]
-    const body = jogadoresFiltrados.map(j => [j.Jogador, j.Time || j.Equipe, j.Posição, ...metricasSelecionadas.map(m => j[m] || '0')])
+    const body = jogadoresFiltrados.map(j => [
+      j.Jogador, 
+      j.Time || j.Equipe, 
+      j.Posição, 
+      ...metricasSelecionadas.map(m => j[m] || '0')
+    ])
     doc.autoTable({ head, body, startY: 30, theme: 'grid', styles: { fontSize: 7 } })
     doc.save('relatorio-novorizontino.pdf')
   }
@@ -221,13 +292,13 @@ export default function CentralDados() {
           <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
             <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Idade</h3>
             <div className="flex gap-4">
-              <input type="number" value={filtroIdade.min} onChange={e => setFiltroIdade({...filtroIdade, min: parseInt(e.target.value)})} className="w-1/2 bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50" />
-              <input type="number" value={filtroIdade.max} onChange={e => setFiltroIdade({...filtroIdade, max: parseInt(e.target.value)})} className="w-1/2 bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50" />
+              <input type="number" value={filtroIdade.min} onChange={e => setFiltroIdade({...filtroIdade, min: parseInt(e.target.value) || 0})} className="w-1/2 bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50" />
+              <input type="number" value={filtroIdade.max} onChange={e => setFiltroIdade({...filtroIdade, max: parseInt(e.target.value) || 0})} className="w-1/2 bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50" />
             </div>
           </div>
           <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
             <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Minutos Mínimos</h3>
-            <input type="number" value={filtroMinutagem} onChange={e => setFiltroMinutagem(parseInt(e.target.value))} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50" />
+            <input type="number" value={filtroMinutagem} onChange={e => setFiltroMinutagem(parseInt(e.target.value) || 0)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50" />
           </div>
         </div>
 
@@ -259,7 +330,7 @@ export default function CentralDados() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
             {categoriasMetricas[abaAtiva]?.map(metrica => (
-              <button key={metrica} onClick={() => setMetricasSelecionadas(prev => prev.includes(metrica) ? prev.filter(x => x !== metrica) : (prev.length < 8 ? [...prev, metrica] : prev))} className={`p-3 rounded-xl border text-[9px] font-black uppercase tracking-widest transition-all text-left flex items-center justify-between group ${metricasSelecionadas.includes(metrica) ? 'bg-brand-yellow/10 border-brand-yellow text-brand-yellow' : 'bg-slate-950/50 border-slate-800 text-slate-500 hover:border-slate-600'}`}>
+              <button key={metrica} onClick={() => setMetricasSelecionadas(prev => prev.includes(metrica) ? prev.filter(x => x !== metrica) : (prev.length < 15 ? [...prev, metrica] : prev))} className={`p-3 rounded-xl border text-[9px] font-black uppercase tracking-widest transition-all text-left flex items-center justify-between group ${metricasSelecionadas.includes(metrica) ? 'bg-brand-yellow/10 border-brand-yellow text-brand-yellow' : 'bg-slate-950/50 border-slate-800 text-slate-500 hover:border-slate-600'}`}>
                 <span className="truncate mr-2">{metrica}</span>
                 {metricasSelecionadas.includes(metrica) && <div className="w-2 h-2 bg-brand-yellow rounded-full shadow-[0_0_8px_rgba(251,191,36,0.8)]"></div>}
               </button>
@@ -289,12 +360,12 @@ export default function CentralDados() {
                     <td className="p-6">
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-center text-[10px] font-black italic text-brand-yellow">
-                          {j.Jogador.substring(0, 2).toUpperCase()}
+                          {(j.Jogador || '??').substring(0, 2).toUpperCase()}
                         </div>
                         <div>
                           <div className="font-black italic uppercase text-sm group-hover:text-brand-yellow transition-colors flex items-center gap-2">
                             {j.Jogador}
-                            {j.scoreSimilaridade && <span className="text-[9px] bg-brand-yellow text-slate-950 px-2 py-0.5 rounded-full not-italic">{j.scoreSimilaridade.toFixed(1)}% MATCH</span>}
+                            {j.scoreSimilaridade !== undefined && <span className="text-[9px] bg-brand-yellow text-slate-950 px-2 py-0.5 rounded-full not-italic">{j.scoreSimilaridade.toFixed(1)}% MATCH</span>}
                           </div>
                           <div className="text-[8px] font-bold uppercase tracking-widest text-slate-500 mt-1">{j.Posição} • {j.Time || j.Equipe}</div>
                         </div>

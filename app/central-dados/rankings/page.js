@@ -45,7 +45,7 @@ export default function RankingsPage() {
           complete: (results) => {
             dadosGeral = cleanData(results.data).map(j => ({
               ...j,
-              Time: normalizeTeamName(j.Time || j.Equipe)
+              Time: normalizeTeamName(j.Time || j.Equipe || '')
             }));
             finalizarCarregamento();
           }
@@ -56,7 +56,7 @@ export default function RankingsPage() {
           complete: (results) => {
             dadosGoleiros = cleanData(results.data).map(j => ({
               ...j,
-              Time: normalizeTeamName(j.Time || j.Equipe),
+              Time: normalizeTeamName(j.Time || j.Equipe || ''),
               Posição: 'GOLEIRO'
             }));
             finalizarCarregamento();
@@ -79,7 +79,7 @@ export default function RankingsPage() {
   const posicoesCompativeis = useMemo(() => {
     return Object.entries(POSICAO_TO_PERFIS)
       .filter(([pos, perfis]) => perfis.includes(perfilAtivo))
-      .map(([pos]) => pos)
+      .map(([pos]) => pos.toUpperCase())
   }, [perfilAtivo])
 
   const metricasPerfil = useMemo(() => {
@@ -93,10 +93,14 @@ export default function RankingsPage() {
   const jogadoresRankeados = useMemo(() => {
     let filtrados = jogadores.filter(j => {
       const pB = (j.Jogador || '').toLowerCase().includes(busca.toLowerCase())
-      const pT = filtroTime === 'todos' || j.Time === filtroTime || j.Equipe === filtroTime
-      const pP = posicoesCompativeis.includes((j.Posição || '').trim().toUpperCase())
+      const pT = filtroTime === 'todos' || (j.Time || j.Equipe) === filtroTime
+      
+      const posJogador = (j.Posição || '').trim().toUpperCase();
+      const pP = posicoesCompativeis.includes(posJogador)
+      
       const idade = safeParseFloat(j.Idade)
-      const pI = idade >= filtroIdade.min && idade <= filtroIdade.max
+      const pI = (idade === 0 && filtroIdade.min === 15) || (idade >= filtroIdade.min && idade <= filtroIdade.max)
+      
       const pM = safeParseFloat(j['Minutos jogados']) >= filtroMinutagem
       return pB && pT && pP && pI && pM
     })
@@ -117,17 +121,27 @@ export default function RankingsPage() {
         return ordenacao.direcao === 'desc' ? b.nota - a.nota : a.nota - b.nota
       }
       const vA = safeParseFloat(a[ordenacao.coluna]), vB = safeParseFloat(b[ordenacao.coluna])
-      if (isNaN(vA)) return ordenacao.direcao === 'asc' ? String(a[ordenacao.coluna]).localeCompare(String(b[ordenacao.coluna])) : String(b[ordenacao.coluna]).localeCompare(String(a[ordenacao.coluna]))
+      if (isNaN(vA) || isNaN(vB)) {
+        const sA = String(a[ordenacao.coluna] || '')
+        const sB = String(b[ordenacao.coluna] || '')
+        return ordenacao.direcao === 'asc' ? sA.localeCompare(sB) : sB.localeCompare(sA)
+      }
       return ordenacao.direcao === 'asc' ? vA - vB : vB - vA
     })
 
     return comNota
   }, [jogadores, busca, filtroTime, filtroIdade, filtroMinutagem, perfilAtivo, posicoesCompativeis, ordenacao])
 
-  const times = useMemo(() => ['todos', ...new Set(jogadores.map(j => j.Time || j.Equipe).filter(Boolean))], [jogadores])
+  const times = useMemo(() => {
+    const uniqueTimes = new Set(jogadores.map(j => j.Time || j.Equipe).filter(Boolean));
+    return ['todos', ...Array.from(uniqueTimes).sort()];
+  }, [jogadores])
 
   const handleOrdenacao = (coluna) => {
-    setOrdenacao(prev => ({ coluna, direcao: prev.coluna === coluna && prev.direcao === 'desc' ? 'asc' : 'desc' }))
+    setOrdenacao(prev => ({ 
+      coluna, 
+      direcao: prev.coluna === coluna && prev.direcao === 'desc' ? 'asc' : 'desc' 
+    }))
   }
 
   const perfisPorCategoria = useMemo(() => {
@@ -155,7 +169,7 @@ export default function RankingsPage() {
     doc.text(`RANKING - ${perfilAtivo.toUpperCase()}`, 14, 20)
     const head = [['#', 'Jogador', 'Time', 'Posição', 'Nota', ...metricasPerfil]]
     const body = jogadoresRankeados.map((j, idx) => [
-      idx + 1, j.Jogador, j.Time || j.Equipe, j.Posição, j.nota,
+      idx + 1, j.Jogador, j.Time || j.Equipe, j.Posição, j.nota?.toFixed(1),
       ...metricasPerfil.map(m => j[m] || '0')
     ])
     doc.autoTable({ head, body, startY: 30, theme: 'grid', styles: { fontSize: 7 } })
@@ -245,13 +259,13 @@ export default function RankingsPage() {
           <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
             <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Idade</h3>
             <div className="flex gap-4">
-              <input type="number" value={filtroIdade.min} onChange={e => setFiltroIdade({...filtroIdade, min: parseInt(e.target.value)})} className="w-1/2 bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50" />
-              <input type="number" value={filtroIdade.max} onChange={e => setFiltroIdade({...filtroIdade, max: parseInt(e.target.value)})} className="w-1/2 bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50" />
+              <input type="number" value={filtroIdade.min} onChange={e => setFiltroIdade({...filtroIdade, min: parseInt(e.target.value) || 0})} className="w-1/2 bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50" />
+              <input type="number" value={filtroIdade.max} onChange={e => setFiltroIdade({...filtroIdade, max: parseInt(e.target.value) || 0})} className="w-1/2 bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50" />
             </div>
           </div>
           <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Minutos Mínimos</h3>
-            <input type="number" value={filtroMinutagem} onChange={e => setFiltroMinutagem(parseInt(e.target.value))} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50" />
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Minutagem Mínima</h3>
+            <input type="number" value={filtroMinutagem} onChange={e => setFiltroMinutagem(parseInt(e.target.value) || 0)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50" />
           </div>
         </div>
 
@@ -263,11 +277,11 @@ export default function RankingsPage() {
                 <tr className="border-b border-slate-800/50 bg-slate-950/50">
                   <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-500">#</th>
                   <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-500">Atleta</th>
-                  <th onClick={() => handleOrdenacao('nota')} className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-500 cursor-pointer hover:text-brand-yellow transition-colors">
+                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-500 cursor-pointer hover:text-brand-yellow transition-colors" onClick={() => handleOrdenacao('nota')}>
                     Nota {ordenacao.coluna === 'nota' && (ordenacao.direcao === 'asc' ? '↑' : '↓')}
                   </th>
                   {metricasPerfil.map(m => (
-                    <th key={m} onClick={() => handleOrdenacao(m)} className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-500 cursor-pointer hover:text-brand-yellow transition-colors">
+                    <th key={m} className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-500 cursor-pointer hover:text-brand-yellow transition-colors" onClick={() => handleOrdenacao(m)}>
                       {m} {ordenacao.coluna === m && (ordenacao.direcao === 'asc' ? '↑' : '↓')}
                     </th>
                   ))}
@@ -276,13 +290,12 @@ export default function RankingsPage() {
               <tbody>
                 {jogadoresRankeados.map((j, idx) => (
                   <tr key={j.Jogador} className="border-b border-slate-800/30 hover:bg-white/5 transition-colors group">
-                    <td className="p-6">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black ${idx === 0 ? 'bg-brand-yellow text-slate-950' : idx === 1 ? 'bg-slate-400 text-slate-950' : idx === 2 ? 'bg-amber-700 text-white' : 'bg-slate-800 text-slate-500'}`}>
-                        {idx + 1}
-                      </div>
-                    </td>
+                    <td className="p-6 text-slate-500 font-black italic">{idx + 1}</td>
                     <td className="p-6">
                       <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-center text-[10px] font-black italic text-brand-yellow">
+                          {(j.Jogador || '??').substring(0, 2).toUpperCase()}
+                        </div>
                         <div>
                           <div className="font-black italic uppercase text-sm group-hover:text-brand-yellow transition-colors">{j.Jogador}</div>
                           <div className="text-[8px] font-bold uppercase tracking-widest text-slate-500 mt-1">{j.Posição} • {j.Time || j.Equipe}</div>
@@ -290,8 +303,9 @@ export default function RankingsPage() {
                       </div>
                     </td>
                     <td className="p-6">
-                      <div className={`inline-block px-3 py-1 rounded-lg border text-[11px] font-black italic ${j.nota >= 8 ? 'bg-brand-yellow/20 border-brand-yellow text-brand-yellow' : j.nota >= 6.5 ? 'bg-blue-500/20 border-blue-500 text-blue-400' : 'bg-slate-800 border-slate-700 text-slate-400'}`}>
-                        {j.nota.toFixed(1)}
+                      <div className="flex flex-col">
+                        <span className="text-brand-yellow font-black italic text-lg">{j.nota?.toFixed(1)}</span>
+                        <span className="text-[8px] font-bold uppercase text-slate-500">Match Perfil</span>
                       </div>
                     </td>
                     {metricasPerfil.map(m => (

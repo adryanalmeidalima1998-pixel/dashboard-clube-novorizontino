@@ -64,7 +64,7 @@ export default function CentralGoleiros() {
           complete: (results) => {
             const dadosLimpos = cleanData(results.data).map(j => ({
               ...j,
-              Time: normalizeTeamName(j.Time || j.Equipe)
+              Time: normalizeTeamName(j.Time || j.Equipe || '')
             }))
             
             setJogadores(dadosLimpos)
@@ -102,7 +102,10 @@ export default function CentralGoleiros() {
   }
 
   const handleOrdenacao = (coluna) => {
-    setOrdenacao(prev => ({ coluna, direcao: prev.coluna === coluna && prev.direcao === 'desc' ? 'asc' : 'desc' }))
+    setOrdenacao(prev => ({ 
+      coluna, 
+      direcao: prev.coluna === coluna && prev.direcao === 'desc' ? 'asc' : 'desc' 
+    }))
   }
 
   const salvarTemplate = () => {
@@ -113,23 +116,37 @@ export default function CentralGoleiros() {
   }
 
   const encontrarSimilares = (jogador) => {
-    if (jogadorReferencia?.Jogador === jogador.Jogador) { setJogadorReferencia(null); setJogadoresSimilares([]); return; }
+    if (jogadorReferencia?.Jogador === jogador.Jogador) { 
+      setJogadorReferencia(null); 
+      setJogadoresSimilares([]); 
+      return; 
+    }
     setJogadorReferencia(jogador)
     
-    const metricasCalculo = metricasSelecionadas.filter(m => !['Jogador', 'Time', 'Equipe', 'Posição', 'Nota Perfil'].includes(m))
+    const metricasCalculo = metricasSelecionadas.filter(m => 
+      !['Jogador', 'Time', 'Equipe', 'Posição', 'Nota Perfil', 'Index'].includes(m)
+    )
+    
+    if (metricasCalculo.length === 0 && metricasSelecionadas.includes('Index')) {
+      metricasCalculo.push('Index')
+    }
     
     const scores = jogadores.filter(j => j.Jogador !== jogador.Jogador).map(j => {
-      let dist = 0;
+      let somaDiferencasQuadradas = 0;
       metricasCalculo.forEach(m => {
-        const v1 = safeParseFloat(jogador[m]), v2 = safeParseFloat(j[m])
-        dist += Math.pow(v1 === 0 ? v2 : Math.abs(v1 - v2) / (v1 || 1), 2)
+        const v1 = safeParseFloat(jogador[m]);
+        const v2 = safeParseFloat(j[m]);
+        const diff = v1 === 0 ? v2 : Math.abs(v1 - v2) / (Math.abs(v1) || 1);
+        somaDiferencasQuadradas += Math.pow(diff, 2);
       })
       
       const n1 = safeParseFloat(getDominantPerfil(jogador, jogadores).nota)
       const n2 = safeParseFloat(getDominantPerfil(j, jogadores).nota)
-      dist += Math.pow(Math.abs(n1 - n2) / 10, 2)
+      somaDiferencasQuadradas += Math.pow(Math.abs(n1 - n2) / 10, 2)
 
-      const similaridade = 100 / (1 + Math.sqrt(dist))
+      const dist = Math.sqrt(somaDiferencasQuadradas / (metricasCalculo.length + 1));
+      const similaridade = Math.max(0, 100 - (dist * 50));
+      
       return { ...j, scoreSimilaridade: similaridade }
     }).sort((a, b) => b.scoreSimilaridade - a.scoreSimilaridade).slice(0, 5)
     
@@ -137,19 +154,23 @@ export default function CentralGoleiros() {
   }
 
   const jogadoresFiltrados = useMemo(() => {
-    if (jogadorReferencia) return [jogadorReferencia, ...jogadoresSimilares]
-    
-    let filtrados = jogadores.filter(j => {
-      const pB = (j.Jogador || '').toLowerCase().includes(busca.toLowerCase())
-      const pT = filtroTime === 'todos' || j.Time === filtroTime || j.Equipe === filtroTime
-      const pP = filtrosPosicao.length === 0 || filtrosPosicao.includes(j.Posição)
-      const idade = safeParseFloat(j.Idade)
-      const pI = idade >= filtroIdade.min && idade <= filtroIdade.max
-      const pM = safeParseFloat(j['Minutos jogados']) >= filtroMinutagem
-      return pB && pT && pP && pI && pM
-    })
+    let baseJogadores = jogadores;
+    if (jogadorReferencia) {
+      baseJogadores = [jogadorReferencia, ...jogadoresSimilares];
+    } else {
+      baseJogadores = jogadores.filter(j => {
+        const pB = (j.Jogador || '').toLowerCase().includes(busca.toLowerCase())
+        const pT = filtroTime === 'todos' || (j.Time || j.Equipe) === filtroTime
+        const posJogador = (j.Posição || '').trim();
+        const pP = filtrosPosicao.length === 0 || filtrosPosicao.includes(posJogador)
+        const idade = safeParseFloat(j.Idade)
+        const pI = (idade === 0 && filtroIdade.min === 15) || (idade >= filtroIdade.min && idade <= filtroIdade.max)
+        const pM = safeParseFloat(j['Minutos jogados']) >= filtroMinutagem
+        return pB && pT && pP && pI && pM
+      })
+    }
 
-    const dadosProcessados = filtrados.map(j => {
+    const dadosProcessados = baseJogadores.map(j => {
       const dominant = getDominantPerfil(j, jogadores)
       return {
         ...j,
@@ -160,16 +181,30 @@ export default function CentralGoleiros() {
 
     const colunaOrdenacao = (perfilAtivo !== 'nenhum' && ordenacao.coluna === 'Index') ? 'Nota Perfil' : ordenacao.coluna
     
-    dadosProcessados.sort((a, b) => {
-      const vA = safeParseFloat(a[colunaOrdenacao]), vB = safeParseFloat(b[colunaOrdenacao])
-      if (isNaN(vA)) return ordenacao.direcao === 'asc' ? String(a[colunaOrdenacao]).localeCompare(String(b[colunaOrdenacao])) : String(b[colunaOrdenacao]).localeCompare(String(a[colunaOrdenacao]))
+    return dadosProcessados.sort((a, b) => {
+      const vA = safeParseFloat(a[colunaOrdenacao])
+      const vB = safeParseFloat(b[colunaOrdenacao])
+      
+      if (isNaN(vA) || isNaN(vB)) {
+        const sA = String(a[colunaOrdenacao] || '')
+        const sB = String(b[colunaOrdenacao] || '')
+        return ordenacao.direcao === 'asc' ? sA.localeCompare(sB) : sB.localeCompare(sA)
+      }
+      
       return ordenacao.direcao === 'asc' ? vA - vB : vB - vA
     })
-    return dadosProcessados
   }, [jogadores, busca, filtroTime, filtrosPosicao, filtroIdade, filtroMinutagem, ordenacao, jogadorReferencia, jogadoresSimilares, perfilAtivo])
 
-  const times = useMemo(() => ['todos', ...new Set(jogadores.map(j => j.Time || j.Equipe).filter(Boolean))], [jogadores])
-  const posicoes = useMemo(() => [...new Set(jogadores.map(j => j.Posição).filter(Boolean))], [jogadores])
+  const times = useMemo(() => {
+    const uniqueTimes = new Set(jogadores.map(j => j.Time || j.Equipe).filter(Boolean));
+    return ['todos', ...Array.from(uniqueTimes).sort()];
+  }, [jogadores])
+
+  const posicoes = useMemo(() => {
+    const uniquePos = new Set(jogadores.map(j => (j.Posição || '').trim()).filter(Boolean));
+    return Array.from(uniquePos).sort();
+  }, [jogadores])
+
   const perfisGoleiro = useMemo(() => Object.keys(PERFIL_WEIGHTS).filter(p => p.includes('Goleiro')), [])
 
   const exportarPDF = () => {
@@ -216,22 +251,21 @@ export default function CentralGoleiros() {
             <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Idade & Minutagem</h3>
             <div className="space-y-4">
               <div className="flex gap-4">
-                <input type="number" value={filtroIdade.min} onChange={e => setFiltroIdade({...filtroIdade, min: parseInt(e.target.value)})} className="w-1/2 bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50" />
-                <input type="number" value={filtroIdade.max} onChange={e => setFiltroIdade({...filtroIdade, max: parseInt(e.target.value)})} className="w-1/2 bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50" />
+                <input type="number" value={filtroIdade.min} onChange={e => setFiltroIdade({...filtroIdade, min: parseInt(e.target.value) || 0})} className="w-1/2 bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50" />
+                <input type="number" value={filtroIdade.max} onChange={e => setFiltroIdade({...filtroIdade, max: parseInt(e.target.value) || 0})} className="w-1/2 bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50" />
               </div>
-              <input type="number" value={filtroMinutagem} onChange={e => setFiltroMinutagem(parseInt(e.target.value))} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50" />
+              <input type="number" placeholder="MINUTAGEM MÍNIMA" value={filtroMinutagem} onChange={e => setFiltroMinutagem(parseInt(e.target.value) || 0)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50" />
             </div>
           </div>
           <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
             <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Perfil Técnico</h3>
-            <select value={perfilAtivo} onChange={e => setPerfilAtivo(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50">
-              <option value="nenhum">PERFIL DOMINANTE (AUTO)</option>
-              {perfisGoleiro.map(p => <option key={p} value={p}>{p.toUpperCase()}</option>)}
-            </select>
+            <div className="flex flex-wrap gap-2">
+              <button onClick={() => setPerfilAtivo('nenhum')} className={`px-3 py-2 rounded-xl text-[8px] font-black uppercase border transition-all ${perfilAtivo === 'nenhum' ? 'bg-brand-yellow text-slate-950 border-brand-yellow' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-600'}`}>AUTOMÁTICO</button>
+              {perfisGoleiro.map(p => <button key={p} onClick={() => setPerfilAtivo(p)} className={`px-3 py-2 rounded-xl text-[8px] font-black uppercase border transition-all ${perfilAtivo === p ? 'bg-brand-yellow text-slate-950 border-brand-yellow' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-600'}`}>{p.replace('Goleiro ', '')}</button>)}
+            </div>
           </div>
         </div>
 
-        {/* SELETOR DE MÉTRICAS */}
         <div className="bg-slate-900/40 p-8 rounded-[2.5rem] border border-slate-800/50 mb-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
             <div className="flex flex-col gap-2">
@@ -259,7 +293,7 @@ export default function CentralGoleiros() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
             {categoriasMetricas[abaAtiva]?.map(metrica => (
-              <button key={metrica} onClick={() => setMetricasSelecionadas(prev => prev.includes(metrica) ? prev.filter(x => x !== metrica) : (prev.length < 8 ? [...prev, metrica] : prev))} className={`p-3 rounded-xl border text-[9px] font-black uppercase tracking-widest transition-all text-left flex items-center justify-between group ${metricasSelecionadas.includes(metrica) ? 'bg-brand-yellow/10 border-brand-yellow text-brand-yellow' : 'bg-slate-950/50 border-slate-800 text-slate-500 hover:border-slate-600'}`}>
+              <button key={metrica} onClick={() => setMetricasSelecionadas(prev => prev.includes(metrica) ? prev.filter(x => x !== metrica) : (prev.length < 15 ? [...prev, metrica] : prev))} className={`p-3 rounded-xl border text-[9px] font-black uppercase tracking-widest transition-all text-left flex items-center justify-between group ${metricasSelecionadas.includes(metrica) ? 'bg-brand-yellow/10 border-brand-yellow text-brand-yellow' : 'bg-slate-950/50 border-slate-800 text-slate-500 hover:border-slate-600'}`}>
                 <span className="truncate mr-2">{metrica}</span>
                 {metricasSelecionadas.includes(metrica) && <div className="w-2 h-2 bg-brand-yellow rounded-full shadow-[0_0_8px_rgba(251,191,36,0.8)]"></div>}
               </button>
@@ -267,7 +301,6 @@ export default function CentralGoleiros() {
           </div>
         </div>
 
-        {/* TABELA PRINCIPAL */}
         <div className="bg-slate-900/40 rounded-[2.5rem] border border-slate-800/50 overflow-hidden shadow-2xl">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
@@ -289,12 +322,12 @@ export default function CentralGoleiros() {
                     <td className="p-6">
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-center text-[10px] font-black italic text-brand-yellow">
-                          {j.Jogador.substring(0, 2).toUpperCase()}
+                          {(j.Jogador || '??').substring(0, 2).toUpperCase()}
                         </div>
                         <div>
                           <div className="font-black italic uppercase text-sm group-hover:text-brand-yellow transition-colors flex items-center gap-2">
                             {j.Jogador}
-                            {j.scoreSimilaridade && <span className="text-[9px] bg-brand-yellow text-slate-950 px-2 py-0.5 rounded-full not-italic">{j.scoreSimilaridade.toFixed(1)}% MATCH</span>}
+                            {j.scoreSimilaridade !== undefined && <span className="text-[9px] bg-brand-yellow text-slate-950 px-2 py-0.5 rounded-full not-italic">{j.scoreSimilaridade.toFixed(1)}% MATCH</span>}
                           </div>
                           <div className="text-[8px] font-bold uppercase tracking-widest text-slate-500 mt-1">{j.Posição} • {j.Time || j.Equipe}</div>
                         </div>
@@ -302,8 +335,8 @@ export default function CentralGoleiros() {
                     </td>
                     <td className="p-6">
                       <div className="flex flex-col">
-                        <span className="text-[10px] font-black italic text-brand-yellow uppercase tracking-tighter">{j['Perfil Nome']}</span>
-                        <span className="text-[8px] font-bold text-slate-600 uppercase tracking-widest">Score: {safeParseFloat(j['Nota Perfil']).toFixed(1)}</span>
+                        <span className="text-brand-yellow font-black italic text-sm">{j['Nota Perfil']?.toFixed(1) || '0.0'}</span>
+                        <span className="text-[8px] font-bold uppercase text-slate-500">{j['Perfil Nome']}</span>
                       </div>
                     </td>
                     {metricasSelecionadas.map(m => (
