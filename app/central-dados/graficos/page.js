@@ -244,13 +244,13 @@ export default function GraficosPage() {
                 >
                   [ Desmarcar Tudo ]
                 </button>
-                <div className="flex flex-wrap gap-2 bg-slate-950 p-1 rounded-xl border border-slate-800 overflow-x-auto custom-scrollbar max-w-[500px]">
+                <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 overflow-x-auto custom-scrollbar max-w-[500px]">
                   {Object.keys(categoriasMetricas).map(cat => (
                     <button key={cat} onClick={() => setAbaAtiva(cat)} className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${abaAtiva === cat ? 'bg-brand-yellow text-slate-950' : 'text-slate-500 hover:text-slate-300'}`}>{cat}</button>
                   ))}
                 </div>
               </div>
-              <div className="flex flex-wrap gap-1 max-h-[60px] overflow-y-auto custom-scrollbar">
+              <div className="flex flex-wrap gap-1">
                 {templates.filter(t => t.tipo === tipoGrafico).map(t => (
                   <button key={t.id} onClick={() => {
                     if (t.tipo === 'radar') setMetricasRadar(t.metricas)
@@ -330,7 +330,18 @@ export default function GraficosPage() {
             </div>
 
             <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Atletas ({jogadoresFiltrados.length})</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500">Atletas ({jogadoresFiltrados.length})</h3>
+                <button 
+                  onClick={() => {
+                    if (jogadoresSelecionados.length === jogadoresFiltrados.length) setJogadoresSelecionados([])
+                    else setJogadoresSelecionados(jogadoresFiltrados.map(j => j.Jogador))
+                  }}
+                  className="text-[8px] font-black uppercase text-brand-yellow hover:text-brand-yellow/80 transition-all"
+                >
+                  {jogadoresSelecionados.length === jogadoresFiltrados.length ? '[ Desmarcar Todos ]' : '[ Selecionar Todos ]'}
+                </button>
+              </div>
               <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                 {jogadoresFiltrados.map(j => (
                   <button 

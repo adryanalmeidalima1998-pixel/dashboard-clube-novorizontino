@@ -6,10 +6,11 @@ import Papa from 'papaparse'
 import { jsPDF } from 'jspdf'
 import 'jspdf-autotable'
 import { cleanData, normalizeTeamName, safeParseFloat } from '../../utils/dataCleaner'
-import { calculateRating, getPerfisForPosicao, getDominantPerfil, getRankingByPerfil, getPosicoesForPerfil } from '../../utils/ratingSystem'
+import { calculateRating, getDominantPerfil } from '../../utils/ratingSystem'
 import { PERFIL_WEIGHTS, POSICAO_TO_PERFIS, PERFIL_DESCRICOES } from '../../utils/perfilWeights'
 
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSVC0eenchMDxK3wsOTXjq9kQiy3aHTFl0X1o5vwJZR7RiZzg1Irxxe_SL2IDrqb3c1i7ZL2ugpBJkN/pub?output=csv";
+const GOLEIROS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQlQGKcj7Dv6ziVn4MU-zs6PAJc5WFyjwr0aks9xNdG4rgRw4iwRNFws7lDGXtjNoQHGypQJ4ssSlqM/pub?output=csv";
 
 export default function RankingsPage() {
   const router = useRouter()
@@ -20,28 +21,56 @@ export default function RankingsPage() {
   const [filtroTime, setFiltroTime] = useState('todos')
   const [filtroIdade, setFiltroIdade] = useState({ min: 15, max: 45 })
   const [filtroMinutagem, setFiltroMinutagem] = useState(0)
-  const [perfilAtivo, setPerfilAtivo] = useState(Object.keys(PERFIL_WEIGHTS)[0])
+  const [perfilAtivo, setPerfilAtivo] = useState('Goleiro Defensor da Meta')
   const [ordenacao, setOrdenacao] = useState({ coluna: 'nota', direcao: 'desc' })
 
   useEffect(() => {
     const carregarDados = async () => {
       try {
-        const response = await fetch(`${CSV_URL}&t=${Date.now()}`)
-        const csvText = await response.text()
+        const [resGeral, resGoleiros] = await Promise.all([
+          fetch(`${CSV_URL}&t=${Date.now()}`),
+          fetch(`${GOLEIROS_CSV_URL}&t=${Date.now()}`)
+        ]);
         
-        Papa.parse(csvText, {
-          header: true,
-          skipEmptyLines: true,
+        const [csvGeral, csvGoleiros] = await Promise.all([
+          resGeral.text(),
+          resGoleiros.text()
+        ]);
+        
+        let dadosGeral = [];
+        let dadosGoleiros = [];
+
+        Papa.parse(csvGeral, {
+          header: true, skipEmptyLines: true,
           complete: (results) => {
-            const dadosLimpos = cleanData(results.data).map(j => ({
+            dadosGeral = cleanData(results.data).map(j => ({
               ...j,
               Time: normalizeTeamName(j.Time || j.Equipe)
-            }))
-            setJogadores(dadosLimpos)
-            setCarregando(false)
-          },
-          error: () => { setCarregando(false); }
-        })
+            }));
+            finalizarCarregamento();
+          }
+        });
+
+        Papa.parse(csvGoleiros, {
+          header: true, skipEmptyLines: true,
+          complete: (results) => {
+            dadosGoleiros = cleanData(results.data).map(j => ({
+              ...j,
+              Time: normalizeTeamName(j.Time || j.Equipe),
+              Posição: 'GOLEIRO'
+            }));
+            finalizarCarregamento();
+          }
+        });
+
+        let count = 0;
+        function finalizarCarregamento() {
+          count++;
+          if (count === 2) {
+            setJogadores([...dadosGeral, ...dadosGoleiros]);
+            setCarregando(false);
+          }
+        }
       } catch (error) { setCarregando(false); }
     }
     carregarDados()
@@ -65,7 +94,7 @@ export default function RankingsPage() {
     let filtrados = jogadores.filter(j => {
       const pB = (j.Jogador || '').toLowerCase().includes(busca.toLowerCase())
       const pT = filtroTime === 'todos' || j.Time === filtroTime || j.Equipe === filtroTime
-      const pP = posicoesCompativeis.includes(j.Posição)
+      const pP = posicoesCompativeis.includes((j.Posição || '').trim().toUpperCase())
       const idade = safeParseFloat(j.Idade)
       const pI = idade >= filtroIdade.min && idade <= filtroIdade.max
       const pM = safeParseFloat(j['Minutos jogados']) >= filtroMinutagem
@@ -120,27 +149,6 @@ export default function RankingsPage() {
     })
     return categorias
   }, [])
-
-  const getNotaColor = (nota) => {
-    if (nota >= 8) return 'bg-brand-yellow/20 border-brand-yellow text-brand-yellow'
-    if (nota >= 6.5) return 'bg-blue-500/20 border-blue-500 text-blue-400'
-    if (nota >= 5) return 'bg-amber-500/20 border-amber-500 text-amber-400'
-    return 'bg-slate-800 border-slate-700 text-slate-500'
-  }
-
-  const getNotaLabel = (nota) => {
-    if (nota >= 8) return 'ELITE'
-    if (nota >= 6.5) return 'BOM'
-    if (nota >= 5) return 'REGULAR'
-    return 'ABAIXO'
-  }
-
-  const getRankBadge = (idx) => {
-    if (idx === 0) return 'bg-brand-yellow text-slate-950'
-    if (idx === 1) return 'bg-slate-400 text-slate-950'
-    if (idx === 2) return 'bg-amber-700 text-white'
-    return 'bg-slate-800 text-slate-500'
-  }
 
   const exportarPDF = () => {
     const doc = new jsPDF('l', 'mm', 'a4')
@@ -248,18 +256,18 @@ export default function RankingsPage() {
         </div>
 
         {/* TABELA DE RANKING */}
-        <div className="bg-slate-900/40 rounded-[2rem] border border-slate-800/50 overflow-hidden shadow-2xl">
+        <div className="bg-slate-900/40 rounded-[2.5rem] border border-slate-800/50 overflow-hidden shadow-2xl">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-slate-800/50 bg-slate-950/50">
-                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-500">Rank</th>
+                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-500">#</th>
                   <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-500">Atleta</th>
-                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-500">Equipe</th>
-                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-500 text-center">Nota</th>
-                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-500 text-center">Status</th>
+                  <th onClick={() => handleOrdenacao('nota')} className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-500 cursor-pointer hover:text-brand-yellow transition-colors">
+                    Nota {ordenacao.coluna === 'nota' && (ordenacao.direcao === 'asc' ? '↑' : '↓')}
+                  </th>
                   {metricasPerfil.map(m => (
-                    <th key={m} onClick={() => handleOrdenacao(m)} className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-500 cursor-pointer hover:text-brand-yellow transition-colors text-center">
+                    <th key={m} onClick={() => handleOrdenacao(m)} className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-500 cursor-pointer hover:text-brand-yellow transition-colors">
                       {m} {ordenacao.coluna === m && (ordenacao.direcao === 'asc' ? '↑' : '↓')}
                     </th>
                   ))}
@@ -269,25 +277,25 @@ export default function RankingsPage() {
                 {jogadoresRankeados.map((j, idx) => (
                   <tr key={j.Jogador} className="border-b border-slate-800/30 hover:bg-white/5 transition-colors group">
                     <td className="p-6">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black italic text-sm ${getRankBadge(idx)}`}>
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black ${idx === 0 ? 'bg-brand-yellow text-slate-950' : idx === 1 ? 'bg-slate-400 text-slate-950' : idx === 2 ? 'bg-amber-700 text-white' : 'bg-slate-800 text-slate-500'}`}>
                         {idx + 1}
                       </div>
                     </td>
                     <td className="p-6">
-                      <div className="font-black italic uppercase text-sm group-hover:text-brand-yellow transition-colors">{j.Jogador}</div>
-                      <div className="text-[8px] font-bold uppercase tracking-widest text-slate-500 mt-1">{j.Posição}</div>
+                      <div className="flex items-center gap-4">
+                        <div>
+                          <div className="font-black italic uppercase text-sm group-hover:text-brand-yellow transition-colors">{j.Jogador}</div>
+                          <div className="text-[8px] font-bold uppercase tracking-widest text-slate-500 mt-1">{j.Posição} • {j.Time || j.Equipe}</div>
+                        </div>
+                      </div>
                     </td>
-                    <td className="p-6 text-[10px] font-black uppercase text-slate-400">{j.Time}</td>
-                    <td className="p-6 text-center">
-                      <div className="text-2xl font-black italic text-white">{j.nota.toFixed(1)}</div>
-                    </td>
-                    <td className="p-6 text-center">
-                      <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase border ${getNotaColor(j.nota)}`}>
-                        {getNotaLabel(j.nota)}
-                      </span>
+                    <td className="p-6">
+                      <div className={`inline-block px-3 py-1 rounded-lg border text-[11px] font-black italic ${j.nota >= 8 ? 'bg-brand-yellow/20 border-brand-yellow text-brand-yellow' : j.nota >= 6.5 ? 'bg-blue-500/20 border-blue-500 text-blue-400' : 'bg-slate-800 border-slate-700 text-slate-400'}`}>
+                        {j.nota.toFixed(1)}
+                      </div>
                     </td>
                     {metricasPerfil.map(m => (
-                      <td key={m} className="p-6 text-center">
+                      <td key={m} className="p-6">
                         <span className="text-sm font-black italic text-slate-400">{j[m] || '0'}</span>
                       </td>
                     ))}
@@ -297,8 +305,13 @@ export default function RankingsPage() {
             </table>
           </div>
         </div>
-
       </div>
+      <style jsx global>{`
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #0a0c10; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #fbbf24; }
+      `}</style>
     </div>
   )
 }

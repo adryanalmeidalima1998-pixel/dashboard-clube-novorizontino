@@ -296,6 +296,9 @@ export const PERFIL_WEIGHTS = {
  * Mapeia a posição do CSV (novos nomes) para as categorias de perfis disponíveis
  */
 export const POSICAO_TO_PERFIS = {
+  'GOLEIRO': [
+    'Goleiro Defensor da Meta', 'Goleiro Defensor do Setor', 'Goleiro Líder', 'Goleiro Construtor'
+  ],
   'LATERAL DIREITO': [
     'Lateral Construtor', 'Lateral Físico', 'Lateral Ofensivo',
     'Lateral Defensivo', 'Lateral Dinâmico'

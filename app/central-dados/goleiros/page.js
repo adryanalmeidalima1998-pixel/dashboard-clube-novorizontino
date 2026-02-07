@@ -122,10 +122,9 @@ export default function CentralGoleiros() {
       let dist = 0;
       metricasCalculo.forEach(m => {
         const v1 = safeParseFloat(jogador[m]), v2 = safeParseFloat(j[m])
-        dist += Math.pow(v1 === 0 ? v2 : Math.abs(v1 - v2) / v1, 2)
+        dist += Math.pow(v1 === 0 ? v2 : Math.abs(v1 - v2) / (v1 || 1), 2)
       })
       
-      // Inclui similaridade de Nota de Perfil no cálculo
       const n1 = safeParseFloat(getDominantPerfil(jogador, jogadores).nota)
       const n2 = safeParseFloat(getDominantPerfil(j, jogadores).nota)
       dist += Math.pow(Math.abs(n1 - n2) / 10, 2)
@@ -182,20 +181,20 @@ export default function CentralGoleiros() {
     doc.save('goleiros-novorizontino.pdf')
   }
 
-  if (carregando) return <div className="min-h-screen bg-[#0a0c10] flex items-center justify-center text-emerald-500">Processando Goleiros...</div>
+  if (carregando) return <div className="min-h-screen bg-[#0a0c10] flex items-center justify-center text-brand-yellow">Processando Goleiros...</div>
 
   return (
     <div className="min-h-screen bg-[#0a0c10] text-white p-4 md:p-8 font-sans">
       <div className="max-w-[1600px] mx-auto">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-12">
           <div className="flex items-center gap-6">
-            <button onClick={() => router.push('/central-dados')} className="p-4 bg-slate-900/80 hover:bg-emerald-500/20 rounded-2xl border border-slate-800 transition-all group"><svg className="w-6 h-6 text-slate-500 group-hover:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button>
-            <div><h1 className="text-4xl md:text-6xl font-black italic uppercase tracking-tighter leading-none">Central de <span className="text-emerald-500">Goleiros</span></h1></div>
+            <button onClick={() => router.push('/central-dados')} className="p-4 bg-slate-900/80 hover:bg-brand-yellow/20 rounded-2xl border border-slate-800 transition-all group"><svg className="w-6 h-6 text-slate-500 group-hover:text-brand-yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button>
+            <div><h1 className="text-4xl md:text-6xl font-black italic uppercase tracking-tighter leading-none">Central de <span className="text-brand-yellow">Goleiros</span></h1></div>
           </div>
           <div className="flex flex-wrap gap-3">
-            <button onClick={() => router.push('/central-dados/goleiros/graficos')} className="px-6 py-3 bg-slate-900/80 border border-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500/20 transition-all">Gráficos</button>
-            <button onClick={() => router.push('/central-dados/goleiros/benchmark')} className="px-6 py-3 bg-slate-900/80 border border-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500/20 transition-all">Benchmark</button>
-            <button onClick={exportarPDF} className="px-6 py-3 bg-emerald-500 text-slate-950 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-400 transition-all">PDF Clean</button>
+            <button onClick={() => router.push('/central-dados/goleiros/graficos')} className="px-6 py-3 bg-slate-900/80 border border-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-yellow/20 transition-all">Gráficos</button>
+            <button onClick={() => router.push('/central-dados/goleiros/benchmark')} className="px-6 py-3 bg-slate-900/80 border border-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-yellow/20 transition-all">Benchmark</button>
+            <button onClick={exportarPDF} className="px-6 py-3 bg-brand-yellow text-slate-950 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-yellow/80 transition-all">PDF Clean</button>
           </div>
         </div>
 
@@ -203,131 +202,133 @@ export default function CentralGoleiros() {
           <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
             <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Busca & Time</h3>
             <div className="space-y-3">
-              <input type="text" placeholder="BUSCAR..." value={busca} onChange={e => setBusca(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none" />
-              <select value={filtroTime} onChange={e => setFiltroTime(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none">{times.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}</select>
+              <input type="text" placeholder="BUSCAR..." value={busca} onChange={e => setBusca(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50" />
+              <select value={filtroTime} onChange={e => setFiltroTime(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50">{times.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}</select>
             </div>
           </div>
           <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
             <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Posições (Multi)</h3>
-            <div className="flex flex-wrap gap-1 max-h-[100px] overflow-y-auto p-1">
-              {posicoes.map(p => <button key={p} onClick={() => setFiltrosPosicao(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p])} className={`px-2 py-1 rounded text-[8px] font-black uppercase border transition-all ${filtrosPosicao.includes(p) ? 'bg-emerald-500 text-slate-950 border-emerald-500' : 'bg-slate-900 text-slate-500 border-slate-800'}`}>{p}</button>)}
+            <div className="flex flex-wrap gap-1 max-h-[100px] overflow-y-auto p-1 custom-scrollbar">
+              {posicoes.map(p => <button key={p} onClick={() => setFiltrosPosicao(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p])} className={`px-2 py-1 rounded text-[8px] font-black uppercase border transition-all ${filtrosPosicao.includes(p) ? 'bg-brand-yellow text-slate-950 border-brand-yellow' : 'bg-slate-900 text-slate-500 border-slate-800 hover:border-slate-600'}`}>{p}</button>)}
             </div>
           </div>
           <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
             <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Idade & Minutagem</h3>
             <div className="space-y-4">
               <div className="flex gap-4">
-                <div className="flex-1"><input type="number" value={filtroIdade.min} onChange={e => setFiltroIdade({...filtroIdade, min: parseInt(e.target.value)})} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-[10px] font-bold" /></div>
-                <div className="flex-1"><input type="number" value={filtroIdade.max} onChange={e => setFiltroIdade({...filtroIdade, max: parseInt(e.target.value)})} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-[10px] font-bold" /></div>
+                <input type="number" value={filtroIdade.min} onChange={e => setFiltroIdade({...filtroIdade, min: parseInt(e.target.value)})} className="w-1/2 bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50" />
+                <input type="number" value={filtroIdade.max} onChange={e => setFiltroIdade({...filtroIdade, max: parseInt(e.target.value)})} className="w-1/2 bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50" />
               </div>
-              <input type="number" value={filtroMinutagem} onChange={e => setFiltroMinutagem(parseInt(e.target.value))} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-[10px] font-bold" />
+              <input type="number" value={filtroMinutagem} onChange={e => setFiltroMinutagem(parseInt(e.target.value))} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50" />
             </div>
           </div>
           <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Perfil Técnico (Ranking)</h3>
-            <select value={perfilAtivo} onChange={e => setPerfilAtivo(e.target.value)} className="w-full bg-slate-950 border border-emerald-500/50 rounded-xl p-3 text-[10px] font-black uppercase text-emerald-500 outline-none">
-              <option value="nenhum">SEM FILTRO DE PERFIL</option>
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Perfil Técnico</h3>
+            <select value={perfilAtivo} onChange={e => setPerfilAtivo(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50">
+              <option value="nenhum">PERFIL DOMINANTE (AUTO)</option>
               {perfisGoleiro.map(p => <option key={p} value={p}>{p.toUpperCase()}</option>)}
             </select>
           </div>
         </div>
 
-        <div className="bg-slate-900/40 p-8 rounded-[2rem] border border-slate-800/50 mb-8">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
-            <div className="flex items-center gap-4">
-              <h2 className="text-xl font-black italic uppercase">Escolher <span className="text-emerald-500">Métricas</span></h2>
+        {/* SELETOR DE MÉTRICAS */}
+        <div className="bg-slate-900/40 p-8 rounded-[2.5rem] border border-slate-800/50 mb-8">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+            <div className="flex flex-col gap-2">
+              <h2 className="text-xl font-black italic uppercase tracking-tighter">Configurar <span className="text-brand-yellow">Métricas</span></h2>
               <div className="flex gap-2">
-                <input type="text" placeholder="SALVAR TEMPLATE..." value={nomeNovoTemplate} onChange={e => setNomeNovoTemplate(e.target.value)} className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-[8px] font-black uppercase tracking-widest outline-none w-32" />
-                <button onClick={salvarTemplate} className="p-1.5 bg-emerald-500 text-slate-950 rounded-lg hover:bg-emerald-400 transition-all"><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" /></svg></button>
+                <input type="text" placeholder="NOME DO TEMPLATE..." value={nomeNovoTemplate} onChange={e => setNomeNovoTemplate(e.target.value)} className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-[10px] font-black uppercase outline-none focus:border-brand-yellow/50" />
+                <button onClick={salvarTemplate} className="bg-brand-yellow text-slate-950 px-4 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-brand-yellow/80 transition-all">Salvar</button>
               </div>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <button onClick={() => setMetricasSelecionadas([])} className="text-[9px] font-black uppercase text-slate-500 hover:text-white mr-4">Desmarcar Tudo</button>
-              <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 overflow-x-auto max-w-full custom-scrollbar">
-                {Object.keys(categoriasMetricas).map(cat => <button key={cat} onClick={() => setAbaAtiva(cat)} className={`px-3 py-1.5 rounded-lg text-[8px] font-black uppercase transition-all whitespace-nowrap ${abaAtiva === cat ? 'bg-emerald-500 text-slate-950' : 'text-slate-500'}`}>{cat}</button>)}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-4 mb-1">
+                <button onClick={() => setMetricasSelecionadas([])} className="text-[9px] font-black uppercase text-slate-500 hover:text-brand-yellow transition-all">[ Desmarcar Tudo ]</button>
+                <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 overflow-x-auto custom-scrollbar max-w-[500px]">
+                  {Object.keys(categoriasMetricas).map(cat => (
+                    <button key={cat} onClick={() => setAbaAtiva(cat)} className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${abaAtiva === cat ? 'bg-brand-yellow text-slate-950' : 'text-slate-500 hover:text-slate-300'}`}>{cat}</button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {templates.map(t => (
+                  <button key={t.id} onClick={() => setMetricasSelecionadas(t.metricas)} className="text-[8px] font-black uppercase bg-slate-800 px-2 py-1 rounded border border-slate-700 hover:border-brand-yellow/50 hover:text-brand-yellow transition-all">{t.nome}</button>
+                ))}
               </div>
             </div>
           </div>
-          
-          <div className="mb-6 flex flex-wrap gap-1">
-            {templates.map(t => (
-              <div key={t.id} className="flex items-center gap-1.5 bg-slate-800/50 border border-slate-700 rounded-lg px-2 py-1 group">
-                <button onClick={() => setMetricasSelecionadas(t.metricas)} className="text-[8px] font-black uppercase text-slate-400 hover:text-emerald-400">{t.nome}</button>
-                <button onClick={() => setTemplates(templates.filter(x => x.id !== t.id))} className="text-slate-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"><svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg></button>
-              </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            {categoriasMetricas[abaAtiva]?.map(metrica => (
+              <button key={metrica} onClick={() => setMetricasSelecionadas(prev => prev.includes(metrica) ? prev.filter(x => x !== metrica) : (prev.length < 8 ? [...prev, metrica] : prev))} className={`p-3 rounded-xl border text-[9px] font-black uppercase tracking-widest transition-all text-left flex items-center justify-between group ${metricasSelecionadas.includes(metrica) ? 'bg-brand-yellow/10 border-brand-yellow text-brand-yellow' : 'bg-slate-950/50 border-slate-800 text-slate-500 hover:border-slate-600'}`}>
+                <span className="truncate mr-2">{metrica}</span>
+                {metricasSelecionadas.includes(metrica) && <div className="w-2 h-2 bg-brand-yellow rounded-full shadow-[0_0_8px_rgba(251,191,36,0.8)]"></div>}
+              </button>
             ))}
           </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">{categoriasMetricas[abaAtiva]?.map(m => <button key={m} onClick={() => setMetricasSelecionadas(prev => prev.includes(m) ? prev.filter(x => x !== m) : (prev.length < 12 ? [...prev, m] : prev))} className={`p-3 rounded-xl border text-[9px] font-black uppercase transition-all text-left flex items-center justify-between ${metricasSelecionadas.includes(m) ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400' : 'bg-slate-950/50 border-slate-800 text-slate-500'}`}><span>{m}</span>{metricasSelecionadas.includes(m) && <div className="w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>}</button>)}</div>
         </div>
 
-        <div className="bg-slate-900/40 rounded-[2rem] border border-slate-800/50 overflow-hidden">
-          <div className="overflow-x-auto"><table className="w-full text-left border-collapse">
-            <thead><tr className="bg-slate-950/50 border-b border-slate-800">
-              <th className="p-6 text-[10px] font-black uppercase text-slate-500 cursor-pointer" onClick={() => handleOrdenacao('Jogador')}>Goleiro</th>
-              <th className="p-6 text-[10px] font-black uppercase text-slate-500">Nota</th>
-              <th className="p-6 text-[10px] font-black uppercase text-slate-500 cursor-pointer" onClick={() => handleOrdenacao('Time')}>Equipe</th>
-              <th className="p-6 text-[10px] font-black uppercase text-slate-500">Pos</th>
-              {metricasSelecionadas.map(m => <th key={m} className={`p-6 text-[10px] font-black uppercase cursor-pointer transition-all ${m === 'Nota Perfil' ? 'text-emerald-500' : 'text-slate-500 hover:text-white'}`} onClick={() => handleOrdenacao(m)}>{m}</th>)}
-              <th className="p-6 text-[10px] font-black uppercase text-slate-500">Ações</th>
-            </tr></thead>
-            <tbody>{jogadoresFiltrados.map((j, idx) => (
-              <tr key={idx} className={`border-b border-slate-800/30 hover:bg-emerald-500/5 transition-all group ${jogadorReferencia?.Jogador === j.Jogador ? 'bg-emerald-500/10' : ''}`}>
-                <td className="p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-[10px] font-black text-slate-600 group-hover:bg-emerald-500 group-hover:text-slate-950 transition-all">{j.Jogador.substring(0, 2).toUpperCase()}</div>
-                    <div className="flex flex-col">
-                      <span className="font-black italic uppercase text-sm group-hover:text-emerald-400 transition-colors">{j.Jogador}</span>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest">• {j.Idade} ANOS</span>
-                        {perfilAtivo !== 'nenhum' && (
-                          <span className="px-1.5 py-0.5 bg-emerald-500/10 border border-emerald-500/30 rounded text-[7px] font-black text-emerald-400 uppercase">{j['Perfil Nome']}</span>
-                        )}
+        {/* TABELA PRINCIPAL */}
+        <div className="bg-slate-900/40 rounded-[2.5rem] border border-slate-800/50 overflow-hidden shadow-2xl">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-800/50 bg-slate-950/50">
+                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-500">Atleta</th>
+                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-500">Perfil</th>
+                  {metricasSelecionadas.map(m => (
+                    <th key={m} onClick={() => handleOrdenacao(m)} className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-500 cursor-pointer hover:text-brand-yellow transition-colors">
+                      {m} {ordenacao.coluna === m && (ordenacao.direcao === 'asc' ? '↑' : '↓')}
+                    </th>
+                  ))}
+                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-500 text-center">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {jogadoresFiltrados.map(j => (
+                  <tr key={j.Jogador} className={`border-b border-slate-800/30 hover:bg-white/5 transition-colors group ${jogadorReferencia?.Jogador === j.Jogador ? 'bg-brand-yellow/5' : ''}`}>
+                    <td className="p-6">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-center text-[10px] font-black italic text-brand-yellow">
+                          {j.Jogador.substring(0, 2).toUpperCase()}
+                        </div>
+                        <div>
+                          <div className="font-black italic uppercase text-sm group-hover:text-brand-yellow transition-colors flex items-center gap-2">
+                            {j.Jogador}
+                            {j.scoreSimilaridade && <span className="text-[9px] bg-brand-yellow text-slate-950 px-2 py-0.5 rounded-full not-italic">{j.scoreSimilaridade.toFixed(1)}% MATCH</span>}
+                          </div>
+                          <div className="text-[8px] font-bold uppercase tracking-widest text-slate-500 mt-1">{j.Posição} • {j.Time || j.Equipe}</div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                </td>
-                <td className="p-6">
-                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black italic text-sm border ${safeParseFloat(j['Nota Perfil']) >= 7.5 ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : safeParseFloat(j['Nota Perfil']) >= 5 ? 'bg-blue-500/20 border-blue-500 text-blue-400' : 'bg-slate-800 border-slate-700 text-slate-500'}`}>
-                    {j['Nota Perfil']}
-                  </div>
-                </td>
-                <td className="p-6 text-[10px] font-black uppercase text-slate-400">{j.Time || j.Equipe}</td>
-                <td className="p-6"><span className="px-3 py-1 bg-slate-950 border border-slate-800 rounded-lg text-[9px] font-black text-slate-500">{j.Posição}</span></td>
-                {metricasSelecionadas.map(m => (
-                  <td key={m} className="p-6">
-                    {m === 'Nota Perfil' ? (
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black italic text-sm border ${safeParseFloat(j['Nota Perfil']) >= 7.5 ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : safeParseFloat(j['Nota Perfil']) >= 5 ? 'bg-blue-500/20 border-blue-500 text-blue-400' : 'bg-slate-800 border-slate-700 text-slate-500'}`}>
-                        {j['Nota Perfil']}
+                    </td>
+                    <td className="p-6">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-black italic text-brand-yellow uppercase tracking-tighter">{j['Perfil Nome']}</span>
+                        <span className="text-[8px] font-bold text-slate-600 uppercase tracking-widest">Score: {safeParseFloat(j['Nota Perfil']).toFixed(1)}</span>
                       </div>
-                    ) : (
-                      <span className="text-xs font-black text-slate-400">{j[m] || '0'}</span>
-                    )}
-                  </td>
+                    </td>
+                    {metricasSelecionadas.map(m => (
+                      <td key={m} className="p-6">
+                        <span className={`text-sm font-black italic ${m === 'Index' ? 'text-brand-yellow' : 'text-slate-400'}`}>{j[m] || '0'}</span>
+                      </td>
+                    ))}
+                    <td className="p-6 text-center">
+                      <button onClick={() => encontrarSimilares(j)} className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border ${jogadorReferencia?.Jogador === j.Jogador ? 'bg-brand-yellow text-slate-950 border-brand-yellow' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-brand-yellow/50 hover:text-brand-yellow'}`}>
+                        {jogadorReferencia?.Jogador === j.Jogador ? 'FECHAR' : 'FIND SIMILAR'}
+                      </button>
+                    </td>
+                  </tr>
                 ))}
-                <td className="p-6">
-                  <div className="flex items-center gap-3">
-                    {jogadorReferencia && j.Jogador !== jogadorReferencia.Jogador && (
-                      <div className="flex flex-col gap-1 w-16">
-                        <div className="flex justify-between text-[8px] font-black uppercase text-slate-500">
-                          <span>Sim</span>
-                          <span>{Math.round(j.scoreSimilaridade)}%</span>
-                        </div>
-                        <div className="h-1 bg-slate-800 rounded-full overflow-hidden">
-                          <div className="h-full bg-emerald-500 transition-all" style={{ width: `${j.scoreSimilaridade}%` }}></div>
-                        </div>
-                      </div>
-                    )}
-                    <button onClick={() => encontrarSimilares(j)} className={`px-4 py-2 rounded-xl text-[8px] font-black uppercase transition-all ${jogadorReferencia?.Jogador === j.Jogador ? 'bg-emerald-500 text-slate-950' : 'bg-slate-900 border border-slate-800 text-slate-500 hover:border-emerald-500/50'}`}>
-                      {jogadorReferencia?.Jogador === j.Jogador ? 'Ativo' : 'Similar'}
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}</tbody>
-          </table></div>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
+      <style jsx global>{`
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #0a0c10; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #fbbf24; }
+      `}</style>
     </div>
   )
 }
