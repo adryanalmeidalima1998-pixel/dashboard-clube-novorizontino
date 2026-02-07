@@ -316,3 +316,4 @@ export default function AgendaPage() {
     </div>
   )
 }
+// Final fix for visibility
