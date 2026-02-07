@@ -188,40 +188,61 @@ export default function AgendaPage() {
                         {jogoExpandido === jogo.id && (
                           <tr className="bg-slate-950/60 border-b border-slate-800/50 animate-in fade-in slide-in-from-top-2 duration-300">
                             <td colSpan="7" className="px-8 py-8">
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                                <div className="space-y-6">
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-1 h-4 bg-brand-yellow rounded-full"></div>
-                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-white">Artilheiros e Gols</h4>
+                              <div className="flex flex-col gap-8">
+                                {/* SEÇÃO DE GOLS - NOVO MODELO */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-12 border-b border-slate-800/50 pb-8">
+                                  <div className="space-y-4">
+                                    <div className="flex items-center gap-3">
+                                      <div className="w-1 h-4 bg-brand-yellow rounded-full"></div>
+                                      <h4 className="text-[10px] font-black uppercase tracking-widest text-white">Gols {jogo.mandante}</h4>
+                                    </div>
+                                    <p className="text-[11px] font-bold text-slate-300 italic leading-relaxed">
+                                      {jogo.artilheirosMandante || 'Nenhum gol registrado'}
+                                    </p>
                                   </div>
-                                  <div className="grid grid-cols-2 gap-8">
-                                    <div>
-                                      <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-2">{jogo.mandante}</p>
-                                      <p className="text-[11px] font-bold text-slate-300 italic leading-relaxed">{jogo.artilheirosMandante || 'Nenhum gol registrado'}</p>
+                                  <div className="space-y-4">
+                                    <div className="flex items-center gap-3">
+                                      <div className="w-1 h-4 bg-brand-yellow rounded-full"></div>
+                                      <h4 className="text-[10px] font-black uppercase tracking-widest text-white">Gols {jogo.visitante}</h4>
                                     </div>
-                                    <div>
-                                      <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-2">{jogo.visitante}</p>
-                                      <p className="text-[11px] font-bold text-slate-300 italic leading-relaxed">{jogo.artilheirosVisitante || 'Nenhum gol registrado'}</p>
-                                    </div>
+                                    <p className="text-[11px] font-bold text-slate-300 italic leading-relaxed">
+                                      {jogo.artilheirosVisitante || 'Nenhum gol registrado'}
+                                    </p>
                                   </div>
                                 </div>
-                                <div className="space-y-6">
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-1 h-4 bg-emerald-500 rounded-full"></div>
-                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-white">Eventos Importantes</h4>
+
+                                {/* SEÇÃO DE ESCALAÇÃO - IFRAME DO SOFASCORE */}
+                                {jogo.escalacaoCode ? (
+                                  <div className="space-y-6">
+                                    <div className="flex items-center gap-3">
+                                      <div className="w-1 h-4 bg-brand-yellow rounded-full"></div>
+                                      <h4 className="text-[10px] font-black uppercase tracking-widest text-white">Escalação e Estatísticas</h4>
+                                    </div>
+                                    <div className="w-full bg-white rounded-2xl overflow-hidden shadow-2xl">
+                                      <div 
+                                        className="sofascore-embed-container"
+                                        dangerouslySetInnerHTML={{ __html: jogo.escalacaoCode.replace(/style=height:786px!important;max-width:800px!important;width:100%!important;/g, 'style="height:786px;width:100%;border:0;"') }}
+                                      />
+                                    </div>
                                   </div>
-                                  <p className="text-[11px] font-bold text-slate-400 italic leading-relaxed">
-                                    {jogo.eventos || 'Nenhum evento adicional registrado para esta partida.'}
-                                  </p>
-                                  {jogo.escalacaoCode && (
-                                    <button 
-                                      onClick={(e) => { e.stopPropagation(); /* lógica para abrir modal se necessário */ }}
-                                      className="mt-4 px-4 py-2 bg-slate-900 border border-slate-800 rounded-xl text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-brand-yellow hover:border-brand-yellow/30 transition-all"
-                                    >
-                                      Ver Escalação Completa
-                                    </button>
-                                  )}
-                                </div>
+                                ) : (
+                                  <div className="py-12 text-center border-2 border-dashed border-slate-800 rounded-3xl">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-600 italic">Escalação não disponível para esta partida</p>
+                                  </div>
+                                )}
+
+                                {/* EVENTOS ADICIONAIS */}
+                                {jogo.eventos && (
+                                  <div className="pt-4">
+                                    <div className="flex items-center gap-3 mb-4">
+                                      <div className="w-1 h-4 bg-brand-yellow rounded-full"></div>
+                                      <h4 className="text-[10px] font-black uppercase tracking-widest text-white">Observações</h4>
+                                    </div>
+                                    <p className="text-[11px] font-bold text-slate-400 italic leading-relaxed">
+                                      {jogo.eventos}
+                                    </p>
+                                  </div>
+                                )}
                               </div>
                             </td>
                           </tr>
@@ -264,6 +285,10 @@ export default function AgendaPage() {
           to { opacity: 1; transform: translateY(0); }
         }
         .animate-in { animation: in 0.3s ease-out fill-mode-forwards; }
+        .sofascore-embed-container iframe {
+          width: 100% !important;
+          max-width: 100% !important;
+        }
       `}</style>
     </div>
   )
