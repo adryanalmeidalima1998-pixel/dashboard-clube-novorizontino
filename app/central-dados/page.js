@@ -18,27 +18,26 @@ export default function CentralDados() {
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState(null)
   
+  // ESTADOS DE FILTRO
   const [busca, setBusca] = useState('')
   const [filtroTime, setFiltroTime] = useState('todos')
   const [filtrosPosicao, setFiltrosPosicao] = useState([])
   const [filtroIdade, setFiltroIdade] = useState({ min: 15, max: 45 })
   const [filtroMinutagem, setFiltroMinutagem] = useState(0)
   
+  // ESTADOS DE ORDENAÇÃO E MÉTRICAS
+  const [metricasSelecionadas, setMetricasSelecionadas] = useState(['Index', 'Minutos jogados', 'Gols', 'Assistências'])
+  const [ordenacao, setOrdenacao] = useState({ coluna: 'Index', direcao: 'desc' })
+  
+  // ESTADOS DE SIMILARIDADE
   const [jogadorReferencia, setJogadorReferencia] = useState(null)
   const [jogadoresSimilares, setJogadoresSimilares] = useState([])
-  const [ordenacao, setOrdenacao] = useState({ coluna: 'Index', direcao: 'desc' })
-
-  const [metricasSelecionadas, setMetricasSelecionadas] = useState([
-    'Index',
-    'Minutos jogados',
-    'Gols',
-    'Assistências'
-  ])
 
   const [templates, setTemplates] = useState([])
   const [nomeNovoTemplate, setNomeNovoTemplate] = useState('')
   const [abaAtiva, setAbaAtiva] = useState('Ataque')
 
+  // Carregar templates
   useEffect(() => {
     const templatesArmazenados = localStorage.getItem('metricsTemplates_Central')
     if (templatesArmazenados) {
@@ -50,6 +49,7 @@ export default function CentralDados() {
     localStorage.setItem('metricsTemplates_Central', JSON.stringify(templates))
   }, [templates])
 
+  // Carregar dados iniciais
   useEffect(() => {
     const carregarDados = async () => {
       try {
@@ -172,20 +172,26 @@ export default function CentralDados() {
     setJogadoresSimilares(scores)
   }
 
-  // LÓGICA DE FILTRAGEM E ORDENAÇÃO CORRIGIDA
+  // LÓGICA DE FILTRAGEM E ORDENAÇÃO TOTALMENTE REATIVA
   const jogadoresFiltrados = useMemo(() => {
-    // IMPORTANTE: Se não houver métricas selecionadas E nenhum filtro ativo, retornamos lista vazia
-    // Isso evita o "travamento" visual de atletas quando tudo é desmarcado
-    if (metricasSelecionadas.length === 0 && filtrosPosicao.length === 0 && !busca && filtroTime === 'todos') {
-      return [];
-    }
-
+    // Se estivermos no modo Find Similar, mostramos apenas o alvo + similares
     if (jogadorReferencia) {
-      return [jogadorReferencia, ...jogadoresSimilares];
+      const lista = [jogadorReferencia, ...jogadoresSimilares];
+      return [...lista].sort((a, b) => {
+        const vA = safeParseFloat(a[ordenacao.coluna]);
+        const vB = safeParseFloat(b[ordenacao.coluna]);
+        if (['Jogador', 'Time', 'Equipe', 'Posição'].includes(ordenacao.coluna)) {
+          const sA = String(a[ordenacao.coluna] || '').toLowerCase();
+          const sB = String(b[ordenacao.coluna] || '').toLowerCase();
+          return ordenacao.direcao === 'asc' ? sA.localeCompare(sB) : sB.localeCompare(sA);
+        }
+        return ordenacao.direcao === 'asc' ? vA - vB : vB - vA;
+      });
     }
     
+    // Caso contrário, aplicamos os filtros
     let filtrados = jogadores.filter(j => {
-      // 1. Filtro de Posição (OBRIGATÓRIO se houver seleção)
+      // 1. Filtro de Posição (Obrigatório se houver seleção)
       if (filtrosPosicao.length > 0) {
         const posJ = (j.Posição || '').trim().toUpperCase();
         if (!filtrosPosicao.includes(posJ)) return false;
@@ -209,7 +215,7 @@ export default function CentralDados() {
       return true;
     });
 
-    // ORDENAÇÃO
+    // Aplicar Ordenação
     return filtrados.sort((a, b) => {
       const col = ordenacao.coluna;
       const dir = ordenacao.direcao;
@@ -224,7 +230,14 @@ export default function CentralDados() {
       const numB = safeParseFloat(b[col]);
       return dir === 'asc' ? numA - numB : numB - numA;
     });
-  }, [jogadores, busca, filtroTime, filtrosPosicao, filtroIdade, filtroMinutagem, ordenacao, jogadorReferencia, jogadoresSimilares, metricasSelecionadas])
+  }, [jogadores, busca, filtroTime, filtrosPosicao, filtroIdade, filtroMinutagem, ordenacao, jogadorReferencia, jogadoresSimilares]);
+
+  // Se não houver nada selecionado e não houver busca, não mostramos nada (opcional, mas evita poluição)
+  const listaParaExibir = useMemo(() => {
+    const temFiltroAtivo = busca || filtroTime !== 'todos' || filtrosPosicao.length > 0 || filtroMinutagem > 0 || metricasSelecionadas.length > 0;
+    if (!temFiltroAtivo && !jogadorReferencia) return [];
+    return jogadoresFiltrados;
+  }, [jogadoresFiltrados, busca, filtroTime, filtrosPosicao, filtroMinutagem, metricasSelecionadas, jogadorReferencia]);
 
   const times = useMemo(() => {
     const uniqueTimes = new Set(jogadores.map(j => j.Time || j.Equipe).filter(Boolean));
@@ -240,7 +253,7 @@ export default function CentralDados() {
     const doc = new jsPDF('l', 'mm', 'a4')
     doc.text('RELATÓRIO TÉCNICO - NOVORIZONTINO', 14, 20)
     const head = [['Jogador', 'Time', 'Posição', ...metricasSelecionadas]]
-    const body = jogadoresFiltrados.map(j => [
+    const body = listaParaExibir.map(j => [
       j.Jogador, 
       j.Time || j.Equipe, 
       j.Posição, 
@@ -352,14 +365,14 @@ export default function CentralDados() {
                 </tr>
               </thead>
               <tbody>
-                {jogadoresFiltrados.length === 0 ? (
+                {listaParaExibir.length === 0 ? (
                   <tr>
                     <td colSpan={metricasSelecionadas.length + 3} className="p-12 text-center text-slate-500 font-black uppercase tracking-widest italic">
-                      Selecione métricas ou filtros para visualizar os atletas
+                      {carregando ? "Processando..." : "Selecione filtros ou métricas para visualizar os atletas"}
                     </td>
                   </tr>
                 ) : (
-                  jogadoresFiltrados.map(j => (
+                  listaParaExibir.map(j => (
                     <tr key={j.Jogador} className={`border-b border-slate-800/30 hover:bg-white/5 transition-colors group ${jogadorReferencia?.Jogador === j.Jogador ? 'bg-brand-yellow/5' : ''}`}>
                       <td className="p-6">
                         <div className="flex items-center gap-4">
