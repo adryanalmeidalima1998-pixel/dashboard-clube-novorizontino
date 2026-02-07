@@ -40,7 +40,8 @@ export default function BenchmarkPage() {
           complete: (results) => {
             const dadosLimpos = cleanData(results.data).map(j => ({
               ...j,
-              Time: normalizeTeamName(j.Time || j.Equipe)
+              Time: normalizeTeamName(j.Time || j.Equipe || ''),
+              Posição: (j.Posição || '').trim().toUpperCase()
             }))
             setJogadores(dadosLimpos)
             if (dadosLimpos.length > 0) {
@@ -98,37 +99,47 @@ export default function BenchmarkPage() {
     return categorias
   }
 
-  const parseValue = (val) => {
-    if (!val || val === '-' || val === 'nan' || val === '') return 0
-    const clean = String(val).replace('%', '').replace(',', '.')
-    const num = parseFloat(clean)
-    return isNaN(num) ? 0 : num
-  }
+  const times = useMemo(() => {
+    const uniqueTimes = new Set(jogadores.map(j => j.Time || j.Equipe).filter(Boolean));
+    return ['Todas', ...Array.from(uniqueTimes).sort()];
+  }, [jogadores])
 
-  const times = useMemo(() => ['Todas', ...new Set(jogadores.map(j => j.Time || j.Equipe).filter(Boolean))].sort(), [jogadores])
-  const posicoes = useMemo(() => [...new Set(jogadores.map(j => j.Posição).filter(Boolean))].sort(), [jogadores])
+  const posicoes = useMemo(() => {
+    const uniquePos = new Set(jogadores.map(j => (j.Posição || '').trim().toUpperCase()).filter(Boolean));
+    return Array.from(uniquePos).sort();
+  }, [jogadores])
 
+  // LÓGICA DE FILTRAGEM CORRIGIDA E BLINDADA
   const jogadoresFiltrados = useMemo(() => {
     return jogadores.filter(j => {
+      // 1. Filtro de Time (Comparação exata)
       const timeAtleta = (j.Time || j.Equipe || '').trim();
-      const passaTime = filtroTime === 'Todas' || timeAtleta.toLowerCase() === filtroTime.toLowerCase();
+      if (filtroTime !== 'Todas' && timeAtleta !== filtroTime) return false;
+
+      // 2. Filtro de Posição (Normalizado e Blindado)
+      if (filtrosPosicao.length > 0) {
+        const posJ = (j.Posição || '').trim().toUpperCase();
+        if (!filtrosPosicao.includes(posJ)) return false;
+      }
+
+      // 3. Busca por nome
       const nomeAtleta = (j.Jogador || '').trim();
-      const passaBusca = nomeAtleta.toLowerCase().includes(busca.toLowerCase());
-      const passaPosicao = filtrosPosicao.length === 0 || filtrosPosicao.includes(j.Posição);
-      return passaTime && passaBusca && passaPosicao;
+      if (busca && !nomeAtleta.toLowerCase().includes(busca.toLowerCase())) return false;
+
+      return true;
     });
   }, [jogadores, busca, filtroTime, filtrosPosicao])
 
   const mediaReferencia = useMemo(() => {
     if (!jogadorSelecionado) return {}
-    const posParaMedia = posicaoReferencia === 'MESMA' ? jogadorSelecionado.Posição : posicaoReferencia
+    const posParaMedia = posicaoReferencia === 'MESMA' ? (jogadorSelecionado.Posição || '').trim().toUpperCase() : posicaoReferencia
     const jogadoresParaMedia = posParaMedia === 'LIGA' 
       ? jogadores 
-      : jogadores.filter(j => j.Posição === posParaMedia)
+      : jogadores.filter(j => (j.Posição || '').trim().toUpperCase() === posParaMedia)
     
     const medias = {}
     metricasBenchmark.forEach(m => {
-      const valores = jogadoresParaMedia.map(j => parseValue(j[m]))
+      const valores = jogadoresParaMedia.map(j => safeParseFloat(j[m]))
       medias[m] = valores.reduce((a, b) => a + b, 0) / (valores.length || 1)
     })
     return medias
@@ -238,127 +249,152 @@ export default function BenchmarkPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          
-          {/* SIDEBAR SELEÇÃO */}
-          <div className="lg:col-span-1 space-y-6">
-            <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Filtros</h3>
-              <div className="space-y-4">
-                <input type="text" placeholder="BUSCAR ATLETA..." value={busca} onChange={e => setBusca(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black uppercase outline-none focus:border-brand-yellow/50" />
-                <select value={filtroTime} onChange={e => setFiltroTime(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black uppercase outline-none focus:border-brand-yellow/50">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* PAINEL DE FILTROS E LISTA */}
+          <div className="lg:col-span-4 space-y-6">
+            <div className="bg-slate-900/40 p-6 rounded-[2rem] border border-slate-800/50 shadow-xl">
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-6">Seleção de Atleta</h3>
+              
+              <div className="space-y-4 mb-6">
+                <input 
+                  type="text" 
+                  placeholder="BUSCAR NOME..." 
+                  value={busca} 
+                  onChange={e => setBusca(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black uppercase outline-none focus:border-brand-yellow/50"
+                />
+                <select 
+                  value={filtroTime} 
+                  onChange={e => setFiltroTime(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black uppercase outline-none focus:border-brand-yellow/50"
+                >
                   {times.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
                 </select>
-                <div className="flex flex-wrap gap-1 max-h-[100px] overflow-y-auto p-1 custom-scrollbar">
-                  {posicoes.map(p => (
-                    <button key={p} onClick={() => togglePosicao(p)} className={`px-2 py-1 rounded text-[8px] font-black uppercase border transition-all ${filtrosPosicao.includes(p) ? 'bg-brand-yellow text-slate-950 border-brand-yellow' : 'bg-slate-900 text-slate-500 border-slate-800 hover:border-slate-600'}`}>{p}</button>
-                  ))}
-                </div>
               </div>
-            </div>
 
-            <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Atletas ({jogadoresFiltrados.length})</h3>
-              <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+              <div className="flex flex-wrap gap-1 mb-8">
+                {posicoes.map(p => (
+                  <button 
+                    key={p} 
+                    onClick={() => togglePosicao(p)}
+                    className={`px-3 py-1.5 rounded-lg text-[8px] font-black uppercase border transition-all ${filtrosPosicao.includes(p) ? 'bg-brand-yellow text-slate-950 border-brand-yellow' : 'bg-slate-950 text-slate-500 border-slate-800 hover:border-slate-700'}`}
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
+
+              <div className="space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
                 {jogadoresFiltrados.map(j => (
                   <button 
-                    key={j.Jogador}
+                    key={`${j.Jogador}-${j.Time}`}
                     onClick={() => setJogadorSelecionado(j)}
-                    className={`w-full p-4 rounded-2xl text-left transition-all border ${jogadorSelecionado?.Jogador === j.Jogador ? 'bg-brand-yellow border-brand-yellow text-slate-950' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-700'}`}
+                    className={`w-full p-4 rounded-2xl border text-left transition-all flex items-center justify-between group ${jogadorSelecionado?.Jogador === j.Jogador ? 'bg-brand-yellow border-brand-yellow shadow-[0_0_20px_rgba(251,191,36,0.2)]' : 'bg-slate-950/50 border-slate-800 hover:border-slate-600'}`}
                   >
-                    <div className="font-black italic uppercase text-[11px] tracking-tighter">{j.Jogador}</div>
-                    <div className="text-[8px] font-bold uppercase tracking-widest opacity-60 mt-1">{j.Time || j.Equipe}</div>
+                    <div>
+                      <div className={`text-[10px] font-black uppercase italic ${jogadorSelecionado?.Jogador === j.Jogador ? 'text-slate-950' : 'text-white'}`}>{j.Jogador}</div>
+                      <div className={`text-[8px] font-bold uppercase tracking-widest mt-1 ${jogadorSelecionado?.Jogador === j.Jogador ? 'text-slate-800' : 'text-slate-500'}`}>{j.Posição} • {j.Time}</div>
+                    </div>
+                    <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${jogadorSelecionado?.Jogador === j.Jogador ? 'bg-slate-950/20' : 'bg-slate-900 border border-slate-800'}`}>
+                      <svg className={`w-3 h-3 ${jogadorSelecionado?.Jogador === j.Jogador ? 'text-slate-950' : 'text-slate-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" /></svg>
+                    </div>
                   </button>
                 ))}
               </div>
             </div>
           </div>
 
-          {/* ÁREA DE BENCHMARK */}
-          <div className="lg:col-span-3 space-y-8">
-            {jogadorSelecionado ? (
-              <>
-                {/* CARD DO ATLETA */}
-                <div className="bg-slate-900/40 rounded-[3rem] p-10 border border-slate-800/50 shadow-2xl relative overflow-hidden">
-                  <div className="absolute right-0 top-0 w-1/3 h-full bg-gradient-to-l from-brand-yellow/[0.03] to-transparent"></div>
-                  <div className="flex flex-col md:flex-row items-center gap-10 relative z-10">
-                    <div className="w-32 h-32 bg-slate-950 rounded-[2.5rem] border-2 border-brand-yellow flex items-center justify-center text-4xl font-black italic text-brand-yellow shadow-[0_0_30px_rgba(251,191,36,0.2)]">
+          {/* PAINEL DE BENCHMARK */}
+          <div className="lg:col-span-8 space-y-8">
+            {jogadorSelecionado && (
+              <div className="bg-slate-900/40 p-10 rounded-[2.5rem] border border-slate-800/50 shadow-2xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-brand-yellow/5 rounded-full blur-[100px] -mr-32 -mt-32"></div>
+                
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-12 relative z-10">
+                  <div className="flex items-center gap-8">
+                    <div className="w-24 h-24 bg-slate-950 rounded-3xl border-2 border-brand-yellow/30 flex items-center justify-center text-3xl font-black italic text-brand-yellow shadow-2xl">
                       {jogadorSelecionado.Jogador.substring(0, 2).toUpperCase()}
                     </div>
-                    <div className="text-center md:text-left">
-                      <h2 className="text-5xl font-black italic uppercase tracking-tighter mb-2">{jogadorSelecionado.Jogador}</h2>
-                      <div className="flex flex-wrap justify-center md:justify-start gap-4">
-                        <span className="px-4 py-1.5 bg-slate-950 border border-slate-800 rounded-full text-[10px] font-black uppercase tracking-widest text-slate-400">{jogadorSelecionado.Time || jogadorSelecionado.Equipe}</span>
-                        <span className="px-4 py-1.5 bg-brand-yellow/10 border border-brand-yellow/30 rounded-full text-[10px] font-black uppercase tracking-widest text-brand-yellow">{jogadorSelecionado.Posição}</span>
-                        <span className="px-4 py-1.5 bg-slate-950 border border-slate-800 rounded-full text-[10px] font-black uppercase tracking-widest text-slate-400">{jogadorSelecionado.Idade} ANOS</span>
+                    <div>
+                      <h2 className="text-4xl font-black italic uppercase tracking-tighter text-white leading-none mb-2">{jogadorSelecionado.Jogador}</h2>
+                      <div className="flex items-center gap-4">
+                        <span className="text-brand-yellow text-[10px] font-black uppercase tracking-[0.2em]">{jogadorSelecionado.Posição}</span>
+                        <div className="w-1.5 h-1.5 rounded-full bg-slate-700"></div>
+                        <span className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">{jogadorSelecionado.Time}</span>
                       </div>
                     </div>
-                    <div className="md:ml-auto text-center md:text-right">
-                      <span className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-1">Referência de Média</span>
-                      <select 
-                        value={posicaoReferencia} 
-                        onChange={e => setPosicaoReferencia(e.target.value)}
-                        className="bg-slate-950 border border-brand-yellow/30 rounded-xl px-4 py-2 text-[10px] font-black uppercase outline-none text-brand-yellow"
+                  </div>
+                  
+                  <div className="bg-slate-950/80 backdrop-blur-md p-2 rounded-2xl border border-slate-800 flex gap-1">
+                    {['MESMA', 'LIGA'].map(p => (
+                      <button 
+                        key={p} 
+                        onClick={() => setPosicaoReferencia(p)}
+                        className={`px-4 py-2 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all ${posicaoReferencia === p ? 'bg-brand-yellow text-slate-950' : 'text-slate-500 hover:text-slate-300'}`}
                       >
-                        <option value="MESMA">MESMA POSIÇÃO ({jogadorSelecionado.Posição})</option>
-                        <option value="LIGA">MÉDIA DA LIGA (GERAL)</option>
-                        {posicoes.map(p => <option key={p} value={p}>{p.toUpperCase()}</option>)}
-                      </select>
-                    </div>
+                        {p === 'MESMA' ? 'Média Posição' : 'Média Liga'}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
-                {/* GRID DE MÉTRICAS */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8 relative z-10">
                   {metricasBenchmark.map(m => {
-                    const valAtleta = parseValue(jogadorSelecionado[m])
+                    const valAtleta = safeParseFloat(jogadorSelecionado[m])
                     const valMedia = mediaReferencia[m] || 0
-                    const diff = valMedia === 0 ? 0 : ((valAtleta - valMedia) / valMedia) * 100
-                    const percent = Math.min(Math.max((valAtleta / (valMedia * 2 || 1)) * 50, 5), 95)
-
+                    const diff = valMedia === 0 ? (valAtleta > 0 ? 100 : 0) : ((valAtleta - valMedia) / valMedia) * 100
+                    const isPositive = diff >= 0
+                    
                     return (
-                      <div key={m} className="bg-slate-900/40 rounded-[2rem] p-8 border border-slate-800/50 hover:border-brand-yellow/20 transition-all group shadow-xl">
-                        <div className="flex justify-between items-start mb-6">
-                          <div>
-                            <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">{m}</h4>
-                            <div className="text-3xl font-black italic text-white group-hover:text-brand-yellow transition-colors">{valAtleta}</div>
-                          </div>
-                          <div className={`text-right ${diff >= 0 ? 'text-brand-yellow' : 'text-red-500'}`}>
-                            <span className="text-[10px] font-black uppercase block mb-1">vs Média</span>
-                            <span className="text-lg font-black italic">{diff >= 0 ? '+' : ''}{diff.toFixed(1)}%</span>
+                      <div key={m} className="group">
+                        <div className="flex justify-between items-end mb-3">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:text-brand-yellow transition-colors">{m}</span>
+                          <div className="flex items-center gap-3">
+                            <span className="text-xs font-black italic text-white">{valAtleta.toLocaleString()}</span>
+                            <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${isPositive ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'}`}>
+                              {isPositive ? '+' : ''}{diff.toFixed(1)}%
+                            </span>
                           </div>
                         </div>
-                        
-                        <div className="relative h-3 bg-slate-950 rounded-full border border-slate-800 overflow-hidden">
-                          <div className="absolute top-0 left-1/2 w-0.5 h-full bg-slate-700 z-10"></div>
-                          <div 
-                            className={`absolute top-0 h-full transition-all duration-1000 ${diff >= 0 ? 'bg-brand-yellow shadow-[0_0_15px_rgba(251,191,36,0.4)]' : 'bg-red-500'}`}
-                            style={{ 
-                              left: diff >= 0 ? '50%' : `${Math.max(50 + (diff/2), 0)}%`,
-                              width: `${Math.abs(diff/2)}%`,
-                              maxWidth: '50%'
-                            }}
-                          ></div>
+                        <div className="h-3 bg-slate-950 rounded-full border border-slate-800 overflow-hidden p-0.5 shadow-inner">
+                          <div className="relative h-full w-full">
+                            {/* Média da Liga (Marcador) */}
+                            <div 
+                              className="absolute top-0 h-full w-1 bg-white/30 z-20 rounded-full"
+                              style={{ left: '50%' }}
+                            ></div>
+                            {/* Barra do Atleta */}
+                            <div 
+                              className={`absolute top-0 h-full rounded-full transition-all duration-1000 ${isPositive ? 'bg-brand-yellow shadow-[0_0_10px_rgba(251,191,36,0.4)]' : 'bg-slate-700'}`}
+                              style={{ 
+                                left: isPositive ? '50%' : `${Math.max(0, 50 + diff/2)}%`,
+                                width: `${Math.min(50, Math.abs(diff/2))}%`
+                              }}
+                            ></div>
+                          </div>
                         </div>
-                        <div className="flex justify-between mt-3 text-[8px] font-black uppercase tracking-widest text-slate-600">
-                          <span>Abaixo da Média</span>
-                          <span>Acima da Média</span>
+                        <div className="flex justify-between mt-2 px-1">
+                          <span className="text-[7px] font-bold text-slate-600 uppercase tracking-widest">Abaixo da Média</span>
+                          <span className="text-[7px] font-bold text-slate-600 uppercase tracking-widest">Acima da Média</span>
                         </div>
                       </div>
                     )
                   })}
                 </div>
-              </>
-            ) : (
-              <div className="h-full flex items-center justify-center text-slate-600 font-black italic uppercase tracking-widest">Selecione um atleta para iniciar o benchmark</div>
+
+                {metricasBenchmark.length === 0 && (
+                  <div className="py-20 text-center border-2 border-dashed border-slate-800 rounded-[2rem]">
+                    <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.3em] italic">Selecione métricas no painel superior para comparar</p>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>
-
       </div>
       <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #0a0c10; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #fbbf24; }
       `}</style>
