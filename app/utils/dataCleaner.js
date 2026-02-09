@@ -1,6 +1,6 @@
 /**
  * Utilitário para limpeza e normalização de dados vindos de CSVs (Google Sheets)
- * Resolve problemas de espaços extras, inconsistências de caixa e valores nulos.
+ * Especialmente ajustado para tratar erros de formatação de porcentagem.
  */
 
 export const cleanData = (data) => {
@@ -11,15 +11,10 @@ export const cleanData = (data) => {
     
     Object.keys(row).forEach(key => {
       let value = row[key];
-      
-      // 1. Limpar a chave (nome da coluna)
       const cleanKey = key.trim();
       
-      // 2. Tratar o valor
       if (typeof value === 'string') {
         value = value.trim();
-        
-        // Converter "nan", "-", "" em null ou 0 dependendo do contexto (aqui mantemos como string vazia ou tratamos depois)
         if (['nan', 'NaN', '-', 'null', 'undefined'].includes(value)) {
           value = '';
         }
@@ -30,46 +25,61 @@ export const cleanData = (data) => {
 
     return cleanedRow;
   }).filter(row => {
-    // Filtrar linhas que não possuem um identificador principal (ex: Jogador ou Data)
     return (row.Jogador && row.Jogador.trim() !== '') || 
-           (row.Data && row.Data.trim() !== '') ||
            (row.Atleta && row.Atleta.trim() !== '');
   });
 };
 
 /**
- * Normaliza nomes de times para evitar duplicatas por erro de digitação
+ * Helper para converter valores numéricos do CSV de forma segura.
+ * Trata o erro do Google Sheets onde números são multiplicados por 100 ao aplicar formatação de %.
  */
-export const normalizeTeamName = (teamName) => {
-  if (!teamName) return '';
-  
-  const name = teamName.trim();
-  
-  // Mapa de normalização (pode ser expandido conforme necessário)
-  const normalizationMap = {
-    'novorizontino': 'Grêmio Novorizontino',
-    'gremio novorizontino': 'Grêmio Novorizontino',
-    'grêmio novorizontino': 'Grêmio Novorizontino',
-    'novorizontino sp': 'Grêmio Novorizontino',
-    // Adicione outros times se encontrar variações
-  };
-
-  const lowerName = name.toLowerCase();
-  return normalizationMap[lowerName] || name;
-};
-
-/**
- * Helper para converter valores numéricos do CSV de forma segura
- */
-export const safeParseFloat = (val) => {
+export const safeParseFloat = (val, columnName = '') => {
   if (val === undefined || val === null || val === '-' || val === '') return 0;
   if (typeof val === 'number') return val;
   
-  const clean = String(val)
+  const strVal = String(val).trim();
+  const hasPercent = strVal.endsWith('%');
+  
+  // Limpar string para conversão
+  const clean = strVal
     .replace('%', '')
     .replace(',', '.')
-    .replace(/[^\d.-]/g, ''); // Remove qualquer caractere que não seja número, ponto ou sinal de menos
+    .replace(/[^\d.-]/g, '');
     
-  const num = parseFloat(clean);
-  return isNaN(num) ? 0 : num;
+  let num = parseFloat(clean);
+  if (isNaN(num)) return 0;
+
+  // Lógica de tratamento de "Misformatted Percentages"
+  // Se o valor tem % E é maior que 100 em colunas que não deveriam ser percentuais (ex: Passes, Gols, xA)
+  // Ou se sabemos que o Sheets multiplicou por 100 erroneamente.
+  if (hasPercent) {
+    // Lista de colunas que são PERCENTUAIS REAIS (0-100%)
+    const isRealPercent = [
+      'Desafios aéreos vencidos, %',
+      'Disputas defensivas ganhas, %',
+      '% de desarmes bem sucedidos',
+      'Disputas ofensivas ganhas, %',
+      '% de dribles com sucesso',
+      'Chances c/ sucesso, %',
+      'Chutes no gol, %',
+      'Passes precisos %',
+      'Passes chave precisos,%',
+      'Passes dentro da área / precisos, %',
+      'Passes progressivos precisos,%',
+      'Passes longos, precisos, %',
+      '% de precisão nos cruzamentos',
+      'Dribles no último terço do campo com sucesso, %',
+      'Gols marcados do número total de chutes, %',
+      'Passa para frente (ângulo de captura - 120 graus) até o terço final, preciso, %'
+    ].includes(columnName);
+
+    // Se NÃO é um percentual real mas tem %, dividimos por 100
+    // Se É um percentual real mas o valor é bizarro (ex: 3800%), também dividimos por 100
+    if (!isRealPercent || num > 100.1) {
+      num = num / 100;
+    }
+  }
+    
+  return num;
 };
