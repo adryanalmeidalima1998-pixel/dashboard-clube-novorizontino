@@ -165,15 +165,20 @@ export default function RankingsPage() {
   }, [])
 
   const exportarPDF = () => {
-    const doc = new jsPDF('l', 'mm', 'a4')
-    doc.text(`RANKING - ${perfilAtivo.toUpperCase()}`, 14, 20)
-    const head = [['#', 'Jogador', 'Time', 'Posição', 'Nota', ...metricasPerfil]]
-    const body = jogadoresRankeados.map((j, idx) => [
-      idx + 1, j.Jogador, j.Time || j.Equipe, j.Posição, j.nota?.toFixed(1),
-      ...metricasPerfil.map(m => j[m] || '0')
-    ])
-    doc.autoTable({ head, body, startY: 30, theme: 'grid', styles: { fontSize: 7 } })
-    doc.save(`ranking-${perfilAtivo.toLowerCase().replace(/\s/g, '-')}.pdf`)
+    try {
+      const doc = new jsPDF('l', 'mm', 'a4')
+      doc.text(`RANKING - ${perfilAtivo.toUpperCase()}`, 14, 20)
+      const head = [['#', 'Jogador', 'Time', 'Posição', 'Nota', ...metricasPerfil]]
+      const body = jogadoresRankeados.map((j, idx) => [
+        idx + 1, j.Jogador, j.Time || j.Equipe, j.Posição, j.nota?.toFixed(1),
+        ...metricasPerfil.map(m => j[m] || '0')
+      ])
+      doc.autoTable({ head, body, startY: 30, theme: 'grid', styles: { fontSize: 7 } })
+      doc.save(`ranking-${perfilAtivo.toLowerCase().replace(/\s/g, '-')}.pdf`)
+    } catch (e) {
+      console.error('Erro PDF:', e)
+      alert('Erro ao gerar PDF')
+    }
   }
 
   if (carregando) return <div className="min-h-screen bg-[#0a0c10] flex items-center justify-center text-brand-yellow">Processando Rankings...</div>
@@ -254,64 +259,85 @@ export default function RankingsPage() {
           </div>
           <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
             <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Filtrar Time</h3>
-            <select value={filtroTime} onChange={e => setFiltroTime(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50">{times.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}</select>
+            <select value={filtroTime} onChange={e => setFiltroTime(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50">
+              {times.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
+            </select>
           </div>
           <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
             <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Idade</h3>
-            <div className="flex gap-4">
-              <input type="number" value={filtroIdade.min} onChange={e => setFiltroIdade({...filtroIdade, min: parseInt(e.target.value) || 0})} className="w-1/2 bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50" />
-              <input type="number" value={filtroIdade.max} onChange={e => setFiltroIdade({...filtroIdade, max: parseInt(e.target.value) || 0})} className="w-1/2 bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50" />
+            <div className="flex items-center gap-3">
+              <input type="number" value={filtroIdade.min} onChange={e => setFiltroIdade({...filtroIdade, min: parseInt(e.target.value) || 0})} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50" />
+              <span className="text-slate-500 font-black">/</span>
+              <input type="number" value={filtroIdade.max} onChange={e => setFiltroIdade({...filtroIdade, max: parseInt(e.target.value) || 0})} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50" />
             </div>
           </div>
           <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Minutagem Mínima</h3>
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Minutos Jogados (Mín)</h3>
             <input type="number" value={filtroMinutagem} onChange={e => setFiltroMinutagem(parseInt(e.target.value) || 0)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50" />
           </div>
         </div>
 
         {/* TABELA DE RANKING */}
-        <div className="bg-slate-900/40 rounded-[2.5rem] border border-slate-800/50 overflow-hidden shadow-2xl">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+        <div className="bg-slate-900/20 rounded-[2.5rem] border border-slate-800/50 overflow-hidden shadow-2xl">
+          <div className="overflow-x-auto custom-scrollbar">
+            <table className="w-full border-collapse">
               <thead>
-                <tr className="border-b border-slate-800/50 bg-slate-950/50">
-                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-500">#</th>
-                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-500">Atleta</th>
-                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-500 cursor-pointer hover:text-brand-yellow transition-colors" onClick={() => handleOrdenacao('nota')}>
-                    Nota {ordenacao.coluna === 'nota' && (ordenacao.direcao === 'asc' ? '↑' : '↓')}
-                  </th>
+                <tr className="bg-slate-950/60 border-b border-slate-800/50">
+                  <th className="p-6 text-left text-[10px] font-black uppercase tracking-widest text-slate-500">Ranking</th>
+                  <th className="p-6 text-left text-[10px] font-black uppercase tracking-widest text-slate-500">Atleta</th>
+                  <th className="p-6 text-left text-[10px] font-black uppercase tracking-widest text-slate-500">Equipe</th>
+                  <th className="p-6 text-center text-[10px] font-black uppercase tracking-widest text-slate-500">Pos</th>
+                  <th className="p-6 text-center text-[10px] font-black uppercase tracking-widest text-brand-yellow cursor-pointer" onClick={() => handleOrdenacao('nota')}>Nota</th>
                   {metricasPerfil.map(m => (
-                    <th key={m} className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-500 cursor-pointer hover:text-brand-yellow transition-colors" onClick={() => handleOrdenacao(m)}>
-                      {m} {ordenacao.coluna === m && (ordenacao.direcao === 'asc' ? '↑' : '↓')}
-                    </th>
+                    <th key={m} className="p-6 text-center text-[10px] font-black uppercase tracking-widest text-slate-500 cursor-pointer hover:text-brand-yellow transition-all" onClick={() => handleOrdenacao(m)}>{m}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-slate-800/30">
                 {jogadoresRankeados.map((j, idx) => (
-                  <tr key={j.Jogador} className="border-b border-slate-800/30 hover:bg-white/5 transition-colors group">
-                    <td className="p-6 text-slate-500 font-black italic">{idx + 1}</td>
+                  <tr key={idx} className="group transition-all hover:bg-white/[0.02]">
+                    <td className="p-6">
+                      <div className="flex items-center gap-3">
+                        <span className={`text-xl font-black italic ${idx < 3 ? 'text-brand-yellow' : 'text-slate-700'}`}>
+                          #{idx + 1}
+                        </span>
+                        {idx === 0 && <span className="text-xl">🥇</span>}
+                        {idx === 1 && <span className="text-xl">🥈</span>}
+                        {idx === 2 && <span className="text-xl">🥉</span>}
+                      </div>
+                    </td>
                     <td className="p-6">
                       <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-center text-[10px] font-black italic text-brand-yellow">
-                          {(j.Jogador || '??').substring(0, 2).toUpperCase()}
+                        <div className="w-10 h-10 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center text-[10px] font-black text-slate-600 group-hover:border-brand-yellow/30 transition-all uppercase">
+                          {j.ID_ATLETA || j.Jogador?.substring(0, 2)}
                         </div>
                         <div>
-                          <div className="font-black italic uppercase text-sm group-hover:text-brand-yellow transition-colors">{j.Jogador}</div>
-                          <div className="text-[8px] font-bold uppercase tracking-widest text-slate-500 mt-1">{j.Posição} • {j.Time || j.Equipe}</div>
+                          <p className="text-xs font-black uppercase italic tracking-tight text-white group-hover:text-brand-yellow transition-colors">{j.Jogador}</p>
+                          <p className="text-[9px] font-bold text-slate-600 uppercase tracking-widest mt-0.5">• {j.Idade} anos</p>
                         </div>
                       </div>
                     </td>
                     <td className="p-6">
-                      <div className="flex flex-col">
-                        <span className="text-brand-yellow font-black italic text-lg">{j.nota?.toFixed(1)}</span>
-                        <span className="text-[8px] font-bold uppercase text-slate-500">Match Perfil</span>
+                      <span className="text-[10px] font-black uppercase italic text-slate-400">{j.Time || j.Equipe}</span>
+                    </td>
+                    <td className="p-6 text-center">
+                      <span className="px-2 py-1 bg-slate-950 border border-slate-800 rounded text-[9px] font-black text-slate-500 uppercase">{j.Posição}</span>
+                    </td>
+                    <td className="p-6 text-center">
+                      <div className={`inline-block px-3 py-1 rounded-lg font-black text-sm italic ${
+                        j.nota >= 8 ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' :
+                        j.nota >= 6.5 ? 'bg-brand-yellow/10 text-brand-yellow border border-brand-yellow/20' :
+                        j.nota >= 5 ? 'bg-slate-500/10 text-slate-400 border border-slate-500/20' :
+                        'bg-red-500/10 text-red-500 border border-red-500/20'
+                      }`}>
+                        {j.nota?.toFixed(1)}
                       </div>
+                      <p className="text-[8px] font-black uppercase mt-1 opacity-50">
+                        {j.nota >= 8 ? 'Elite' : j.nota >= 6.5 ? 'Bom' : j.nota >= 5 ? 'Regular' : 'Abaixo'}
+                      </p>
                     </td>
                     {metricasPerfil.map(m => (
-                      <td key={m} className="p-6">
-                        <span className="text-sm font-black italic text-slate-400">{j[m] || '0'}</span>
-                      </td>
+                      <td key={m} className="p-6 text-center text-xs font-black italic text-white">{j[m] || '0'}</td>
                     ))}
                   </tr>
                 ))}
@@ -319,12 +345,15 @@ export default function RankingsPage() {
             </table>
           </div>
         </div>
+
+        <div className="mt-12 text-center">
+          <p className="text-[9px] font-black uppercase tracking-[0.5em] text-slate-800">Novorizontino Scouting Intelligence • 2026</p>
+        </div>
       </div>
       <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #0a0c10; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #fbbf24; }
       `}</style>
     </div>
   )
