@@ -219,11 +219,14 @@ export default function RankingPerfil() {
     doc.save(`ranking_${selectedPerfil}_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
-    const exportComparisonPDF = () => {
+      const exportComparisonPDF = () => {
     if (!comparisonModal.player1 || !comparisonModal.player2) return;
     
     const doc = new jsPDF('p', 'mm', 'a4');
     const pageWidth = doc.internal.pageSize.getWidth();
+    
+    const nomeP1 = comparisonModal.player1.Jogador || 'DESCONHECIDO';
+    const nomeP2 = comparisonModal.player2.Jogador || 'DESCONHECIDO';
     
     // Header
     doc.setFillColor(10, 12, 16);
@@ -246,13 +249,13 @@ export default function RankingPerfil() {
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(12);
     doc.setFont(undefined, 'bold');
-    doc.text('ATLETA 1', 20, yPos);
+    doc.text(nomeP1.toUpperCase(), 20, yPos);
     yPos += 8;
     
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(10);
     doc.setFont(undefined, 'normal');
-    doc.text(`${comparisonModal.player1.Jogador} | ${comparisonModal.player1.Time}`, 20, yPos);
+    doc.text(`${comparisonModal.player1.Time}`, 20, yPos);
     yPos += 6;
     doc.text(`${comparisonModal.player1.Posição} | Idade: ${comparisonModal.player1.Idade} | Minutos: ${comparisonModal.player1['Minutos jogados']}`, 20, yPos);
     yPos += 10;
@@ -261,13 +264,13 @@ export default function RankingPerfil() {
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(12);
     doc.setFont(undefined, 'bold');
-    doc.text('ATLETA 2', 20, yPos);
+    doc.text(nomeP2.toUpperCase(), 20, yPos);
     yPos += 8;
     
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(10);
     doc.setFont(undefined, 'normal');
-    doc.text(`${comparisonModal.player2.Jogador} | ${comparisonModal.player2.Time}`, 20, yPos);
+    doc.text(`${comparisonModal.player2.Time}`, 20, yPos);
     yPos += 6;
     doc.text(`${comparisonModal.player2.Posição} | Idade: ${comparisonModal.player2.Idade} | Minutos: ${comparisonModal.player2['Minutos jogados']}`, 20, yPos);
     yPos += 15;
@@ -283,7 +286,7 @@ export default function RankingPerfil() {
       .filter(key => !['Jogador', 'Time', 'Posição', 'Idade', 'Nacionalidade', 'Minutos jogados', 'notaPerfil'].includes(key))
       .sort();
     
-    const menorEhMelhor = ['Faltas', 'Erros graves', 'Falhas em gols', 'Bolas perdidas', 'Cartões', 'Cartão amarelo', 'Cartão vermelho'];
+    const menorEhMelhor = ['Faltas', 'Erros graves', 'Falhas em gols', 'Bolas perdidas', 'Cartões', 'Cartão amarelo', 'Cartão vermelho', 'Chutes', 'Interceptações'];
     
     const tableData = metricas.map(metric => {
       const val1 = safeParseFloat(comparisonModal.player1[metric]);
@@ -292,9 +295,9 @@ export default function RankingPerfil() {
       let winner = '=';
       if (val1 !== val2) {
         if (menorEhMelhor.some(m => metric.toLowerCase().includes(m.toLowerCase()))) {
-          winner = val1 < val2 ? '✓ P1' : '✓ P2';
+          winner = val1 < val2 ? '✓ ' + nomeP1.substring(0, 10) : '✓ ' + nomeP2.substring(0, 10);
         } else {
-          winner = val1 > val2 ? '✓ P1' : '✓ P2';
+          winner = val1 > val2 ? '✓ ' + nomeP1.substring(0, 10) : '✓ ' + nomeP2.substring(0, 10);
         }
       }
       
@@ -303,7 +306,12 @@ export default function RankingPerfil() {
     
     doc.autoTable({
       startY: yPos,
-      head: [['Métrica', 'Atleta 1', 'Atleta 2', 'Vencedor']],
+      head: [[
+        'Métrica',
+        nomeP1.substring(0, 15).toUpperCase(),
+        nomeP2.substring(0, 15).toUpperCase(),
+        'Vencedor'
+      ]],
       body: tableData,
       theme: 'grid',
       styles: { 
@@ -326,18 +334,33 @@ export default function RankingPerfil() {
         textColor: [0, 0, 0]
       },
       didDrawCell: (data) => {
-        if (data.column.index === 3 && data.row.section === 'body') {
-          const cellText = data.cell.text[0];
-          if (cellText.includes('P1')) {
-            data.cell.styles.fillColor = [200, 255, 200];
-          } else if (cellText.includes('P2')) {
-            data.cell.styles.fillColor = [255, 200, 200];
+        if (data.row.section === 'body') {
+          const metric = data.cell.text[0];
+          const val1 = safeParseFloat(comparisonModal.player1[metric]);
+          const val2 = safeParseFloat(comparisonModal.player2[metric]);
+          
+          if (val1 === val2) return;
+          
+          const isMenorMelhor = menorEhMelhor.some(m => metric.toLowerCase().includes(m.toLowerCase()));
+          const p1Vence = isMenorMelhor ? val1 < val2 : val1 > val2;
+          
+          // Coluna do Atleta 1 (índice 1)
+          if (data.column.index === 1) {
+            data.cell.styles.fillColor = p1Vence ? [200, 255, 200] : [255, 200, 200];
+          }
+          // Coluna do Atleta 2 (índice 2)
+          else if (data.column.index === 2) {
+            data.cell.styles.fillColor = !p1Vence ? [200, 255, 200] : [255, 200, 200];
+          }
+          // Coluna de Vencedor (índice 3)
+          else if (data.column.index === 3) {
+            data.cell.styles.fillColor = p1Vence ? [200, 255, 200] : [255, 200, 200];
           }
         }
       }
     });
     
-    doc.save(`comparacao-${comparisonModal.player1.Jogador}-vs-${comparisonModal.player2.Jogador}.pdf`);
+    doc.save(`comparacao-${nomeP1}-vs-${nomeP2}.pdf`);
   };
 
 
