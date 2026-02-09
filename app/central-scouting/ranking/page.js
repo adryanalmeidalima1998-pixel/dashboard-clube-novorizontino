@@ -174,12 +174,17 @@ export default function RankingPerfil() {
     yPos += 12;
     
     processedRanking.slice(0, 3).forEach((atleta, idx) => {
+      const nomeAtleta = atleta.Jogador ? atleta.Jogador.toUpperCase() : 'DESCONHECIDO';
+      const nomeTime = atleta.Time ? atleta.Time : '-';
+      const posicao = atleta.Posição ? atleta.Posição : '-';
+      const nota = atleta.notaPerfil ? atleta.notaPerfil : 0;
+      
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(11);
-      doc.text(`${idx + 1}. ${atleta.Jogador.toUpperCase()}`, 20, yPos);
+      doc.text(`${idx + 1}. ${nomeAtleta}`, 20, yPos);
       doc.setTextColor(100, 116, 139);
       doc.setFontSize(9);
-      doc.text(`${atleta.Time} | ${atleta.Posição} | Nota: ${atleta.notaPerfil}`, 20, yPos + 5);
+      doc.text(`${nomeTime} | ${posicao} | Nota: ${nota}`, 20, yPos + 5);
       yPos += 15;
     });
     
