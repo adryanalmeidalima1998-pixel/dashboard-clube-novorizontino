@@ -219,7 +219,7 @@ export default function RankingPerfil() {
     doc.save(`ranking_${selectedPerfil}_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
-      const exportComparisonPDF = () => {
+        const exportComparisonPDF = () => {
     if (!comparisonModal.player1 || !comparisonModal.player2) return;
     
     const doc = new jsPDF('p', 'mm', 'a4');
@@ -288,20 +288,30 @@ export default function RankingPerfil() {
     
     const menorEhMelhor = ['Faltas', 'Erros graves', 'Falhas em gols', 'Bolas perdidas', 'Cartões', 'Cartão amarelo', 'Cartão vermelho', 'Chutes', 'Interceptações'];
     
+    let p1Vitorias = 0;
+    let p2Vitorias = 0;
+    
     const tableData = metricas.map(metric => {
       const val1 = safeParseFloat(comparisonModal.player1[metric]);
       const val2 = safeParseFloat(comparisonModal.player2[metric]);
       
-      let winner = '=';
+      let seta1 = '';
+      let seta2 = '';
+      
       if (val1 !== val2) {
-        if (menorEhMelhor.some(m => metric.toLowerCase().includes(m.toLowerCase()))) {
-          winner = val1 < val2 ? '✓ ' + nomeP1.substring(0, 10) : '✓ ' + nomeP2.substring(0, 10);
+        const isMenorMelhor = menorEhMelhor.some(m => metric.toLowerCase().includes(m.toLowerCase()));
+        const p1Vence = isMenorMelhor ? val1 < val2 : val1 > val2;
+        
+        if (p1Vence) {
+          seta1 = '▲';
+          p1Vitorias++;
         } else {
-          winner = val1 > val2 ? '✓ ' + nomeP1.substring(0, 10) : '✓ ' + nomeP2.substring(0, 10);
+          seta2 = '▲';
+          p2Vitorias++;
         }
       }
       
-      return [metric, val1.toString(), val2.toString(), winner];
+      return [metric, seta1 + ' ' + val1.toString(), seta2 + ' ' + val2.toString()];
     });
     
     doc.autoTable({
@@ -309,8 +319,7 @@ export default function RankingPerfil() {
       head: [[
         'Métrica',
         nomeP1.substring(0, 15).toUpperCase(),
-        nomeP2.substring(0, 15).toUpperCase(),
-        'Vencedor'
+        nomeP2.substring(0, 15).toUpperCase()
       ]],
       body: tableData,
       theme: 'grid',
@@ -335,30 +344,43 @@ export default function RankingPerfil() {
       },
       didDrawCell: (data) => {
         if (data.row.section === 'body') {
-          const metric = data.cell.text[0];
-          const val1 = safeParseFloat(comparisonModal.player1[metric]);
-          const val2 = safeParseFloat(comparisonModal.player2[metric]);
-          
-          if (val1 === val2) return;
-          
-          const isMenorMelhor = menorEhMelhor.some(m => metric.toLowerCase().includes(m.toLowerCase()));
-          const p1Vence = isMenorMelhor ? val1 < val2 : val1 > val2;
+          const cellText = data.cell.text[0] || '';
           
           // Coluna do Atleta 1 (índice 1)
-          if (data.column.index === 1) {
-            data.cell.styles.fillColor = p1Vence ? [200, 255, 200] : [255, 200, 200];
+          if (data.column.index === 1 && cellText.includes('▲')) {
+            data.cell.styles.textColor = [0, 150, 0];
+            data.cell.styles.fontStyle = 'bold';
           }
           // Coluna do Atleta 2 (índice 2)
-          else if (data.column.index === 2) {
-            data.cell.styles.fillColor = !p1Vence ? [200, 255, 200] : [255, 200, 200];
-          }
-          // Coluna de Vencedor (índice 3)
-          else if (data.column.index === 3) {
-            data.cell.styles.fillColor = p1Vence ? [200, 255, 200] : [255, 200, 200];
+          else if (data.column.index === 2 && cellText.includes('▲')) {
+            data.cell.styles.textColor = [0, 150, 0];
+            data.cell.styles.fontStyle = 'bold';
           }
         }
       }
     });
+    
+    // Veredito Técnico
+    yPos = doc.lastAutoTable.finalY + 15;
+    
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(11);
+    doc.setFont(undefined, 'bold');
+    doc.text('VEREDITO TÉCNICO', 20, yPos);
+    yPos += 8;
+    
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(9);
+    doc.setFont(undefined, 'normal');
+    
+    const veredito = p1Vitorias > p2Vitorias 
+      ? `${nomeP1.toUpperCase()} apresenta melhor desempenho técnico neste perfil, vencendo em ${p1Vitorias} métricas contra ${p2Vitorias} de ${nomeP2.toUpperCase()}. É o candidato mais adequado para este papel tático.`
+      : p2Vitorias > p1Vitorias
+      ? `${nomeP2.toUpperCase()} apresenta melhor desempenho técnico neste perfil, vencendo em ${p2Vitorias} métricas contra ${p1Vitorias} de ${nomeP1.toUpperCase()}. É o candidato mais adequado para este papel tático.`
+      : `Ambos os atletas apresentam desempenho equilibrado neste perfil, com ${p1Vitorias} vitórias cada um. A escolha deve considerar outros fatores como experiência e adaptação ao grupo.`;
+    
+    const splitVeredito = doc.splitTextToSize(veredito, pageWidth - 40);
+    doc.text(splitVeredito, 20, yPos);
     
     doc.save(`comparacao-${nomeP1}-vs-${nomeP2}.pdf`);
   };
