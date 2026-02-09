@@ -219,7 +219,7 @@ export default function RankingPerfil() {
     doc.save(`ranking_${selectedPerfil}_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
-  const exportComparisonPDF = () => {
+    const exportComparisonPDF = () => {
     if (!comparisonModal.player1 || !comparisonModal.player2) return;
     
     const doc = new jsPDF('p', 'mm', 'a4');
@@ -249,7 +249,7 @@ export default function RankingPerfil() {
     doc.text('ATLETA 1', 20, yPos);
     yPos += 8;
     
-    doc.setTextColor(100, 116, 139);
+    doc.setTextColor(0, 0, 0);
     doc.setFontSize(10);
     doc.setFont(undefined, 'normal');
     doc.text(`${comparisonModal.player1.Jogador} | ${comparisonModal.player1.Time}`, 20, yPos);
@@ -264,7 +264,7 @@ export default function RankingPerfil() {
     doc.text('ATLETA 2', 20, yPos);
     yPos += 8;
     
-    doc.setTextColor(100, 116, 139);
+    doc.setTextColor(0, 0, 0);
     doc.setFontSize(10);
     doc.setFont(undefined, 'normal');
     doc.text(`${comparisonModal.player2.Jogador} | ${comparisonModal.player2.Time}`, 20, yPos);
@@ -273,7 +273,7 @@ export default function RankingPerfil() {
     yPos += 15;
     
     // Tabela de comparação
-    doc.setTextColor(251, 191, 36);
+    doc.setTextColor(255, 255, 255);
     doc.setFontSize(11);
     doc.setFont(undefined, 'bold');
     doc.text('ANÁLISE DE MÉTRICAS', 20, yPos);
@@ -283,11 +283,22 @@ export default function RankingPerfil() {
       .filter(key => !['Jogador', 'Time', 'Posição', 'Idade', 'Nacionalidade', 'Minutos jogados', 'notaPerfil'].includes(key))
       .sort();
     
+    const menorEhMelhor = ['Faltas', 'Erros graves', 'Falhas em gols', 'Bolas perdidas', 'Cartões', 'Cartão amarelo', 'Cartão vermelho'];
+    
     const tableData = metricas.map(metric => {
       const val1 = safeParseFloat(comparisonModal.player1[metric]);
       const val2 = safeParseFloat(comparisonModal.player2[metric]);
-      const winner = val1 > val2 ? '✓' : val2 > val1 ? '✗' : '=';
-      return [metric, val1, val2, winner];
+      
+      let winner = '=';
+      if (val1 !== val2) {
+        if (menorEhMelhor.some(m => metric.toLowerCase().includes(m.toLowerCase()))) {
+          winner = val1 < val2 ? '✓ P1' : '✓ P2';
+        } else {
+          winner = val1 > val2 ? '✓ P1' : '✓ P2';
+        }
+      }
+      
+      return [metric, val1.toString(), val2.toString(), winner];
     });
     
     doc.autoTable({
@@ -295,9 +306,35 @@ export default function RankingPerfil() {
       head: [['Métrica', 'Atleta 1', 'Atleta 2', 'Vencedor']],
       body: tableData,
       theme: 'grid',
-      styles: { fontSize: 8, textColor: [100, 116, 139] },
-      headStyles: { fillColor: [251, 191, 36], textColor: [10, 12, 16], fontStyle: 'bold' },
-      alternateRowStyles: { fillColor: [30, 41, 59] }
+      styles: { 
+        fontSize: 8, 
+        textColor: [0, 0, 0],
+        fillColor: [255, 255, 255]
+      },
+      headStyles: { 
+        fillColor: [251, 191, 36], 
+        textColor: [10, 12, 16], 
+        fontStyle: 'bold' 
+      },
+      bodyStyles: {
+        fillColor: [255, 255, 255],
+        textColor: [0, 0, 0],
+        lineColor: [200, 200, 200]
+      },
+      alternateRowStyles: { 
+        fillColor: [255, 255, 255],
+        textColor: [0, 0, 0]
+      },
+      didDrawCell: (data) => {
+        if (data.column.index === 3 && data.row.section === 'body') {
+          const cellText = data.cell.text[0];
+          if (cellText.includes('P1')) {
+            data.cell.styles.fillColor = [200, 255, 200];
+          } else if (cellText.includes('P2')) {
+            data.cell.styles.fillColor = [255, 200, 200];
+          }
+        }
+      }
     });
     
     doc.save(`comparacao-${comparisonModal.player1.Jogador}-vs-${comparisonModal.player2.Jogador}.pdf`);
