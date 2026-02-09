@@ -148,3 +148,85 @@ export const getDominantPerfil = (atleta, todosAtletas) => {
 
   return { perfil: melhorPerfil, nota: maiorNota };
 };
+
+/**
+ * Calcula um vetor de percentis para um atleta em todas as métricas relevantes.
+ * Usado para comparação de similaridade.
+ */
+export const calculatePlayerProfileVector = (atleta, todosAtletas, minMinutos = 0) => {
+  const posicaoAtleta = (atleta.Posição || '').trim().toUpperCase();
+  const atletasElegiveis = todosAtletas.filter(a => {
+    const pos = (a.Posição || '').trim().toUpperCase();
+    const mins = safeParseFloat(a['Minutos jogados']);
+    return pos === posicaoAtleta && mins >= minMinutos;
+  });
+
+  if (atletasElegiveis.length < 5) return {}; // Amostra mínima
+
+  const profileVector = {};
+  const allMetrics = [...new Set(Object.values(PERFIL_WEIGHTS).flatMap(weights => Object.keys(weights)))];
+
+  allMetrics.forEach(metrica => {
+    const valoresPosicao = atletasElegiveis.map(a => safeParseFloat(a[metrica]));
+    const valorAtleta = safeParseFloat(atleta[metrica]);
+    let scoreMetrica = calculatePercentile(valorAtleta, valoresPosicao);
+
+    const menorEhMelhor = ['Faltas', 'Erros graves', 'Falhas em gols', 'Bolas perdidas'].includes(metrica);
+    if (menorEhMelhor) {
+      scoreMetrica = 100 - scoreMetrica;
+    }
+    profileVector[metrica] = scoreMetrica;
+  });
+
+  return profileVector;
+};
+
+/**
+ * Calcula a distância Euclidiana entre dois vetores de perfil.
+ */
+const euclideanDistance = (vec1, vec2) => {
+  let sumOfSquares = 0;
+  const keys = new Set([...Object.keys(vec1), ...Object.keys(vec2)]);
+  for (const key of keys) {
+    const val1 = vec1[key] || 0;
+    const val2 = vec2[key] || 0;
+    sumOfSquares += Math.pow(val1 - val2, 2);
+  }
+  return Math.sqrt(sumOfSquares);
+};
+
+/**
+ * Encontra jogadores similares a um atleta alvo.
+ */
+export const findSimilarPlayers = (targetAtleta, todosAtletas, minMinutos = 0, numSimilar = 5) => {
+  const targetVector = calculatePlayerProfileVector(targetAtleta, todosAtletas, minMinutos);
+  if (Object.keys(targetVector).length === 0) return [];
+
+  const similarities = [];
+  todosAtletas.forEach(atleta => {
+    if (atleta.Jogador === targetAtleta.Jogador) return; // Não comparar com ele mesmo
+
+    const currentVector = calculatePlayerProfileVector(atleta, todosAtletas, minMinutos);
+    if (Object.keys(currentVector).length === 0) return;
+
+    const distance = euclideanDistance(targetVector, currentVector);
+    similarities.push({ atleta, distance });
+  });
+
+  return similarities
+    .sort((a, b) => a.distance - b.distance)
+    .slice(0, numSimilar)
+    .map(s => s.atleta);
+};
+
+/**
+ * Simula a tendência de desempenho de um atleta.
+ * Para uma implementação real, seria necessário dados históricos.
+ */
+export const getTrend = (atleta) => {
+  // Implementação placeholder: retorna uma tendência aleatória para demonstração
+  const random = Math.random();
+  if (random < 0.33) return 'up';
+  if (random < 0.66) return 'down';
+  return 'stable';
+};

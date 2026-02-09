@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Papa from 'papaparse';
-import { getRankingByPerfil, getPerfisForPosicao } from '@/app/utils/ratingSystem';
+import { getRankingByPerfil, getPerfisForPosicao, findSimilarPlayers, getTrend, calculateRating } from '@/app/utils/ratingSystem';
 import { cleanData, safeParseFloat } from '@/app/utils/dataCleaner';
 import { useRouter } from 'next/navigation';
+import { jsPDF } from 'jspdf';
 
 const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTx73GpGdTLkIPTmBfkYujRILN3DmPV5FG2dH4-bbELYZJ4STAIYrOSJ7AOPDOTq_tB0ib_xFKHLiHZ/pub?output=csv';
 
@@ -33,6 +34,10 @@ export default function RankingPerfil() {
   // Ordenação
   const [sortConfig, setSortConfig] = useState({ key: 'notaPerfil', direction: 'desc' });
 
+  // Modais
+  const [comparisonModal, setComparisonModal] = useState({ open: false, player1: null, player2: null });
+  const [similarModal, setSimilarModal] = useState({ open: false, targetPlayer: null, similar: [] });
+
   // Carregar dados
   useEffect(() => {
     const fetchData = async () => {
@@ -48,7 +53,6 @@ export default function RankingPerfil() {
             const cleaned = cleanData(results.data);
             setAtletas(cleaned);
             
-            // Extrair opções para filtros
             const perfisUnicos = new Set();
             const posicoes = new Set();
             const times = new Set();
@@ -130,6 +134,84 @@ export default function RankingPerfil() {
     }));
   };
 
+  // Abrir modal de comparação
+  const openComparison = (player1, player2 = null) => {
+    setComparisonModal({ open: true, player1, player2 });
+  };
+
+  // Abrir modal de similaridade
+  const openSimilarPlayers = (targetPlayer) => {
+    const similar = findSimilarPlayers(targetPlayer, atletas, minMinutos, 5);
+    setSimilarModal({ open: true, targetPlayer, similar });
+  };
+
+  // Exportar PDF
+  const exportPDF = () => {
+    const doc = new jsPDF('p', 'mm', 'a4');
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    
+    // Header
+    doc.setFillColor(10, 12, 16);
+    doc.rect(0, 0, pageWidth, 30, 'F');
+    
+    doc.setTextColor(251, 191, 36);
+    doc.setFontSize(24);
+    doc.setFont(undefined, 'bold');
+    doc.text('RANKING DE PERFIL', 20, 20);
+    
+    doc.setTextColor(100, 116, 139);
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    doc.text(`Perfil: ${selectedPerfil.toUpperCase()}`, 20, 28);
+    
+    // Top 3
+    let yPos = 45;
+    doc.setTextColor(251, 191, 36);
+    doc.setFontSize(14);
+    doc.setFont(undefined, 'bold');
+    doc.text('TOP 3 ATLETAS', 20, yPos);
+    yPos += 12;
+    
+    processedRanking.slice(0, 3).forEach((atleta, idx) => {
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(11);
+      doc.text(`${idx + 1}. ${atleta.Jogador.toUpperCase()}`, 20, yPos);
+      doc.setTextColor(100, 116, 139);
+      doc.setFontSize(9);
+      doc.text(`${atleta.Time} | ${atleta.Posição} | Nota: ${atleta.notaPerfil}`, 20, yPos + 5);
+      yPos += 15;
+    });
+    
+    // Tabela resumida
+    yPos += 10;
+    doc.setTextColor(251, 191, 36);
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'bold');
+    doc.text('RANKING COMPLETO', 20, yPos);
+    yPos += 8;
+    
+    const tableData = processedRanking.slice(0, 20).map((a, idx) => [
+      idx + 1,
+      a.Jogador.substring(0, 20),
+      a.Time.substring(0, 15),
+      a.Posição,
+      a.notaPerfil
+    ]);
+    
+    doc.autoTable({
+      head: [['Pos', 'Atleta', 'Time', 'Pos', 'Nota']],
+      body: tableData,
+      startY: yPos,
+      margin: { left: 20, right: 20 },
+      headStyles: { fillColor: [251, 191, 36], textColor: [10, 12, 16], fontStyle: 'bold' },
+      bodyStyles: { textColor: [100, 116, 139] },
+      alternateRowStyles: { fillColor: [30, 41, 59] }
+    });
+    
+    doc.save(`ranking_${selectedPerfil}_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
   if (loading) return (
     <div className="min-h-screen bg-[#0a0c10] flex items-center justify-center">
       <div className="text-center">
@@ -155,9 +237,12 @@ export default function RankingPerfil() {
               <h1 className="text-4xl md:text-6xl font-black italic tracking-tighter uppercase leading-none bg-gradient-to-r from-white via-white to-slate-500 bg-clip-text text-transparent">
                 Ranking de <span className="text-brand-yellow">Perfil</span>
               </h1>
-              <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.3em] mt-3 ml-1">Algoritmo Estatístico de Alta Performance</p>
+              <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.3em] mt-3 ml-1">Inteligência Avançada de Scouting</p>
             </div>
           </div>
+          <button onClick={exportPDF} className="px-8 py-4 bg-brand-yellow text-slate-950 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-yellow/80 transition-all shadow-lg hover:shadow-brand-yellow/20">
+            📄 Exportar PDF
+          </button>
         </div>
 
         {/* FILTROS E BUSCA */}
@@ -165,8 +250,6 @@ export default function RankingPerfil() {
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-brand-yellow/20 to-transparent"></div>
           
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            
-            {/* Linha 1 */}
             <div className="md:col-span-2">
               <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-4">Buscar Atleta</label>
               <input 
@@ -188,7 +271,6 @@ export default function RankingPerfil() {
               <input type="range" min="0" max="3000" step="90" value={minMinutos} onChange={e => setMinMinutos(parseInt(e.target.value))} className="w-full accent-brand-yellow mt-3" />
             </div>
 
-            {/* Linha 2 */}
             <div>
               <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-4">Posição</label>
               <select value={selectedPosicao} onChange={e => setSelectedPosicao(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-[11px] font-black uppercase outline-none focus:border-brand-yellow/50 text-white appearance-none cursor-pointer">
@@ -220,7 +302,6 @@ export default function RankingPerfil() {
                 <input type="number" value={maxIdade} onChange={e => setMaxIdade(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-[11px] font-black uppercase outline-none focus:border-brand-yellow/50 text-white" />
               </div>
             </div>
-
           </div>
         </div>
 
@@ -245,38 +326,53 @@ export default function RankingPerfil() {
                   <th className="p-8 text-[10px] font-black uppercase tracking-widest text-slate-500 cursor-pointer hover:text-brand-yellow transition-colors" onClick={() => handleSort('Idade')}>
                     Idade {sortConfig.key === 'Idade' && (sortConfig.direction === 'desc' ? '▼' : '▲')}
                   </th>
-                  <th className="p-8 text-[10px] font-black uppercase tracking-widest text-slate-500 cursor-pointer hover:text-brand-yellow transition-colors" onClick={() => handleSort('Minutos jogados')}>
-                    Minutos {sortConfig.key === 'Minutos jogados' && (sortConfig.direction === 'desc' ? '▼' : '▲')}
-                  </th>
+                  <th className="p-8 text-[10px] font-black uppercase tracking-widest text-slate-500">Ações</th>
                   <th className="p-8 text-[10px] font-black uppercase tracking-widest text-brand-yellow text-right cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('notaPerfil')}>
                     Nota Final {sortConfig.key === 'notaPerfil' && (sortConfig.direction === 'desc' ? '▼' : '▲')}
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {processedRanking.map((j, idx) => (
-                  <tr key={idx} className="border-b border-slate-800/30 hover:bg-brand-yellow/5 transition-all group">
-                    <td className="p-8">
-                      <span className={`text-lg font-black italic ${idx < 3 ? 'text-brand-yellow' : 'text-slate-700'}`}>#{idx + 1}</span>
-                    </td>
-                    <td className="p-8">
-                      <div className="font-black italic uppercase text-base group-hover:text-brand-yellow transition-colors text-white">{j.Jogador}</div>
-                      <div className="text-[9px] font-bold text-slate-600 uppercase tracking-widest mt-1">{j.Posição}</div>
-                    </td>
-                    <td className="p-8 text-[11px] font-black uppercase text-slate-400">{j.Time}</td>
-                    <td className="p-8 text-[11px] font-black uppercase text-slate-400">{j.Nacionalidade || '-'}</td>
-                    <td className="p-8 text-[11px] font-black text-slate-500">{j.Idade || '-'}</td>
-                    <td className="p-8 text-[11px] font-black text-slate-500">{j['Minutos jogados']}</td>
-                    <td className="p-8 text-right">
-                      <div className="inline-flex items-center gap-4">
-                        <div className="w-32 h-2 bg-slate-950 rounded-full overflow-hidden hidden lg:block border border-slate-800">
-                          <div className="h-full bg-brand-yellow shadow-[0_0_10px_rgba(251,191,36,0.4)]" style={{ width: `${j.notaPerfil}%` }}></div>
+                {processedRanking.map((j, idx) => {
+                  const trend = getTrend(j);
+                  return (
+                    <tr key={idx} className="border-b border-slate-800/30 hover:bg-brand-yellow/5 transition-all group">
+                      <td className="p-8">
+                        <span className={`text-lg font-black italic ${idx < 3 ? 'text-brand-yellow' : 'text-slate-700'}`}>#{idx + 1}</span>
+                      </td>
+                      <td className="p-8">
+                        <div className="font-black italic uppercase text-base group-hover:text-brand-yellow transition-colors text-white">{j.Jogador}</div>
+                        <div className="text-[9px] font-bold text-slate-600 uppercase tracking-widest mt-1">{j.Posição}</div>
+                      </td>
+                      <td className="p-8 text-[11px] font-black uppercase text-slate-400">{j.Time}</td>
+                      <td className="p-8 text-[11px] font-black uppercase text-slate-400">{j.Nacionalidade || '-'}</td>
+                      <td className="p-8 text-[11px] font-black text-slate-500">{j.Idade || '-'}</td>
+                      <td className="p-8">
+                        <div className="flex gap-2">
+                          <button onClick={() => openComparison(j)} className="px-3 py-1 bg-slate-900 border border-slate-700 rounded-lg text-[8px] font-black uppercase hover:border-brand-yellow transition-all" title="Comparar">
+                            ⚔️
+                          </button>
+                          <button onClick={() => openSimilarPlayers(j)} className="px-3 py-1 bg-slate-900 border border-slate-700 rounded-lg text-[8px] font-black uppercase hover:border-brand-yellow transition-all" title="Similares">
+                            🔍
+                          </button>
                         </div>
-                        <span className="text-2xl font-black italic text-white min-w-[3rem]">{j.notaPerfil}</span>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="p-8 text-right">
+                        <div className="inline-flex items-center gap-4">
+                          <div className="w-32 h-2 bg-slate-950 rounded-full overflow-hidden hidden lg:block border border-slate-800">
+                            <div className="h-full bg-brand-yellow shadow-[0_0_10px_rgba(251,191,36,0.4)]" style={{ width: `${j.notaPerfil}%` }}></div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-2xl font-black italic text-white min-w-[3rem]">{j.notaPerfil}</span>
+                            <span className={`text-lg ${trend === 'up' ? 'text-green-500' : trend === 'down' ? 'text-red-500' : 'text-slate-600'}`}>
+                              {trend === 'up' ? '📈' : trend === 'down' ? '📉' : '➡️'}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -336,6 +432,127 @@ export default function RankingPerfil() {
         </div>
 
       </div>
+
+      {/* MODAL: COMPARAÇÃO HEAD-TO-HEAD */}
+      {comparisonModal.open && comparisonModal.player1 && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-10 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-10">
+              <h2 className="text-2xl font-black italic uppercase tracking-tighter text-brand-yellow">Comparação <span className="text-white">Head-to-Head</span></h2>
+              <button onClick={() => setComparisonModal({ open: false, player1: null, player2: null })} className="text-slate-500 hover:text-white transition-colors">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+              {/* Player 1 */}
+              <div className="bg-slate-950/50 p-8 rounded-2xl border border-slate-800">
+                <h3 className="text-lg font-black italic uppercase text-white mb-4">{comparisonModal.player1.Jogador}</h3>
+                <div className="space-y-2 text-sm">
+                  <p className="text-slate-400"><strong className="text-slate-300">Time:</strong> {comparisonModal.player1.Time}</p>
+                  <p className="text-slate-400"><strong className="text-slate-300">Posição:</strong> {comparisonModal.player1.Posição}</p>
+                  <p className="text-slate-400"><strong className="text-slate-300">Idade:</strong> {comparisonModal.player1.Idade}</p>
+                  <p className="text-slate-400"><strong className="text-slate-300">Minutos:</strong> {comparisonModal.player1['Minutos jogados']}</p>
+                  <p className="text-brand-yellow mt-4"><strong>Nota Geral:</strong> {comparisonModal.player1.notaPerfil}</p>
+                </div>
+              </div>
+
+              {/* Player 2 Selector */}
+              {!comparisonModal.player2 ? (
+                <div className="bg-slate-950/50 p-8 rounded-2xl border border-slate-800 flex flex-col justify-center">
+                  <p className="text-slate-500 text-center mb-6 font-black uppercase">Selecione um segundo atleta para comparar</p>
+                  <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                    {processedRanking.filter(p => p.Jogador !== comparisonModal.player1.Jogador).map(p => (
+                      <button key={p.Jogador} onClick={() => setComparisonModal({ ...comparisonModal, player2: p })} className="w-full p-3 bg-slate-900 border border-slate-700 rounded-lg text-left hover:border-brand-yellow transition-all text-sm font-black uppercase text-slate-300 hover:text-brand-yellow">
+                        {p.Jogador} ({p.notaPerfil})
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-slate-950/50 p-8 rounded-2xl border border-slate-800">
+                  <h3 className="text-lg font-black italic uppercase text-white mb-4">{comparisonModal.player2.Jogador}</h3>
+                  <div className="space-y-2 text-sm">
+                    <p className="text-slate-400"><strong className="text-slate-300">Time:</strong> {comparisonModal.player2.Time}</p>
+                    <p className="text-slate-400"><strong className="text-slate-300">Posição:</strong> {comparisonModal.player2.Posição}</p>
+                    <p className="text-slate-400"><strong className="text-slate-300">Idade:</strong> {comparisonModal.player2.Idade}</p>
+                    <p className="text-slate-400"><strong className="text-slate-300">Minutos:</strong> {comparisonModal.player2['Minutos jogados']}</p>
+                    <p className="text-brand-yellow mt-4"><strong>Nota Geral:</strong> {comparisonModal.player2.notaPerfil}</p>
+                  </div>
+                  <button onClick={() => setComparisonModal({ ...comparisonModal, player2: null })} className="mt-6 w-full py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-[10px] font-black uppercase transition-all">
+                    Trocar Atleta
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {comparisonModal.player2 && (
+              <div className="bg-slate-950/30 p-8 rounded-2xl border border-slate-800/50">
+                <h4 className="text-brand-yellow font-black uppercase mb-6">Comparação de Métricas</h4>
+                <div className="space-y-4">
+                  {['Gols', 'Passes precisos %', 'Dribles', 'Desafios vencidos, %', 'Interceptações'].map(metric => {
+                    const val1 = safeParseFloat(comparisonModal.player1[metric]);
+                    const val2 = safeParseFloat(comparisonModal.player2[metric]);
+                    const winner = val1 > val2 ? 1 : val2 > val1 ? 2 : 0;
+                    return (
+                      <div key={metric}>
+                        <p className="text-[10px] font-black uppercase text-slate-400 mb-2">{metric}</p>
+                        <div className="flex items-center gap-4">
+                          <div className={`flex-1 p-2 rounded-lg text-center text-sm font-black ${winner === 1 ? 'bg-green-900/30 text-green-400' : 'bg-slate-800 text-slate-400'}`}>
+                            {val1}
+                          </div>
+                          <span className="text-slate-600 font-black">vs</span>
+                          <div className={`flex-1 p-2 rounded-lg text-center text-sm font-black ${winner === 2 ? 'bg-green-900/30 text-green-400' : 'bg-slate-800 text-slate-400'}`}>
+                            {val2}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: JOGADORES SIMILARES */}
+      {similarModal.open && similarModal.targetPlayer && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-10 max-w-2xl w-full">
+            <div className="flex items-center justify-between mb-10">
+              <div>
+                <h2 className="text-2xl font-black italic uppercase tracking-tighter text-brand-yellow">Jogadores <span className="text-white">Similares</span></h2>
+                <p className="text-slate-500 text-[10px] font-black uppercase mt-2">Perfil técnico similar a {similarModal.targetPlayer.Jogador}</p>
+              </div>
+              <button onClick={() => setSimilarModal({ open: false, targetPlayer: null, similar: [] })} className="text-slate-500 hover:text-white transition-colors">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {similarModal.similar.length > 0 ? (
+                similarModal.similar.map((player, idx) => (
+                  <div key={player.Jogador} className="bg-slate-950/50 p-6 rounded-2xl border border-slate-800 hover:border-brand-yellow/50 transition-all">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-lg font-black italic uppercase text-white">{idx + 1}. {player.Jogador}</p>
+                        <p className="text-[10px] font-bold text-slate-600 uppercase mt-2">{player.Time} • {player.Posição} • {player.Idade} anos</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-3xl font-black italic text-brand-yellow">{player.notaPerfil}</p>
+                        <p className="text-[9px] font-black text-slate-600 uppercase mt-1">Nota Geral</p>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-slate-500 text-center py-8 font-black uppercase">Nenhum jogador similar encontrado</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
