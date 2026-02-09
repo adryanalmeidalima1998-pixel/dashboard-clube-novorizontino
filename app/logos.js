@@ -29,6 +29,11 @@ export const LOGOS = {
   'RB Bragantino': '/club/logos/RB Bragantino.png',
   'Red Bull Bragantino': '/club/logos/RB Bragantino.png',
   'Bragantino': '/club/logos/RB Bragantino.png',
+  'São Paulo FC': '/club/logos/são-paulo.png',
+  'São Paulo': '/club/logos/são-paulo.png',
+  'Corinthians': '/club/logos/corinthians.png',
+  'Botafogo SP': '/club/logos/botafogo-sp.png',
+  'Portuguesa': '/club/logos/portuguesa.png',
   
   // Adicione mais times conforme necessário:
   // 'Nome do Time': '/club/logos/nome-do-arquivo.png',

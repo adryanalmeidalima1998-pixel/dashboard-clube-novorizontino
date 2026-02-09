@@ -24,9 +24,13 @@ export default function AgendaPage() {
           header: true,
           skipEmptyLines: true,
           complete: (results) => {
-            const dadosLimpos = cleanData(results.data)
-            
-            const parsedJogos = dadosLimpos.map((data, index) => {
+            // Se o cleanData filtrar tudo, tentamos usar os dados brutos se houver Mandante/Visitante
+            let dadosParaProcessar = cleanData(results.data);
+            if (dadosParaProcessar.length === 0 && results.data.length > 0) {
+              dadosParaProcessar = results.data.filter(r => r.Mandante || r.Visitante || r.Data);
+            }
+
+            const parsedJogos = dadosParaProcessar.map((data, index) => {
               const mandanteNorm = normalizeTeamName(data['Mandante'] || '')
               const visitanteNorm = normalizeTeamName(data['Visitante'] || '')
               const isMandante = mandanteNorm === 'Grêmio Novorizontino'
