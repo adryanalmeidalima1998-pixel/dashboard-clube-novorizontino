@@ -253,6 +253,88 @@ export default function CentralDados() {
     doc.save('relatorio-novorizontino.pdf')
   }
 
+  const exportComparisonPDF = () => {
+    if (!comparisonModal.player1 || !comparisonModal.player2) return;
+    
+    const doc = new jsPDF('p', 'mm', 'a4');
+    const pageWidth = doc.internal.pageSize.getWidth();
+    
+    // Header
+    doc.setFillColor(10, 12, 16);
+    doc.rect(0, 0, pageWidth, 30, 'F');
+    
+    doc.setTextColor(251, 191, 36);
+    doc.setFontSize(20);
+    doc.setFont(undefined, 'bold');
+    doc.text('COMPARAÇÃO HEAD-TO-HEAD', 20, 20);
+    
+    doc.setTextColor(100, 116, 139);
+    doc.setFontSize(9);
+    doc.setFont(undefined, 'normal');
+    doc.text('Central de Dados - Análise Técnica', 20, 28);
+    
+    // Atletas
+    let yPos = 45;
+    
+    // Jogador 1
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'bold');
+    doc.text('ATLETA 1', 20, yPos);
+    yPos += 8;
+    
+    doc.setTextColor(100, 116, 139);
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    doc.text(`${comparisonModal.player1.Jogador} | ${comparisonModal.player1.Time || comparisonModal.player1.Equipe}`, 20, yPos);
+    yPos += 6;
+    doc.text(`${comparisonModal.player1.Posição} | Idade: ${comparisonModal.player1.Idade} | Minutos: ${comparisonModal.player1['Minutos jogados']}`, 20, yPos);
+    yPos += 10;
+    
+    // Jogador 2
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'bold');
+    doc.text('ATLETA 2', 20, yPos);
+    yPos += 8;
+    
+    doc.setTextColor(100, 116, 139);
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    doc.text(`${comparisonModal.player2.Jogador} | ${comparisonModal.player2.Time || comparisonModal.player2.Equipe}`, 20, yPos);
+    yPos += 6;
+    doc.text(`${comparisonModal.player2.Posição} | Idade: ${comparisonModal.player2.Idade} | Minutos: ${comparisonModal.player2['Minutos jogados']}`, 20, yPos);
+    yPos += 15;
+    
+    // Tabela de comparação
+    doc.setTextColor(251, 191, 36);
+    doc.setFontSize(11);
+    doc.setFont(undefined, 'bold');
+    doc.text('ANÁLISE DE MÉTRICAS', 20, yPos);
+    yPos += 10;
+    
+    const metricas = metricasSelecionadas.length > 0 ? metricasSelecionadas : Object.keys(comparisonModal.player1).filter(k => !['Jogador', 'Time', 'Equipe', 'Posição', 'Idade', 'historicoIndex'].includes(k));
+    
+    const tableData = metricas.map(metric => {
+      const val1 = safeParseFloat(comparisonModal.player1[metric]);
+      const val2 = safeParseFloat(comparisonModal.player2[metric]);
+      const winner = val1 > val2 ? '✓' : val2 > val1 ? '✗' : '=';
+      return [metric, val1, val2, winner];
+    });
+    
+    doc.autoTable({
+      startY: yPos,
+      head: [['Métrica', 'Atleta 1', 'Atleta 2', 'Vencedor']],
+      body: tableData,
+      theme: 'grid',
+      styles: { fontSize: 8, textColor: [100, 116, 139] },
+      headStyles: { fillColor: [251, 191, 36], textColor: [10, 12, 16], fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [30, 41, 59] }
+    });
+    
+    doc.save(`comparacao-${comparisonModal.player1.Jogador}-vs-${comparisonModal.player2.Jogador}.pdf`);
+  };
+
   if (carregando) return <div className="min-h-screen bg-[#0a0c10] flex items-center justify-center text-brand-yellow">Processando...</div>
 
   return (
@@ -393,9 +475,12 @@ export default function CentralDados() {
                         </td>
                       ))}
                       <td className="p-6 text-center">
-                        <button onClick={() => encontrarSimilares(j)} className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border ${jogadorReferencia?.Jogador === j.Jogador ? 'bg-brand-yellow text-slate-950 border-brand-yellow' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-brand-yellow/50 hover:text-brand-yellow'}`}>
-                          {jogadorReferencia?.Jogador === j.Jogador ? 'FECHAR' : 'FIND SIMILAR'}
-                        </button>
+                        <div className="flex gap-2 justify-center">
+                          <button onClick={() => setComparisonModal({ open: true, player1: j, player2: null })} className="p-2 hover:bg-slate-800 rounded-lg text-lg transition-all" title="Comparar">⚔️</button>
+                          <button onClick={() => encontrarSimilares(j)} className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border ${jogadorReferencia?.Jogador === j.Jogador ? 'bg-brand-yellow text-slate-950 border-brand-yellow' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-brand-yellow/50 hover:text-brand-yellow'}`}>
+                            {jogadorReferencia?.Jogador === j.Jogador ? 'FECHAR' : 'FIND SIMILAR'}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -418,9 +503,16 @@ export default function CentralDados() {
           <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-10 max-w-5xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
             <div className="flex items-center justify-between mb-10">
               <h2 className="text-2xl font-black italic uppercase tracking-tighter text-brand-yellow">Comparação <span className="text-white">Head-to-Head</span></h2>
-              <button onClick={() => setComparisonModal({ open: false, player1: null, player2: null })} className="text-slate-500 hover:text-white transition-colors">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
+              <div className="flex gap-3">
+                {comparisonModal.player2 && (
+                  <button onClick={exportComparisonPDF} className="px-4 py-2 bg-brand-yellow text-slate-950 rounded-lg text-[10px] font-black uppercase hover:bg-brand-yellow/80 transition-all">
+                    📄 Exportar PDF
+                  </button>
+                )}
+                <button onClick={() => setComparisonModal({ open: false, player1: null, player2: null })} className="text-slate-500 hover:text-white transition-colors">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">

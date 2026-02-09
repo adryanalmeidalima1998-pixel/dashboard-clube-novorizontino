@@ -219,6 +219,91 @@ export default function RankingPerfil() {
     doc.save(`ranking_${selectedPerfil}_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
+  const exportComparisonPDF = () => {
+    if (!comparisonModal.player1 || !comparisonModal.player2) return;
+    
+    const doc = new jsPDF('p', 'mm', 'a4');
+    const pageWidth = doc.internal.pageSize.getWidth();
+    
+    // Header
+    doc.setFillColor(10, 12, 16);
+    doc.rect(0, 0, pageWidth, 30, 'F');
+    
+    doc.setTextColor(251, 191, 36);
+    doc.setFontSize(20);
+    doc.setFont(undefined, 'bold');
+    doc.text('COMPARAÇÃO HEAD-TO-HEAD', 20, 20);
+    
+    doc.setTextColor(100, 116, 139);
+    doc.setFontSize(9);
+    doc.setFont(undefined, 'normal');
+    doc.text(`Perfil: ${selectedPerfil.toUpperCase()}`, 20, 28);
+    
+    // Atletas
+    let yPos = 45;
+    
+    // Jogador 1
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'bold');
+    doc.text('ATLETA 1', 20, yPos);
+    yPos += 8;
+    
+    doc.setTextColor(100, 116, 139);
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    doc.text(`${comparisonModal.player1.Jogador} | ${comparisonModal.player1.Time}`, 20, yPos);
+    yPos += 6;
+    doc.text(`${comparisonModal.player1.Posição} | Idade: ${comparisonModal.player1.Idade} | Minutos: ${comparisonModal.player1['Minutos jogados']}`, 20, yPos);
+    yPos += 10;
+    
+    // Jogador 2
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'bold');
+    doc.text('ATLETA 2', 20, yPos);
+    yPos += 8;
+    
+    doc.setTextColor(100, 116, 139);
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    doc.text(`${comparisonModal.player2.Jogador} | ${comparisonModal.player2.Time}`, 20, yPos);
+    yPos += 6;
+    doc.text(`${comparisonModal.player2.Posição} | Idade: ${comparisonModal.player2.Idade} | Minutos: ${comparisonModal.player2['Minutos jogados']}`, 20, yPos);
+    yPos += 15;
+    
+    // Tabela de comparação
+    doc.setTextColor(251, 191, 36);
+    doc.setFontSize(11);
+    doc.setFont(undefined, 'bold');
+    doc.text('ANÁLISE DE MÉTRICAS', 20, yPos);
+    yPos += 10;
+    
+    const metricas = Object.keys(comparisonModal.player1)
+      .filter(key => !['Jogador', 'Time', 'Posição', 'Idade', 'Nacionalidade', 'Minutos jogados', 'notaPerfil'].includes(key))
+      .sort();
+    
+    const tableData = metricas.map(metric => {
+      const val1 = safeParseFloat(comparisonModal.player1[metric]);
+      const val2 = safeParseFloat(comparisonModal.player2[metric]);
+      const winner = val1 > val2 ? '✓' : val2 > val1 ? '✗' : '=';
+      return [metric, val1, val2, winner];
+    });
+    
+    doc.autoTable({
+      startY: yPos,
+      head: [['Métrica', 'Atleta 1', 'Atleta 2', 'Vencedor']],
+      body: tableData,
+      theme: 'grid',
+      styles: { fontSize: 8, textColor: [100, 116, 139] },
+      headStyles: { fillColor: [251, 191, 36], textColor: [10, 12, 16], fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [30, 41, 59] }
+    });
+    
+    doc.save(`comparacao-${comparisonModal.player1.Jogador}-vs-${comparisonModal.player2.Jogador}.pdf`);
+  };
+
+
   if (loading) return (
     <div className="min-h-screen bg-[#0a0c10] flex items-center justify-center">
       <div className="text-center">
@@ -446,9 +531,16 @@ export default function RankingPerfil() {
           <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-10 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-10">
               <h2 className="text-2xl font-black italic uppercase tracking-tighter text-brand-yellow">Comparação <span className="text-white">Head-to-Head</span></h2>
-              <button onClick={() => setComparisonModal({ open: false, player1: null, player2: null })} className="text-slate-500 hover:text-white transition-colors">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
+              <div className="flex gap-3">
+                {comparisonModal.player2 && (
+                  <button onClick={exportComparisonPDF} className="px-4 py-2 bg-brand-yellow text-slate-950 rounded-lg text-[10px] font-black uppercase hover:bg-brand-yellow/80 transition-all">
+                    📄 Exportar PDF
+                  </button>
+                )}
+                <button onClick={() => setComparisonModal({ open: false, player1: null, player2: null })} className="text-slate-500 hover:text-white transition-colors">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
