@@ -62,7 +62,7 @@ export const calculatePercentile = (value, allValues) => {
  * Combina Z-Score (distância da média) com Percentil (posição relativa)
  * para gerar uma nota robusta e equilibrada.
  */
-export const calculateRating = (atleta, todosAtletas, perfilNome, minMinutos = 0) => {
+export const getPlayerRating = (atleta, todosAtletas, perfilNome, minMinutos = 0) => {
   const weights = PERFIL_WEIGHTS[perfilNome];
   if (!weights) return 0;
 
@@ -126,12 +126,12 @@ export const getRankingByPerfil = (atletas, perfilNome, minMinutos = 0) => {
   return atletasFiltrados
     .map(a => ({
       ...a,
-      notaPerfil: calculateRating(a, atletas, perfilNome, minMinutos)
+      notaPerfil: getPlayerRating(a, atletas, perfilNome, minMinutos)
     }))
     .sort((a, b) => b.notaPerfil - a.notaPerfil);
 };
 
-export const getDominantPerfil = (atleta, todosAtletas) => {
+export const getPlayerDominantPerfil = (atleta, todosAtletas) => {
   const perfisPossiveis = getPerfisForPosicao(atleta.Posição);
   if (perfisPossiveis.length === 0) return { perfil: 'Sem perfil', nota: 0 };
 
@@ -139,7 +139,7 @@ export const getDominantPerfil = (atleta, todosAtletas) => {
   let maiorNota = -1;
 
   perfisPossiveis.forEach(perfil => {
-    const nota = calculateRating(atleta, todosAtletas, perfil);
+    const nota = getPlayerRating(atleta, todosAtletas, perfil);
     if (nota > maiorNota) {
       maiorNota = nota;
       melhorPerfil = perfil;
