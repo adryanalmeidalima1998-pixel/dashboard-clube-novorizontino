@@ -34,9 +34,31 @@ ChartJS.register(
   Legend
 )
 
+/**
+ * Paleta de cores expandida e vibrante para evitar repetições.
+ * Inclui 20 cores distintas e visualmente contrastantes.
+ */
 const CORES_JOGADORES = [
-  '#fbbf24', '#d4af37', '#e2e8f0', '#3b82f6', '#ef4444',
-  '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#06b6d4'
+  '#fbbf24', // Amarelo Novorizontino
+  '#3b82f6', // Azul
+  '#ef4444', // Vermelho
+  '#10b981', // Verde Esmeralda
+  '#8b5cf6', // Roxo
+  '#f97316', // Laranja
+  '#06b6d4', // Ciano
+  '#ec4899', // Rosa
+  '#d4af37', // Dourado
+  '#14b8a6', // Teal
+  '#f43f5e', // Rose
+  '#84cc16', // Lima
+  '#6366f1', // Indigo
+  '#a855f7', // Purple
+  '#eab308', // Yellow
+  '#ef4444', // Red
+  '#22c55e', // Green
+  '#3b82f6', // Blue
+  '#f59e0b', // Amber
+  '#64748b'  // Slate
 ]
 
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSVC0eenchMDxK3wsOTXjq9kQiy3aHTFl0X1o5vwJZR7RiZzg1Irxxe_SL2IDrqb3c1i7ZL2ugpBJkN/pub?output=csv";
@@ -146,16 +168,30 @@ export default function GraficosPage() {
     });
   }, [jogadores, filtroTime, filtrosPosicao, filtroIdade, filtroMinutagem])
 
+  /**
+   * Atribui uma cor única a cada jogador selecionado.
+   * Se houver mais jogadores que cores, usa um algoritmo determinístico para gerar novas.
+   */
+  const getCorJogador = (index) => {
+    if (index < CORES_JOGADORES.length) {
+      return CORES_JOGADORES[index];
+    }
+    // Gerar cor baseada no index para garantir que seja determinística mas diferente
+    const hue = (index * 137.508) % 360; // Golden angle approximation
+    return `hsl(${hue}, 70%, 50%)`;
+  }
+
   const radarData = useMemo(() => {
     if (jogadoresSelecionados.length === 0 || metricasRadar.length === 0) return null
     const datasets = jogadoresSelecionados.map((nome, idx) => {
       const j = jogadores.find(x => x.Jogador === nome)
       if (!j) return null
+      const cor = getCorJogador(idx);
       return {
         label: j.Jogador,
         data: metricasRadar.map(m => normalizarMetrica(parseValue(j[m]), m)),
-        borderColor: CORES_JOGADORES[idx % CORES_JOGADORES.length],
-        backgroundColor: CORES_JOGADORES[idx % CORES_JOGADORES.length] + '20',
+        borderColor: cor,
+        backgroundColor: cor.startsWith('hsl') ? cor.replace(')', ', 0.15)').replace('hsl', 'hsla') : cor + '20',
         borderWidth: 3, pointRadius: 4
       }
     }).filter(Boolean)
@@ -163,14 +199,20 @@ export default function GraficosPage() {
   }, [jogadores, jogadoresSelecionados, metricasRadar])
 
   const scatterData = useMemo(() => {
-    const pontos = jogadoresFiltrados.map((j, idx) => ({
-      x: parseValue(j[metricaX]), y: parseValue(j[metricaY]), jogador: j.Jogador,
-      cor: jogadoresSelecionados.includes(j.Jogador) ? CORES_JOGADORES[jogadoresSelecionados.indexOf(j.Jogador) % CORES_JOGADORES.length] : '#475569'
-    }))
+    const pontos = jogadoresFiltrados.map((j, idx) => {
+      const isSelected = jogadoresSelecionados.includes(j.Jogador);
+      const cor = isSelected ? getCorJogador(jogadoresSelecionados.indexOf(j.Jogador)) : '#475569';
+      return {
+        x: parseValue(j[metricaX]), 
+        y: parseValue(j[metricaY]), 
+        jogador: j.Jogador,
+        cor: cor
+      }
+    })
     return {
       datasets: [{
         label: 'Dispersão', data: pontos,
-        backgroundColor: pontos.map(p => p.cor + 'cc'),
+        backgroundColor: pontos.map(p => p.cor + (jogadoresSelecionados.includes(p.jogador) ? 'cc' : '66')),
         pointRadius: pontos.map(p => jogadoresSelecionados.includes(p.jogador) ? 10 : 4)
       }]
     }
@@ -244,50 +286,45 @@ export default function GraficosPage() {
                 >
                   [ Desmarcar Tudo ]
                 </button>
-                <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 overflow-x-auto custom-scrollbar max-w-[500px]">
-                  {Object.keys(categoriasMetricas).map(cat => (
-                    <button key={cat} onClick={() => setAbaAtiva(cat)} className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${abaAtiva === cat ? 'bg-brand-yellow text-slate-950' : 'text-slate-500 hover:text-slate-300'}`}>{cat}</button>
-                  ))}
-                </div>
               </div>
-              <div className="flex flex-wrap gap-1">
-                {templates.filter(t => t.tipo === tipoGrafico).map(t => (
-                  <button key={t.id} onClick={() => {
-                    if (t.tipo === 'radar') setMetricasRadar(t.metricas)
-                    else { setMetricaX(t.metricas[0]); setMetricaY(t.metricas[1]) }
-                  }} className="text-[8px] font-black uppercase bg-slate-800 px-2 py-1 rounded border border-slate-700 hover:border-brand-yellow/50 hover:text-brand-yellow transition-all">{t.nome}</button>
+              <div className="flex flex-wrap gap-2">
+                {['Ataque', 'Defesa', 'Passes & Criação', 'Posse & Controle', 'Físico & Duelos', 'Geral'].map(cat => (
+                  <button 
+                    key={cat} 
+                    onClick={() => setAbaAtiva(cat)}
+                    className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border ${abaAtiva === cat ? 'bg-brand-yellow border-brand-yellow text-slate-950 shadow-[0_0_15px_rgba(251,191,36,0.3)]' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-700'}`}
+                  >
+                    {cat}
+                  </button>
                 ))}
               </div>
             </div>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-            {categoriasMetricas[abaAtiva]?.map(metrica => (
-              <button 
-                key={metrica} 
+            {(categoriasMetricas[abaAtiva] || []).map(metrica => (
+              <button
+                key={metrica}
                 onClick={() => {
                   if (tipoGrafico === 'radar') {
-                    setMetricasRadar(prev => prev.includes(metrica) ? prev.filter(x => x !== metrica) : (prev.length < 10 ? [...prev, metrica] : prev))
+                    if (metricasRadar.includes(metrica)) setMetricasRadar(metricasRadar.filter(m => m !== metrica))
+                    else if (metricasRadar.length < 12) setMetricasRadar([...metricasRadar, metrica])
                   } else {
                     if (metricaX === metrica) setMetricaX('')
                     else if (metricaY === metrica) setMetricaY('')
                     else if (!metricaX) setMetricaX(metrica)
                     else setMetricaY(metrica)
                   }
-                }} 
-                className={`p-3 rounded-xl border text-[9px] font-black uppercase tracking-widest transition-all text-left flex items-center justify-between group ${
-                  (tipoGrafico === 'radar' ? metricasRadar.includes(metrica) : (metricaX === metrica || metricaY === metrica)) 
-                  ? 'bg-brand-yellow/10 border-brand-yellow text-brand-yellow' 
-                  : 'bg-slate-950/50 border-slate-800 text-slate-500 hover:border-slate-600'
+                }}
+                className={`p-3 rounded-xl text-[9px] font-bold text-left transition-all border ${
+                  (tipoGrafico === 'radar' ? metricasRadar.includes(metrica) : (metricaX === metrica || metricaY === metrica))
+                    ? 'bg-brand-yellow/10 border-brand-yellow text-brand-yellow' 
+                    : 'bg-slate-950/50 border-slate-800 text-slate-500 hover:border-slate-700'
                 }`}
               >
-                <span className="truncate mr-2">{metrica}</span>
-                {(tipoGrafico === 'radar' ? metricasRadar.includes(metrica) : (metricaX === metrica || metricaY === metrica)) && (
-                  <div className="flex items-center gap-1">
-                    {tipoGrafico === 'dispersao' && <span className="text-[8px] font-black">{metricaX === metrica ? 'X' : 'Y'}</span>}
-                    <div className="w-2 h-2 bg-brand-yellow rounded-full shadow-[0_0_8px_rgba(251,191,36,0.8)]"></div>
-                  </div>
-                )}
+                {metrica.toUpperCase()}
+                {(tipoGrafico === 'dispersao' && metricaX === metrica) && <span className="ml-2 text-white font-black">[X]</span>}
+                {(tipoGrafico === 'dispersao' && metricaY === metrica) && <span className="ml-2 text-white font-black">[Y]</span>}
               </button>
             ))}
           </div>
@@ -295,99 +332,138 @@ export default function GraficosPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           
-          {/* SIDEBAR FILTROS */}
+          {/* PAINEL LATERAL: FILTROS E SELEÇÃO */}
           <div className="lg:col-span-1 space-y-6">
-            <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Filtros de Base</h3>
+            
+            {/* Filtros de Base */}
+            <div className="bg-slate-900/40 p-6 rounded-[2rem] border border-slate-800/50">
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-6">Filtros de Base</h3>
               <div className="space-y-4">
                 <div>
-                  <label className="text-[8px] font-black text-slate-600 uppercase block mb-1">Equipe (Soberano)</label>
-                  <select value={filtroTime} onChange={e => setFiltroTime(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50">{times.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}</select>
+                  <label className="text-[8px] font-black text-slate-600 uppercase mb-2 block">Equipe</label>
+                  <select value={filtroTime} onChange={e => setFiltroTime(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black uppercase outline-none focus:border-brand-yellow/50">
+                    {times.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
+                  </select>
                 </div>
                 <div>
-                  <label className="text-[8px] font-black text-slate-600 uppercase block mb-1">Posições (Multi)</label>
-                  <div className="flex flex-wrap gap-1 max-h-[100px] overflow-y-auto p-1 custom-scrollbar">
-                    {posicoes.map(p => (
-                      <button key={p} onClick={() => setFiltrosPosicao(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p])} className={`px-2 py-1 rounded text-[8px] font-black uppercase border transition-all ${filtrosPosicao.includes(p) ? 'bg-brand-yellow text-slate-950 border-brand-yellow' : 'bg-slate-900 text-slate-500 border-slate-800 hover:border-slate-600'}`}>{p}</button>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex gap-4">
-                  <div className="flex-1">
-                    <label className="text-[8px] font-black text-slate-600 uppercase block mb-1">Idade Min</label>
-                    <input type="number" value={filtroIdade.min} onChange={e => setFiltroIdade({...filtroIdade, min: parseInt(e.target.value)})} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-[10px] font-bold focus:border-brand-yellow/50 outline-none" />
-                  </div>
-                  <div className="flex-1">
-                    <label className="text-[8px] font-black text-slate-600 uppercase block mb-1">Idade Max</label>
-                    <input type="number" value={filtroIdade.max} onChange={e => setFiltroIdade({...filtroIdade, max: parseInt(e.target.value)})} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-[10px] font-bold focus:border-brand-yellow/50 outline-none" />
-                  </div>
-                </div>
-                <div>
-                  <label className="text-[8px] font-black text-slate-600 uppercase block mb-1">Minutos Mínimos</label>
-                  <input type="number" value={filtroMinutagem} onChange={e => setFiltroMinutagem(parseInt(e.target.value))} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-[10px] font-bold focus:border-brand-yellow/50 outline-none" />
+                  <label className="text-[8px] font-black text-slate-600 uppercase mb-2 block">Minutagem Mínima</label>
+                  <input type="number" value={filtroMinutagem} onChange={e => setFiltroMinutagem(parseInt(e.target.value) || 0)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black uppercase outline-none focus:border-brand-yellow/50" />
                 </div>
               </div>
             </div>
 
-            <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
-              <div className="flex items-center justify-between mb-4">
+            {/* Seleção de Jogadores */}
+            <div className="bg-slate-900/40 p-6 rounded-[2rem] border border-slate-800/50 h-[500px] flex flex-col">
+              <div className="flex items-center justify-between mb-6">
                 <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500">Atletas ({jogadoresFiltrados.length})</h3>
-                <button 
-                  onClick={() => {
-                    if (jogadoresSelecionados.length === jogadoresFiltrados.length) setJogadoresSelecionados([])
-                    else setJogadoresSelecionados(jogadoresFiltrados.map(j => j.Jogador))
-                  }}
-                  className="text-[8px] font-black uppercase text-brand-yellow hover:text-brand-yellow/80 transition-all"
-                >
-                  {jogadoresSelecionados.length === jogadoresFiltrados.length ? '[ Desmarcar Todos ]' : '[ Selecionar Todos ]'}
-                </button>
+                <button onClick={() => setJogadoresSelecionados([])} className="text-[8px] font-black uppercase text-brand-yellow hover:underline">Limpar</button>
               </div>
-              <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                {jogadoresFiltrados.map(j => (
-                  <button 
+              <div className="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                {jogadoresFiltrados.map((j, idx) => (
+                  <button
                     key={j.Jogador}
                     onClick={() => {
-                      if (jogadoresSelecionados.includes(j.Jogador)) setJogadoresSelecionados(jogadoresSelecionados.filter(x => x !== j.Jogador))
-                      else if (jogadoresSelecionados.length < 10) setJogadoresSelecionados([...jogadoresSelecionados, j.Jogador])
+                      if (jogadoresSelecionados.includes(j.Jogador)) setJogadoresSelecionados(jogadoresSelecionados.filter(n => n !== j.Jogador))
+                      else if (jogadoresSelecionados.length < 15) setJogadoresSelecionados([...jogadoresSelecionados, j.Jogador])
                     }}
-                    className={`w-full p-4 rounded-2xl text-left transition-all border ${jogadoresSelecionados.includes(j.Jogador) ? 'bg-brand-yellow border-brand-yellow text-slate-950' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-700'}`}
+                    className={`w-full p-3 rounded-xl text-left transition-all border flex items-center justify-between group ${
+                      jogadoresSelecionados.includes(j.Jogador) 
+                        ? 'bg-brand-yellow border-brand-yellow text-slate-950' 
+                        : 'bg-slate-950/50 border-slate-800 text-slate-400 hover:border-slate-700'
+                    }`}
                   >
-                    <div className="font-black italic uppercase text-[11px] tracking-tighter">{j.Jogador}</div>
-                    <div className="text-[8px] font-bold uppercase tracking-widest opacity-60 mt-1">{j.Time || j.Equipe}</div>
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-black italic uppercase leading-none mb-1">{j.Jogador}</span>
+                      <span className={`text-[8px] font-bold uppercase ${jogadoresSelecionados.includes(j.Jogador) ? 'text-slate-800' : 'text-slate-600'}`}>{j.Time}</span>
+                    </div>
+                    {jogadoresSelecionados.includes(j.Jogador) && (
+                      <div className="w-4 h-4 rounded-full bg-slate-950/20 flex items-center justify-center">
+                        <span className="text-[8px] font-black">{jogadoresSelecionados.indexOf(j.Jogador) + 1}</span>
+                      </div>
+                    )}
                   </button>
                 ))}
               </div>
             </div>
           </div>
 
-          {/* ÁREA DO GRÁFICO */}
+          {/* GRÁFICO PRINCIPAL */}
           <div className="lg:col-span-3">
-            <div className="bg-slate-900/40 rounded-[3rem] p-10 border border-slate-800/50 shadow-2xl flex items-center justify-center min-h-[600px]">
-              {tipoGrafico === 'radar' ? (
-                radarData ? (
-                  <Radar 
-                    data={radarData} 
+            <div className="bg-slate-900/40 p-10 rounded-[3rem] border border-slate-800/50 h-full flex flex-col shadow-2xl relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-brand-yellow/20 to-transparent"></div>
+              
+              <div className="flex items-center justify-between mb-10">
+                <div className="flex items-center gap-4">
+                  <div className="w-3 h-3 bg-brand-yellow rounded-full animate-pulse"></div>
+                  <h2 className="text-2xl font-black italic uppercase tracking-tighter">Visualização <span className="text-brand-yellow">Dinâmica</span></h2>
+                </div>
+                <div className="flex gap-4">
+                  {jogadoresSelecionados.map((nome, idx) => (
+                    <div key={nome} className="flex items-center gap-2 px-3 py-1 bg-slate-950 border border-slate-800 rounded-full">
+                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: getCorJogador(idx) }}></div>
+                      <span className="text-[8px] font-black uppercase text-slate-400">{nome.split(' ')[0]}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex-1 flex items-center justify-center min-h-[600px]">
+                {tipoGrafico === 'radar' ? (
+                  radarData ? (
+                    <Radar 
+                      data={radarData} 
+                      options={{
+                        scales: {
+                          r: {
+                            min: 0, max: 2,
+                            angleLines: { color: '#1e293b' },
+                            grid: { color: '#1e293b' },
+                            pointLabels: { color: '#64748b', font: { size: 10, weight: 'bold' } },
+                            ticks: { display: false, stepSize: 0.5 }
+                          }
+                        },
+                        plugins: {
+                          legend: { display: false },
+                          tooltip: {
+                            backgroundColor: '#0f172a',
+                            titleFont: { size: 12, weight: 'bold' },
+                            bodyFont: { size: 11 },
+                            padding: 12,
+                            cornerRadius: 12,
+                            borderColor: '#1e293b',
+                            borderWidth: 1
+                          }
+                        },
+                        maintainAspectRatio: false
+                      }} 
+                    />
+                  ) : <div className="text-slate-700 font-black italic uppercase">Selecione Atletas e Métricas para o Radar</div>
+                ) : (
+                  <Scatter 
+                    data={scatterData}
                     options={{
-                      scales: { r: { min: 0, max: 2, ticks: { display: false }, grid: { color: '#1e293b' }, angleLines: { color: '#1e293b' }, pointLabels: { color: '#64748b', font: { size: 10, weight: '900' } } } },
-                      plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 10, weight: '900' }, padding: 20 } } }
-                    }} 
+                      scales: {
+                        x: { grid: { color: '#1e293b' }, ticks: { color: '#64748b' }, title: { display: true, text: metricaX.toUpperCase(), color: '#fbbf24', font: { size: 10, weight: 'bold' } } },
+                        y: { grid: { color: '#1e293b' }, ticks: { color: '#64748b' }, title: { display: true, text: metricaY.toUpperCase(), color: '#fbbf24', font: { size: 10, weight: 'bold' } } }
+                      },
+                      plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                          callbacks: {
+                            label: (ctx) => `${ctx.raw.jogador}: (${ctx.raw.x}, ${ctx.raw.y})`
+                          }
+                        }
+                      },
+                      maintainAspectRatio: false
+                    }}
                   />
-                ) : <div className="text-slate-600 font-black italic uppercase tracking-widest">Selecione atletas e métricas para o radar</div>
-              ) : (
-                <Scatter 
-                  data={scatterData}
-                  options={{
-                    scales: {
-                      x: { title: { display: true, text: metricaX.toUpperCase(), color: '#64748b', font: { size: 10, weight: '900' } }, grid: { color: '#1e293b' }, ticks: { color: '#475569' } },
-                      y: { title: { display: true, text: metricaY.toUpperCase(), color: '#64748b', font: { size: 10, weight: '900' } }, grid: { color: '#1e293b' }, ticks: { color: '#475569' } }
-                    },
-                    plugins: {
-                      tooltip: { callbacks: { label: (ctx) => ctx.raw.jogador + ': ' + ctx.raw.x + ' / ' + ctx.raw.y } },
-                      legend: { display: false }
-                    }
-                  }}
-                />
-              )}
+                )}
+              </div>
+
+              <div className="mt-8 flex items-center justify-between text-slate-600 border-t border-slate-800/50 pt-8">
+                <div className="text-[9px] font-black uppercase tracking-widest">Metodologia: Normalização por Média do Grupo (1.0 = Média)</div>
+                <div className="text-[9px] font-black uppercase tracking-widest">Grêmio Novorizontino • Inteligência de Dados</div>
+              </div>
             </div>
           </div>
         </div>
@@ -395,7 +471,7 @@ export default function GraficosPage() {
       </div>
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #0a0c10; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #fbbf24; }
       `}</style>
