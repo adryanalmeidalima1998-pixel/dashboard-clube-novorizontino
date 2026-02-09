@@ -1,136 +1,110 @@
-'use client'
+'use client';
 
-import { useState, useEffect, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
-import Papa from 'papaparse'
+import { useState, useEffect } from 'react';
+import Papa from 'papaparse';
+import { getRankingByPerfil, getPerfisForPosicao } from '@/app/utils/ratingSystem';
+import { cleanData } from '@/app/utils/dataCleaner';
+import { useRouter } from 'next/navigation';
 
-// URL temporária ou placeholder até que a planilha final seja fornecida
-const SCOUTING_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQlQGKcj7Dv6ziVn4MU-zs6PAJc5WFyjwr0aks9xNdG4rgRw4iwRNFws7lDGXtjNoQHGypQJ4ssSlqM/pub?output=csv";
+const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTx73GpGdTLkIPTmBfkYujRILN3DmPV5FG2dH4-bbELYZJ4STAIYrOSJ7AOPDOTq_tB0ib_xFKHLiHZ/pub?output=csv';
 
 export default function RankingPerfil() {
-  const router = useRouter()
-  const [jogadores, setJogadores] = useState([])
-  const [carregando, setCarregando] = useState(true)
-  const [perfilAtivo, setPerfilAtivo] = useState('Construtor')
-  const [filtroTime, setFiltroTime] = useState('Todos')
-  const [minutosMinimos, setMinutosMinimos] = useState(450)
+  const router = useRouter();
+  const [atletas, setAtletas] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [selectedPerfil, setSelectedPerfil] = useState('');
+  const [ranking, setRanking] = useState([]);
+  const [minMinutos, setMinMinutos] = useState(0);
+  const [posicoesFiltradas, setPosicoesFiltradas] = useState([]);
+  const [selectedPosicao, setSelectedPosicao] = useState('');
+  const [allPerfis, setAllPerfis] = useState([]);
 
-  // Definição de Pesos (Baseado no documento)
-  const pesosPerfis = {
-    'Construtor': {
-      'Passes progressivos/90': 0.25,
-      'Passes p/ terço final/90': 0.20,
-      'Passes inteligentes/90': 0.20,
-      'Passes chave/90': 0.15,
-      'xA/90': 0.10,
-      'Acurácia de cruzamentos %': 0.10
-    },
-    'Ofensivo': {
-      'Ações atacantes c/ êxito/90': 0.25,
-      'Dribles/90': 0.20,
-      'Cruzamentos/90': 0.15,
-      'Acurácia de cruzamentos %': 0.10,
-      'xA/90': 0.15,
-      'Assist. p/ remate/90': 0.15
-    },
-    'Defensivo': {
-      'Ações defensivas c/ êxito/90': 0.25,
-      'Duelos defensivos/90': 0.15,
-      '% duelos defensivos ganhos': 0.20,
-      'Interseções/90': 0.20,
-      'Duelos aéreos/90': 0.10,
-      '% duelos aéreos ganhos': 0.10
-    }
-  }
-
+  // Carregar dados do CSV
   useEffect(() => {
-    const carregarDados = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch(`${SCOUTING_CSV_URL}&t=${Date.now()}`)
-        const csvText = await response.text()
+        setLoading(true);
+        const response = await fetch(CSV_URL);
+        const csvText = await response.text();
+        
         Papa.parse(csvText, {
           header: true,
           skipEmptyLines: true,
           complete: (results) => {
-            const dados = results.data.filter(j => j.Jogador && j.Jogador.trim())
-            setJogadores(dados)
-            setCarregando(false)
+            const cleaned = cleanData(results.data);
+            setAtletas(cleaned);
+            
+            // Extrair todos os perfis únicos
+            const perfisUnicos = new Set();
+            cleaned.forEach(atleta => {
+              const pos = (atleta.Posição || '').trim().toUpperCase();
+              const perfis = getPerfisForPosicao(pos);
+              perfis.forEach(p => perfisUnicos.add(p));
+            });
+            setAllPerfis(Array.from(perfisUnicos).sort());
+            
+            // Definir primeiro perfil como padrão
+            if (perfisUnicos.size > 0) {
+              const firstPerfil = Array.from(perfisUnicos).sort()[0];
+              setSelectedPerfil(firstPerfil);
+            }
+            
+            setLoading(false);
+          },
+          error: (err) => {
+            setError(`Erro ao carregar CSV: ${err.message}`);
+            setLoading(false);
           }
-        })
-      } catch (error) {
-        console.error('Erro ao carregar dados:', error)
-        setCarregando(false)
+        });
+      } catch (err) {
+        setError(`Erro ao buscar dados: ${err.message}`);
+        setLoading(false);
       }
-    }
-    carregarDados()
-  }, [])
+    };
 
-  const parseValue = (val) => {
-    if (!val || val === '-' || val === 'nan') return 0
-    return parseFloat(String(val).replace('%', '').replace(',', '.')) || 0
+    fetchData();
+  }, []);
+
+  // Atualizar ranking quando perfil ou minutos mudam
+  useEffect(() => {
+    if (atletas.length > 0 && selectedPerfil) {
+      const newRanking = getRankingByPerfil(atletas, selectedPerfil, minMinutos);
+      setRanking(newRanking);
+      
+      // Extrair posições do ranking
+      const posicoes = [...new Set(newRanking.map(a => (a.Posição || '').trim().toUpperCase()))].sort();
+      setPosicoesFiltradas(posicoes);
+      setSelectedPosicao('');
+    }
+  }, [atletas, selectedPerfil, minMinutos]);
+
+  // Filtrar ranking por posição se selecionada
+  const rankingFinal = selectedPosicao 
+    ? ranking.filter(a => (a.Posição || '').trim().toUpperCase() === selectedPosicao)
+    : ranking;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[#0a0c10]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mx-auto mb-4"></div>
+          <p className="text-white text-lg font-black uppercase tracking-widest italic">Calculando Rankings...</p>
+        </div>
+      </div>
+    );
   }
 
-  // Lógica de Cálculo de Percentil e Score de Perfil
-  const rankingProcessado = useMemo(() => {
-    if (jogadores.length === 0) return []
-
-    // 1. Filtrar por minutos mínimos
-    const elegiveis = jogadores.filter(j => parseValue(j['Minutos jogados']) >= minutosMinimos)
-
-    // 2. Calcular Percentis para cada métrica necessária
-    const metricasNecessarias = new Set()
-    Object.values(pesosPerfis).forEach(p => Object.keys(p).forEach(m => metricasNecessarias.add(m)))
-    
-    const percentisPorMetrica = {}
-    metricasNecessarias.forEach(metrica => {
-      const valores = elegiveis.map(j => parseValue(j[metrica])).sort((a, b) => a - b)
-      percentisPorMetrica[metrica] = elegiveis.map(j => {
-        const val = parseValue(j[metrica])
-        const index = valores.lastIndexOf(val)
-        return { jogador: j.Jogador, p: (index / (valores.length - 1)) * 100 }
-      })
-    })
-
-    // 3. Calcular Score Final por Perfil
-    const pesos = pesosPerfis[perfilAtivo] || {}
-    const resultado = elegiveis.map(j => {
-      let score = 0
-      Object.entries(pesos).forEach(([metrica, peso]) => {
-        const pObj = percentisPorMetrica[metrica]?.find(p => p.jogador === j.Jogador)
-        score += (pObj?.p || 0) * peso
-      })
-
-      // Adicionar Equilibrado (Média dos 3)
-      let scoreEquilibrado = 0
-      if (perfilAtivo === 'Equilibrado') {
-        ['Construtor', 'Ofensivo', 'Defensivo'].forEach(p => {
-          let s = 0
-          Object.entries(pesosPerfis[p]).forEach(([m, w]) => {
-            const pObj = percentisPorMetrica[m]?.find(px => px.jogador === j.Jogador)
-            s += (pObj?.p || 0) * w
-          })
-          scoreEquilibrado += s
-        })
-        score = scoreEquilibrado / 3
-      }
-
-      return {
-        ...j,
-        scoreFinal: score,
-        time: j.Time || j.Equipe
-      }
-    })
-
-    // 4. Filtrar por Time e Ordenar
-    return resultado
-      .filter(j => filtroTime === 'Todos' || j.time === filtroTime)
-      .sort((a, b) => b.scoreFinal - a.scoreFinal)
-
-  }, [jogadores, perfilAtivo, filtroTime, minutosMinimos])
-
-  const times = useMemo(() => ['Todos', ...new Set(jogadores.map(j => j.Time || j.Equipe).filter(Boolean))].sort(), [jogadores])
-
-  if (carregando) return <div className="min-h-screen bg-[#0a0c10] flex items-center justify-center text-emerald-500 font-black italic uppercase tracking-widest">Calculando Rankings...</div>
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[#0a0c10]">
+        <div className="bg-red-900/20 border border-red-700/50 text-red-100 px-6 py-4 rounded-2xl max-w-md">
+          <h2 className="font-black uppercase tracking-widest italic mb-2">Erro ao carregar dados</h2>
+          <p className="text-sm opacity-80">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#0a0c10] text-white p-4 md:p-8 font-sans">
@@ -144,41 +118,64 @@ export default function RankingPerfil() {
             </button>
             <div>
               <h1 className="text-4xl font-black italic uppercase tracking-tighter leading-none">Ranking de <span className="text-emerald-500">Perfil</span></h1>
-              <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest mt-2">Ordenação por Score de Papel Tático (0-100)</p>
+              <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest mt-2">Análise por Percentil de Métricas Específicas</p>
             </div>
-          </div>
-
-          <div className="flex flex-wrap gap-3">
-            {['Construtor', 'Ofensivo', 'Defensivo', 'Equilibrado'].map(p => (
-              <button 
-                key={p} 
-                onClick={() => setPerfilAtivo(p)}
-                className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border ${perfilAtivo === p ? 'bg-emerald-500 border-emerald-500 text-slate-950 shadow-[0_0_20px_rgba(16,185,129,0.3)]' : 'bg-slate-900 border-slate-800 text-slate-500 hover:border-slate-600'}`}
-              >
-                {p}
-              </button>
-            ))}
           </div>
         </div>
 
-        {/* FILTROS RÁPIDOS */}
+        {/* CONTROLES / FILTROS */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
-            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-3">Filtrar por Equipe</label>
-            <select value={filtroTime} onChange={e => setFiltroTime(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black uppercase outline-none focus:border-emerald-500/50">
-              {times.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
+            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-3">Perfil Técnico</label>
+            <select 
+              value={selectedPerfil} 
+              onChange={e => setSelectedPerfil(e.target.value)} 
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black uppercase outline-none focus:border-emerald-500/50 text-white"
+            >
+              {allPerfis.map(p => <option key={p} value={p}>{p.toUpperCase()}</option>)}
             </select>
           </div>
+
           <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
-            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-3">Minutagem Mínima: {minutosMinimos}min</label>
-            <input type="range" min="0" max="2000" step="50" value={minutosMinimos} onChange={e => setMinutosMinimos(parseInt(e.target.value))} className="w-full accent-emerald-500" />
+            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-3">Posição (Filtro)</label>
+            <select 
+              value={selectedPosicao} 
+              onChange={e => setSelectedPosicao(e.target.value)} 
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black uppercase outline-none focus:border-emerald-500/50 text-white"
+            >
+              <option value="">TODAS AS POSIÇÕES</option>
+              {posicoesFiltradas.map(pos => <option key={pos} value={pos}>{pos}</option>)}
+            </select>
           </div>
-          <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50 flex items-center justify-center">
-            <div className="text-center">
-              <div className="text-2xl font-black italic text-emerald-500 leading-none">{rankingProcessado.length}</div>
-              <div className="text-[8px] font-black text-slate-500 uppercase tracking-widest mt-1">Atletas Elegíveis</div>
+
+          <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
+            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-3">Minutos Mínimos: {minMinutos}min</label>
+            <input 
+              type="range" 
+              min="0" 
+              max="3000" 
+              step="90" 
+              value={minMinutos} 
+              onChange={e => setMinMinutos(parseInt(e.target.value))} 
+              className="w-full accent-emerald-500" 
+            />
+          </div>
+        </div>
+
+        {/* INFO BAR */}
+        <div className="mb-6 flex items-center gap-4">
+          <div className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
+            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-400">
+              {rankingFinal.length} Atletas Elegíveis
+            </p>
+          </div>
+          {selectedPerfil && (
+            <div className="px-4 py-2 bg-blue-500/10 border border-blue-500/20 rounded-full">
+              <p className="text-[10px] font-black uppercase tracking-widest text-blue-400">
+                Perfil: {selectedPerfil}
+              </p>
             </div>
-          </div>
+          )}
         </div>
 
         {/* TABELA DE RANKING */}
@@ -190,28 +187,30 @@ export default function RankingPerfil() {
                   <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-500">Pos</th>
                   <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-500">Atleta</th>
                   <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-500">Equipe</th>
+                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-500">Idade</th>
                   <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-500">Minutos</th>
-                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-500 text-right">Score {perfilAtivo}</th>
+                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-500 text-right">Nota (0-100)</th>
                 </tr>
               </thead>
               <tbody>
-                {rankingProcessado.map((j, idx) => (
-                  <tr key={j.Jogador} className="border-b border-slate-800/30 hover:bg-emerald-500/5 transition-colors group">
+                {rankingFinal.map((j, idx) => (
+                  <tr key={idx} className="border-b border-slate-800/30 hover:bg-emerald-500/5 transition-colors group">
                     <td className="p-6">
                       <span className={`text-sm font-black italic ${idx < 3 ? 'text-emerald-500' : 'text-slate-600'}`}>#{idx + 1}</span>
                     </td>
                     <td className="p-6">
-                      <div className="font-black italic uppercase text-sm group-hover:text-emerald-400 transition-colors">{j.Jogador}</div>
+                      <div className="font-black italic uppercase text-sm group-hover:text-emerald-400 transition-colors text-white">{j.Jogador}</div>
                       <div className="text-[9px] font-bold text-slate-600 uppercase tracking-widest">{j.Posição}</div>
                     </td>
-                    <td className="p-6 text-[10px] font-black uppercase text-slate-400">{j.time}</td>
+                    <td className="p-6 text-[10px] font-black uppercase text-slate-400">{j.Time}</td>
+                    <td className="p-6 text-[10px] font-bold text-slate-500">{j.Idade || '-'}</td>
                     <td className="p-6 text-[10px] font-bold text-slate-500">{j['Minutos jogados']}</td>
                     <td className="p-6 text-right">
                       <div className="inline-flex items-center gap-3">
                         <div className="w-24 h-1.5 bg-slate-800 rounded-full overflow-hidden hidden md:block">
-                          <div className="h-full bg-emerald-500" style={{ width: `${j.scoreFinal}%` }}></div>
+                          <div className="h-full bg-emerald-500" style={{ width: `${j.notaPerfil}%` }}></div>
                         </div>
-                        <span className="text-lg font-black italic text-white">{j.scoreFinal.toFixed(1)}</span>
+                        <span className="text-lg font-black italic text-white">{j.notaPerfil}</span>
                       </div>
                     </td>
                   </tr>
@@ -221,7 +220,26 @@ export default function RankingPerfil() {
           </div>
         </div>
 
+        {/* FOOTER INFO */}
+        <div className="mt-8 bg-slate-900/40 p-8 rounded-[2rem] border border-slate-800/50">
+          <h3 className="text-[10px] font-black uppercase tracking-widest text-emerald-500 mb-4">Metodologia de Cálculo</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-4">
+              <p className="text-xs text-slate-400 leading-relaxed">
+                <strong className="text-slate-200 uppercase tracking-tighter italic mr-2">Nivelamento por Percentil:</strong>
+                As notas não são médias simples, mas sim a posição relativa do atleta em relação a todos os outros jogadores da mesma posição no banco de dados. Um score de 90 significa que o atleta é superior a 90% da amostra naquela métrica específica.
+              </p>
+            </div>
+            <div className="space-y-4">
+              <p className="text-xs text-slate-400 leading-relaxed">
+                <strong className="text-slate-200 uppercase tracking-tighter italic mr-2">Ponderação Tática:</strong>
+                Cada perfil (ex: Lateral Construtor vs Lateral Ofensivo) utiliza um conjunto diferente de métricas e pesos, priorizando as ações que definem aquele papel em campo.
+              </p>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
-  )
+  );
 }
