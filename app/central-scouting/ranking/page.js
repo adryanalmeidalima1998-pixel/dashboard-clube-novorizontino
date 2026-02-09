@@ -331,7 +331,21 @@ export default function RankingPerfil() {
     doc.save(`comparacao-${nomeP1}-vs-${nomeP2}.pdf`);
   };
 
-  if (loading) return (
+
+  // Categorizar métricas por tipo
+  const categorizarMetricas = (metricas) => {
+    const categorias = {
+      'Todos': metricas,
+      'Ataque': metricas.filter(m => ['Gol', 'Finalização', 'Chute', 'Chance', 'xG', 'Assistência', 'Passe chave', 'Cruzamento', 'Drible'].some(k => m.toLowerCase().includes(k.toLowerCase()))),
+      'Defesa': metricas.filter(m => ['Falta', 'Cartão', 'Interceptação', 'Duelo', 'Bloqueio', 'Erro'].some(k => m.toLowerCase().includes(k.toLowerCase()))),
+      'Construção': metricas.filter(m => ['Passe', 'Precisão', 'Bola', 'Progresso', 'Terço'].some(k => m.toLowerCase().includes(k.toLowerCase()))),
+      'Físico': metricas.filter(m => ['Altura', 'Velocidade', 'Distância', 'Sprint', 'Aceleração'].some(k => m.toLowerCase().includes(k.toLowerCase())))
+    };
+    return categorias;
+  };
+
+
+    if (loading) return (
     <div className="min-h-screen bg-[#0a0c10] flex items-center justify-center">
       <div className="text-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-yellow mx-auto mb-4"></div>
