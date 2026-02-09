@@ -355,7 +355,7 @@ export default function GraficosPage() {
             {/* Seleção de Jogadores */}
             <div className="bg-slate-900/40 p-6 rounded-[2rem] border border-slate-800/50 h-[500px] flex flex-col">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500">Atletas ({jogadoresFiltrados.length})</h3>
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500">Atletas ({jogadoresFiltrados.length}) <span className="text-brand-yellow ml-2">[Máx 8]</span></h3>
                 <button onClick={() => setJogadoresSelecionados([])} className="text-[8px] font-black uppercase text-brand-yellow hover:underline">Limpar</button>
               </div>
               <div className="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
@@ -364,7 +364,7 @@ export default function GraficosPage() {
                     key={j.Jogador}
                     onClick={() => {
                       if (jogadoresSelecionados.includes(j.Jogador)) setJogadoresSelecionados(jogadoresSelecionados.filter(n => n !== j.Jogador))
-                      else if (jogadoresSelecionados.length < 15) setJogadoresSelecionados([...jogadoresSelecionados, j.Jogador])
+                      else if (jogadoresSelecionados.length < 8) setJogadoresSelecionados([...jogadoresSelecionados, j.Jogador])
                     }}
                     className={`w-full p-3 rounded-xl text-left transition-all border flex items-center justify-between group ${
                       jogadoresSelecionados.includes(j.Jogador) 
