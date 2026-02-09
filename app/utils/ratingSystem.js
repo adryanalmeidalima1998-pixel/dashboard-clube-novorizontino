@@ -196,27 +196,72 @@ const euclideanDistance = (vec1, vec2) => {
 };
 
 /**
- * Encontra jogadores similares a um atleta alvo.
+ * Encontra jogadores similares a um atleta alvo (versão otimizada).
+ * Filtra apenas por posição e limita a 50 atletas para evitar travamentos.
  */
 export const findSimilarPlayers = (targetAtleta, todosAtletas, minMinutos = 0, numSimilar = 5) => {
   const targetVector = calculatePlayerProfileVector(targetAtleta, todosAtletas, minMinutos);
   if (Object.keys(targetVector).length === 0) return [];
 
-  const similarities = [];
-  todosAtletas.forEach(atleta => {
-    if (atleta.Jogador === targetAtleta.Jogador) return; // Não comparar com ele mesmo
+  const posicaoAtleta = (targetAtleta.Posição || '').trim().toUpperCase();
+  const atletasElegiveis = todosAtletas.filter(a => {
+    const pos = (a.Posição || '').trim().toUpperCase();
+    const mins = safeParseFloat(a['Minutos jogados']);
+    return pos === posicaoAtleta && mins >= minMinutos && a.Jogador !== targetAtleta.Jogador;
+  });
 
+  if (atletasElegiveis.length === 0) return [];
+
+  const similarities = [];
+  
+  // Limitar a apenas os atletas da mesma posição (máx 50) para performance
+  const maxAtletas = Math.min(atletasElegiveis.length, 50);
+  for (let i = 0; i < maxAtletas; i++) {
+    const atleta = atletasElegiveis[i];
     const currentVector = calculatePlayerProfileVector(atleta, todosAtletas, minMinutos);
-    if (Object.keys(currentVector).length === 0) return;
+    
+    if (Object.keys(currentVector).length === 0) continue;
 
     const distance = euclideanDistance(targetVector, currentVector);
     similarities.push({ atleta, distance });
-  });
+  }
 
   return similarities
     .sort((a, b) => a.distance - b.distance)
     .slice(0, numSimilar)
     .map(s => s.atleta);
+};
+
+/**
+ * Obtém todas as métricas disponíveis para comparação.
+ */
+export const getAllMetrics = () => {
+  const allMetrics = new Set();
+  Object.values(PERFIL_WEIGHTS).forEach(weights => {
+    Object.keys(weights).forEach(metric => allMetrics.add(metric));
+  });
+  return Array.from(allMetrics).sort();
+};
+
+/**
+ * Compara dois atletas em todas as métricas.
+ */
+export const compareAthletes = (athlete1, athlete2, todosAtletas) => {
+  const metrics = getAllMetrics();
+  const comparison = {};
+
+  metrics.forEach(metric => {
+    const val1 = safeParseFloat(athlete1[metric]);
+    const val2 = safeParseFloat(athlete2[metric]);
+    
+    comparison[metric] = {
+      athlete1: val1,
+      athlete2: val2,
+      winner: val1 > val2 ? 1 : val2 > val1 ? 2 : 0
+    };
+  });
+
+  return comparison;
 };
 
 /**

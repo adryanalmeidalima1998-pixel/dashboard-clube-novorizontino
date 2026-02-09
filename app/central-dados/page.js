@@ -7,6 +7,7 @@ import { jsPDF } from 'jspdf'
 import 'jspdf-autotable'
 import { LineChart, Line, ResponsiveContainer } from 'recharts'
 import { cleanData, normalizeTeamName, safeParseFloat } from '../utils/dataCleaner'
+import { compareAthletes } from '../utils/ratingSystem'
 
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSVC0eenchMDxK3wsOTXjq9kQiy3aHTFl0X1o5vwJZR7RiZzg1Irxxe_SL2IDrqb3c1i7ZL2ugpBJkN/pub?output=csv";
 
@@ -33,6 +34,7 @@ export default function CentralDados() {
   const [templates, setTemplates] = useState([])
   const [nomeNovoTemplate, setNomeNovoTemplate] = useState('')
   const [abaAtiva, setAbaAtiva] = useState('Ataque')
+  const [comparisonModal, setComparisonModal] = useState({ open: false, player1: null, player2: null })
 
   useEffect(() => {
     const templatesArmazenados = localStorage.getItem('metricsTemplates_Central')
@@ -409,6 +411,97 @@ export default function CentralDados() {
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #fbbf24; }
       `}</style>
+
+      {/* MODAL: COMPARAÇÃO HEAD-TO-HEAD */}
+      {comparisonModal.open && comparisonModal.player1 && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-10 max-w-5xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="flex items-center justify-between mb-10">
+              <h2 className="text-2xl font-black italic uppercase tracking-tighter text-brand-yellow">Comparação <span className="text-white">Head-to-Head</span></h2>
+              <button onClick={() => setComparisonModal({ open: false, player1: null, player2: null })} className="text-slate-500 hover:text-white transition-colors">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+              {/* Player 1 */}
+              <div className="bg-slate-950/50 p-8 rounded-2xl border border-slate-800">
+                <h3 className="text-lg font-black italic uppercase text-white mb-4">{comparisonModal.player1.Jogador}</h3>
+                <div className="space-y-2 text-sm">
+                  <p className="text-slate-400"><strong className="text-slate-300">Time:</strong> {comparisonModal.player1.Time}</p>
+                  <p className="text-slate-400"><strong className="text-slate-300">Posição:</strong> {comparisonModal.player1.Posição}</p>
+                  <p className="text-slate-400"><strong className="text-slate-300">Idade:</strong> {comparisonModal.player1.Idade}</p>
+                  <p className="text-slate-400"><strong className="text-slate-300">Minutos:</strong> {comparisonModal.player1['Minutos jogados']}</p>
+                </div>
+              </div>
+
+              {/* Player 2 Selector */}
+              {!comparisonModal.player2 ? (
+                <div className="bg-slate-950/50 p-8 rounded-2xl border border-slate-800 flex flex-col justify-center">
+                  <p className="text-slate-500 text-center mb-6 font-black uppercase">Selecione um segundo atleta para comparar</p>
+                  <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                    {jogadoresFiltrados.filter(p => p.Jogador !== comparisonModal.player1.Jogador).map(p => (
+                      <button key={p.Jogador} onClick={() => setComparisonModal({ ...comparisonModal, player2: p })} className="w-full p-3 bg-slate-900 border border-slate-700 rounded-lg text-left hover:border-brand-yellow transition-all text-sm font-black uppercase text-slate-300 hover:text-brand-yellow">
+                        {p.Jogador}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-slate-950/50 p-8 rounded-2xl border border-slate-800">
+                  <h3 className="text-lg font-black italic uppercase text-white mb-4">{comparisonModal.player2.Jogador}</h3>
+                  <div className="space-y-2 text-sm">
+                    <p className="text-slate-400"><strong className="text-slate-300">Time:</strong> {comparisonModal.player2.Time}</p>
+                    <p className="text-slate-400"><strong className="text-slate-300">Posição:</strong> {comparisonModal.player2.Posição}</p>
+                    <p className="text-slate-400"><strong className="text-slate-300">Idade:</strong> {comparisonModal.player2.Idade}</p>
+                    <p className="text-slate-400"><strong className="text-slate-300">Minutos:</strong> {comparisonModal.player2['Minutos jogados']}</p>
+                  </div>
+                  <button onClick={() => setComparisonModal({ ...comparisonModal, player2: null })} className="mt-6 w-full py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-[10px] font-black uppercase transition-all">
+                    Trocar Atleta
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {comparisonModal.player2 && (
+              <div className="bg-slate-950/30 p-8 rounded-2xl border border-slate-800/50">
+                <h4 className="text-brand-yellow font-black uppercase mb-6 text-lg">Análise Completa de Métricas</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {Object.keys(comparisonModal.player1)
+                    .filter(key => !['Jogador', 'Time', 'Posição', 'Idade', 'Nacionalidade', 'Minutos jogados', 'historicoIndex'].includes(key))
+                    .sort()
+                    .map(metric => {
+                      const val1 = safeParseFloat(comparisonModal.player1[metric]);
+                      const val2 = safeParseFloat(comparisonModal.player2[metric]);
+                      const winner = val1 > val2 ? 1 : val2 > val1 ? 2 : 0;
+                      const menorEhMelhor = ['Faltas', 'Erros graves', 'Falhas em gols', 'Bolas perdidas'].includes(metric);
+                      const winner_adjusted = menorEhMelhor ? (val1 < val2 ? 1 : val2 < val1 ? 2 : 0) : winner;
+                      
+                      return (
+                        <div key={metric} className="bg-slate-900/50 p-4 rounded-xl border border-slate-700/50">
+                          <p className="text-[9px] font-black uppercase text-slate-500 mb-3 tracking-widest">{metric}</p>
+                          <div className="space-y-2">
+                            <div className={`p-3 rounded-lg text-center text-sm font-black transition-all ${
+                              winner_adjusted === 1 ? 'bg-green-900/40 text-green-300 border border-green-700/50' : 'bg-slate-800 text-slate-400'
+                            }`}>
+                              {val1}
+                            </div>
+                            <div className="text-center text-[8px] text-slate-600 font-bold">vs</div>
+                            <div className={`p-3 rounded-lg text-center text-sm font-black transition-all ${
+                              winner_adjusted === 2 ? 'bg-green-900/40 text-green-300 border border-green-700/50' : 'bg-slate-800 text-slate-400'
+                            }`}>
+                              {val2}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -493,27 +493,37 @@ export default function RankingPerfil() {
 
             {comparisonModal.player2 && (
               <div className="bg-slate-950/30 p-8 rounded-2xl border border-slate-800/50">
-                <h4 className="text-brand-yellow font-black uppercase mb-6">Comparação de Métricas</h4>
-                <div className="space-y-4">
-                  {['Gols', 'Passes precisos %', 'Dribles', 'Desafios vencidos, %', 'Interceptações'].map(metric => {
-                    const val1 = safeParseFloat(comparisonModal.player1[metric]);
-                    const val2 = safeParseFloat(comparisonModal.player2[metric]);
-                    const winner = val1 > val2 ? 1 : val2 > val1 ? 2 : 0;
-                    return (
-                      <div key={metric}>
-                        <p className="text-[10px] font-black uppercase text-slate-400 mb-2">{metric}</p>
-                        <div className="flex items-center gap-4">
-                          <div className={`flex-1 p-2 rounded-lg text-center text-sm font-black ${winner === 1 ? 'bg-green-900/30 text-green-400' : 'bg-slate-800 text-slate-400'}`}>
-                            {val1}
-                          </div>
-                          <span className="text-slate-600 font-black">vs</span>
-                          <div className={`flex-1 p-2 rounded-lg text-center text-sm font-black ${winner === 2 ? 'bg-green-900/30 text-green-400' : 'bg-slate-800 text-slate-400'}`}>
-                            {val2}
+                <h4 className="text-brand-yellow font-black uppercase mb-6 text-lg">Análise Completa de Métricas</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {Object.keys(comparisonModal.player1)
+                    .filter(key => !['Jogador', 'Time', 'Posição', 'Idade', 'Nacionalidade', 'Minutos jogados', 'notaPerfil'].includes(key))
+                    .sort()
+                    .map(metric => {
+                      const val1 = safeParseFloat(comparisonModal.player1[metric]);
+                      const val2 = safeParseFloat(comparisonModal.player2[metric]);
+                      const winner = val1 > val2 ? 1 : val2 > val1 ? 2 : 0;
+                      const menorEhMelhor = ['Faltas', 'Erros graves', 'Falhas em gols', 'Bolas perdidas'].includes(metric);
+                      const winner_adjusted = menorEhMelhor ? (val1 < val2 ? 1 : val2 < val1 ? 2 : 0) : winner;
+                      
+                      return (
+                        <div key={metric} className="bg-slate-900/50 p-4 rounded-xl border border-slate-700/50">
+                          <p className="text-[9px] font-black uppercase text-slate-500 mb-3 tracking-widest">{metric}</p>
+                          <div className="space-y-2">
+                            <div className={`p-3 rounded-lg text-center text-sm font-black transition-all ${
+                              winner_adjusted === 1 ? 'bg-green-900/40 text-green-300 border border-green-700/50' : 'bg-slate-800 text-slate-400'
+                            }`}>
+                              {val1}
+                            </div>
+                            <div className="text-center text-[8px] text-slate-600 font-bold">vs</div>
+                            <div className={`p-3 rounded-lg text-center text-sm font-black transition-all ${
+                              winner_adjusted === 2 ? 'bg-green-900/40 text-green-300 border border-green-700/50' : 'bg-slate-800 text-slate-400'
+                            }`}>
+                              {val2}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
                 </div>
               </div>
             )}
