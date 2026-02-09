@@ -36,6 +36,7 @@ export default function RankingPerfil() {
 
   // Modais
   const [comparisonModal, setComparisonModal] = useState({ open: false, player1: null, player2: null });
+  const [comparisonTab, setComparisonTab] = useState('Todos');
   const [similarModal, setSimilarModal] = useState({ open: false, targetPlayer: null, similar: [] });
 
   // Carregar dados
@@ -219,7 +220,7 @@ export default function RankingPerfil() {
     doc.save(`ranking_${selectedPerfil}_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
-        const exportComparisonPDF = () => {
+          const exportComparisonPDF = () => {
     if (!comparisonModal.player1 || !comparisonModal.player2) return;
     
     const doc = new jsPDF('p', 'mm', 'a4');
@@ -290,28 +291,31 @@ export default function RankingPerfil() {
     
     let p1Vitorias = 0;
     let p2Vitorias = 0;
+    const topP1 = [];
+    const topP2 = [];
     
     const tableData = metricas.map(metric => {
       const val1 = safeParseFloat(comparisonModal.player1[metric]);
       const val2 = safeParseFloat(comparisonModal.player2[metric]);
       
-      let seta1 = '';
-      let seta2 = '';
+      let indicador = '';
       
       if (val1 !== val2) {
         const isMenorMelhor = menorEhMelhor.some(m => metric.toLowerCase().includes(m.toLowerCase()));
         const p1Vence = isMenorMelhor ? val1 < val2 : val1 > val2;
         
         if (p1Vence) {
-          seta1 = '▲';
+          indicador = '●';
           p1Vitorias++;
+          topP1.push(metric);
         } else {
-          seta2 = '▲';
+          indicador = '●';
           p2Vitorias++;
+          topP2.push(metric);
         }
       }
       
-      return [metric, seta1 + ' ' + val1.toString(), seta2 + ' ' + val2.toString()];
+      return [metric, indicador + ' ' + val1.toString(), indicador + ' ' + val2.toString()];
     });
     
     doc.autoTable({
@@ -347,12 +351,12 @@ export default function RankingPerfil() {
           const cellText = data.cell.text[0] || '';
           
           // Coluna do Atleta 1 (índice 1)
-          if (data.column.index === 1 && cellText.includes('▲')) {
+          if (data.column.index === 1 && cellText.includes('●')) {
             data.cell.styles.textColor = [0, 150, 0];
             data.cell.styles.fontStyle = 'bold';
           }
           // Coluna do Atleta 2 (índice 2)
-          else if (data.column.index === 2 && cellText.includes('▲')) {
+          else if (data.column.index === 2 && cellText.includes('●')) {
             data.cell.styles.textColor = [0, 150, 0];
             data.cell.styles.fontStyle = 'bold';
           }
@@ -360,9 +364,40 @@ export default function RankingPerfil() {
       }
     });
     
-    // Veredito Técnico
+    // Destaques de Pontos Fortes
     yPos = doc.lastAutoTable.finalY + 15;
     
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(11);
+    doc.setFont(undefined, 'bold');
+    doc.text('PONTOS FORTES', 20, yPos);
+    yPos += 8;
+    
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(9);
+    doc.setFont(undefined, 'normal');
+    
+    const top3P1 = topP1.slice(0, 3);
+    const top3P2 = topP2.slice(0, 3);
+    
+    doc.text(`${nomeP1.toUpperCase()}:`, 20, yPos);
+    yPos += 5;
+    top3P1.forEach(metric => {
+      doc.text(`• ${metric}`, 25, yPos);
+      yPos += 4;
+    });
+    
+    yPos += 3;
+    doc.text(`${nomeP2.toUpperCase()}:`, 20, yPos);
+    yPos += 5;
+    top3P2.forEach(metric => {
+      doc.text(`• ${metric}`, 25, yPos);
+      yPos += 4;
+    });
+    
+    yPos += 5;
+    
+    // Veredito Técnico
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(11);
     doc.setFont(undefined, 'bold');
@@ -681,7 +716,57 @@ export default function RankingPerfil() {
                       const menorEhMelhor = ['Faltas', 'Erros graves', 'Falhas em gols', 'Bolas perdidas'].includes(metric);
                       const winner_adjusted = menorEhMelhor ? (val1 < val2 ? 1 : val2 < val1 ? 2 : 0) : winner;
                       
-                      return (
+                      
+  // Categorizar métricas
+  const categorizarMetricas = (metricas) => {
+    const categorias = {
+      'Ataque': ['Gol', 'Finalização', 'Chute', 'Chance', 'xG', 'Assistência', 'Passe chave', 'Cruzamento', 'Drible'],
+      'Defesa': ['Falta', 'Cartão', 'Interceptação', 'Duelo', 'Duel', 'Bloqueio', 'Erro grave'],
+      'Construção': ['Passe', 'Precisão', 'Bola', 'Progresso', 'Terço'],
+      'Físico': ['Altura', 'Velocidade', 'Distância', 'Sprint', 'Aceleração']
+    };
+    
+    const categorizado = {
+      'Ataque': [],
+      'Defesa': [],
+      'Construção': [],
+      'Físico': [],
+      'Outros': []
+    };
+    
+    metricas.forEach(m => {
+      let encontrado = false;
+      for (const [cat, keywords] of Object.entries(categorias)) {
+        if (keywords.some(kw => m.toLowerCase().includes(kw.toLowerCase()))) {
+          categorizado[cat].push(m);
+          encontrado = true;
+          break;
+        }
+      }
+      if (!encontrado) categorizado['Outros'].push(m);
+    });
+    
+    return categorizado;
+  };
+  
+  // Calcular similaridade entre dois jogadores
+  const calcularSimilaridade = (p1, p2) => {
+    const metricas = Object.keys(p1).filter(k => !['Jogador', 'Time', 'Posição', 'Idade', 'Nacionalidade', 'Minutos jogados'].includes(k));
+    
+    let diferenca = 0;
+    metricas.forEach(m => {
+      const v1 = safeParseFloat(p1[m]);
+      const v2 = safeParseFloat(p2[m]);
+      diferenca += Math.abs(v1 - v2);
+    });
+    
+    const media = diferenca / metricas.length;
+    const similaridade = Math.max(0, 100 - (media * 2));
+    
+    return Math.round(similaridade);
+  };
+
+  return (
                         <div key={metric} className="bg-slate-900/50 p-4 rounded-xl border border-slate-700/50">
                           <p className="text-[9px] font-black uppercase text-slate-500 mb-3 tracking-widest">{metric}</p>
                           <div className="space-y-2">
