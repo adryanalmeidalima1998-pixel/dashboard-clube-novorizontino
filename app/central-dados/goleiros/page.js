@@ -6,7 +6,7 @@ import Papa from 'papaparse'
 import { jsPDF } from 'jspdf'
 import 'jspdf-autotable'
 import { cleanData, normalizeTeamName, safeParseFloat } from '../../utils/dataCleaner'
-import { calculateRating, getDominantPerfil } from '../../utils/ratingSystem'
+import { getPlayerRating, getPlayerDominantPerfil } from '../../utils/ratingSystem'
 import { PERFIL_WEIGHTS } from '../../utils/perfilWeights'
 
 const GOLEIROS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQlQGKcj7Dv6ziVn4MU-zs6PAJc5WFyjwr0aks9xNdG4rgRw4iwRNFws7lDGXtjNoQHGypQJ4ssSlqM/pub?output=csv";
@@ -140,8 +140,8 @@ export default function CentralGoleiros() {
         somaDiferencasQuadradas += Math.pow(diff, 2);
       })
       
-      const n1 = safeParseFloat(getDominantPerfil(jogador, jogadores).nota)
-      const n2 = safeParseFloat(getDominantPerfil(j, jogadores).nota)
+      const n1 = safeParseFloat(getPlayerDominantPerfil(jogador, jogadores).nota)
+      const n2 = safeParseFloat(getPlayerDominantPerfil(j, jogadores).nota)
       somaDiferencasQuadradas += Math.pow(Math.abs(n1 - n2) / 10, 2)
 
       const dist = Math.sqrt(somaDiferencasQuadradas / (metricasCalculo.length + 1));
@@ -171,10 +171,10 @@ export default function CentralGoleiros() {
     }
 
     const dadosProcessados = baseJogadores.map(j => {
-      const dominant = getDominantPerfil(j, jogadores)
+      const dominant = getPlayerDominantPerfil(j, jogadores)
       return {
         ...j,
-        'Nota Perfil': perfilAtivo === 'nenhum' ? dominant.nota : calculateRating(j, jogadores, perfilAtivo),
+        'Nota Perfil': perfilAtivo === 'nenhum' ? dominant.nota : getPlayerRating(j, jogadores, perfilAtivo),
         'Perfil Nome': perfilAtivo === 'nenhum' ? dominant.perfil : perfilAtivo
       }
     })
