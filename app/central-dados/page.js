@@ -97,7 +97,7 @@ export default function CentralDados() {
     const palavrasChave = {
       'Ataque': ['Gol', 'Assistência', 'Chance', 'Chute', 'Finalização', 'Xg', 'xA', 'Tiro', 'Header', 'Poste', 'Entradas no terço final'],
       'Defesa': ['Desarme', 'Interceptação', 'Rebote', 'Falha', 'Erro', 'Cartão', 'Falta', 'Defesa', 'Disputa defensiva', 'Disputa na defesa'],
-      'Passes & Criação': ['Passe', 'Cruzamento', 'Passe chave', 'Passe progressivo', 'Passe longo', 'Passe super longo', 'Passe para', 'Precisão'],
+      'Passes & Criação': ['Passe', 'Cruzamento', 'Passe chave', 'Passe progressive', 'Passe longo', 'Passe super longo', 'Passe para', 'Precisão'],
       'Posse & Controle': ['Drible', 'Controle', 'Bola', 'Posse', 'Impedimento', 'Perda'],
       'Físico & Duelos': ['Duelo', 'Disputa', 'Disputa aérea', 'Desafio', 'Minutos']
     }
@@ -341,7 +341,7 @@ export default function CentralDados() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-8">
           <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
             <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Buscar Atleta</h3>
             <input type="text" placeholder="NOME DO ATLETA..." value={busca} onChange={e => setBusca(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50" />
@@ -360,6 +360,14 @@ export default function CentralDados() {
                   {p}
                 </button>
               ))}
+            </div>
+          </div>
+          <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Idade</h3>
+            <div className="flex items-center gap-3">
+              <input type="number" value={filtroIdade.min} onChange={e => setFiltroIdade({...filtroIdade, min: parseInt(e.target.value) || 0})} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50" />
+              <span className="text-slate-500 font-black">/</span>
+              <input type="number" value={filtroIdade.max} onChange={e => setFiltroIdade({...filtroIdade, max: parseInt(e.target.value) || 0})} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50" />
             </div>
           </div>
           <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">

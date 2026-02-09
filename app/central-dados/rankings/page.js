@@ -23,6 +23,7 @@ export default function RankingsPage() {
   const [filtroMinutagem, setFiltroMinutagem] = useState(0)
   const [perfilAtivo, setPerfilAtivo] = useState('Goleiro Defensor da Meta')
   const [ordenacao, setOrdenacao] = useState({ coluna: 'nota', direcao: 'desc' })
+  const [comparisonModal, setComparisonModal] = useState({ open: false, player1: null, player2: null })
 
   useEffect(() => {
     const carregarDados = async () => {
@@ -94,26 +95,17 @@ export default function RankingsPage() {
     let filtrados = jogadores.filter(j => {
       const pB = (j.Jogador || '').toLowerCase().includes(busca.toLowerCase())
       const pT = filtroTime === 'todos' || (j.Time || j.Equipe) === filtroTime
-      
       const posJogador = (j.Posição || '').trim().toUpperCase();
       const pP = posicoesCompativeis.includes(posJogador)
-      
       const idade = safeParseFloat(j.Idade)
       const pI = (idade === 0 && filtroIdade.min === 15) || (idade >= filtroIdade.min && idade <= filtroIdade.max)
-      
       const pM = safeParseFloat(j['Minutos jogados']) >= filtroMinutagem
       return pB && pT && pP && pI && pM
     })
 
     const comNota = filtrados.map(j => {
       const nota = calculateRating(j, jogadores, perfilAtivo)
-      const dominant = getDominantPerfil(j, jogadores)
-      return {
-        ...j,
-        nota,
-        perfilDominante: dominant.perfil,
-        notaDominante: dominant.nota
-      }
+      return { ...j, nota }
     })
 
     comNota.sort((a, b) => {
@@ -180,6 +172,85 @@ export default function RankingsPage() {
       alert('Erro ao gerar PDF')
     }
   }
+
+  const exportComparisonPDF = () => {
+    try {
+      if (!comparisonModal.player1 || !comparisonModal.player2) {
+        alert('Selecione dois atletas para comparar');
+        return;
+      }
+
+      const p1 = comparisonModal.player1;
+      const p2 = comparisonModal.player2;
+
+      const doc = new jsPDF();
+      
+      const amarelo = [251, 191, 36];
+      const preto = [10, 12, 16];
+      const branco = [255, 255, 255];
+
+      doc.setFillColor(...amarelo);
+      doc.rect(10, 10, 190, 25, 'F');
+      doc.setTextColor(...preto);
+      doc.setFontSize(20);
+      doc.setFont('helvetica', 'bold');
+      doc.text('COMPARAÇÃO DE ATLETAS', 15, 28);
+
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`${p1.Jogador} (${p1.Posição})`, 15, 45);
+      doc.text(`${p2.Jogador} (${p2.Posição})`, 15, 52);
+
+      let yPos = 65;
+      const colWidth = 60;
+      const rowHeight = 8;
+
+      doc.setFillColor(...preto);
+      doc.setTextColor(...branco);
+      doc.setFont('helvetica', 'bold');
+      doc.rect(10, yPos - 5, colWidth, rowHeight, 'F');
+      doc.text('MÉTRICA', 12, yPos);
+      doc.rect(10 + colWidth, yPos - 5, colWidth, rowHeight, 'F');
+      doc.text(p1.Jogador.substring(0, 15), 12 + colWidth, yPos);
+      doc.rect(10 + colWidth * 2, yPos - 5, colWidth, rowHeight, 'F');
+      doc.text(p2.Jogador.substring(0, 15), 12 + colWidth * 2, yPos);
+
+      yPos += rowHeight + 2;
+      doc.setTextColor(...preto);
+      doc.setFontSize(8);
+
+      const metricas = Object.keys(p1).filter(k => 
+        !['Jogador', 'Posição', 'Time', 'Idade', 'Altura', 'Nacionalidade', 'Minutos jogados', 'historicoIndex', 'ID_ATLETA', 'nota'].includes(k)
+      );
+
+      metricas.forEach((metrica) => {
+        const val1 = safeParseFloat(p1[metrica]);
+        const val2 = safeParseFloat(p2[metrica]);
+        const isPositive = !['Falta', 'Erro', 'Cartão', 'Bola perdida'].some(w => metrica.toLowerCase().includes(w.toLowerCase()));
+        const player1Wins = isPositive ? val1 > val2 : val1 < val2;
+
+        doc.setFillColor(240, 240, 240);
+        doc.rect(10, yPos, colWidth, rowHeight, 'F');
+        doc.text(metrica.substring(0, 20), 12, yPos + 5);
+
+        doc.setFillColor(...(player1Wins ? [220, 220, 100] : [255, 255, 255]));
+        doc.rect(10 + colWidth, yPos, colWidth, rowHeight, 'F');
+        doc.text(val1 === 0 ? '-' : val1.toString(), 12 + colWidth, yPos + 5);
+
+        doc.setFillColor(...(!player1Wins && val2 > 0 ? [220, 220, 100] : [255, 255, 255]));
+        doc.rect(10 + colWidth * 2, yPos, colWidth, rowHeight, 'F');
+        doc.text(val2 === 0 ? '-' : val2.toString(), 12 + colWidth * 2, yPos + 5);
+
+        yPos += rowHeight;
+        if (yPos > 270) { doc.addPage(); yPos = 20; }
+      });
+
+      doc.save(`comparacao-${p1.Jogador}-vs-${p2.Jogador}.pdf`);
+    } catch (error) {
+      console.error('Erro PDF:', error);
+      alert('Erro ao gerar PDF');
+    }
+  };
 
   if (carregando) return <div className="min-h-screen bg-[#0a0c10] flex items-center justify-center text-brand-yellow">Processando Rankings...</div>
 
@@ -291,6 +362,7 @@ export default function RankingsPage() {
                   {metricasPerfil.map(m => (
                     <th key={m} className="p-6 text-center text-[10px] font-black uppercase tracking-widest text-slate-500 cursor-pointer hover:text-brand-yellow transition-all" onClick={() => handleOrdenacao(m)}>{m}</th>
                   ))}
+                  <th className="p-6 text-center text-[10px] font-black uppercase tracking-widest text-slate-500">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/30">
@@ -332,13 +404,15 @@ export default function RankingsPage() {
                       }`}>
                         {j.nota?.toFixed(1)}
                       </div>
-                      <p className="text-[8px] font-black uppercase mt-1 opacity-50">
-                        {j.nota >= 8 ? 'Elite' : j.nota >= 6.5 ? 'Bom' : j.nota >= 5 ? 'Regular' : 'Abaixo'}
-                      </p>
                     </td>
                     {metricasPerfil.map(m => (
                       <td key={m} className="p-6 text-center text-xs font-black italic text-white">{j[m] || '0'}</td>
                     ))}
+                    <td className="p-6 text-center">
+                      <button onClick={() => setComparisonModal({ open: true, player1: j, player2: null })} className="p-2 bg-slate-900 border border-slate-800 rounded-lg text-slate-500 hover:text-brand-yellow transition-all">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -350,6 +424,102 @@ export default function RankingsPage() {
           <p className="text-[9px] font-black uppercase tracking-[0.5em] text-slate-800">Novorizontino Scouting Intelligence • 2026</p>
         </div>
       </div>
+
+      {comparisonModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0a0c10]/95 backdrop-blur-xl animate-in fade-in duration-300">
+          <div className="bg-slate-900 w-full max-w-6xl max-h-[90vh] overflow-y-auto rounded-[3rem] border border-slate-800 shadow-2xl p-8 md:p-12 custom-scrollbar">
+            <div className="flex items-center justify-between mb-12">
+              <h2 className="text-2xl font-black italic uppercase tracking-tighter text-brand-yellow">Comparação <span className="text-white">Head-to-Head</span></h2>
+              <div className="flex gap-3">
+                {comparisonModal.player2 && (
+                  <button onClick={exportComparisonPDF} className="px-4 py-2 bg-brand-yellow text-slate-950 rounded-lg text-[10px] font-black uppercase hover:bg-brand-yellow/80 transition-all">
+                    📄 Exportar PDF
+                  </button>
+                )}
+                <button onClick={() => setComparisonModal({ open: false, player1: null, player2: null })} className="text-slate-500 hover:text-white transition-colors">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+              <div className="bg-slate-950/50 p-8 rounded-2xl border border-slate-800">
+                <h3 className="text-lg font-black italic uppercase text-white mb-4">{comparisonModal.player1.Jogador}</h3>
+                <div className="space-y-2 text-sm">
+                  <p className="text-slate-400"><strong className="text-slate-300">Time:</strong> {comparisonModal.player1.Time}</p>
+                  <p className="text-slate-400"><strong className="text-slate-300">Posição:</strong> {comparisonModal.player1.Posição}</p>
+                  <p className="text-slate-400"><strong className="text-slate-300">Idade:</strong> {comparisonModal.player1.Idade}</p>
+                  <p className="text-slate-400"><strong className="text-slate-300">Minutos:</strong> {comparisonModal.player1['Minutos jogados']}</p>
+                </div>
+              </div>
+
+              {!comparisonModal.player2 ? (
+                <div className="bg-slate-950/50 p-8 rounded-2xl border border-slate-800 flex flex-col justify-center">
+                  <p className="text-slate-500 text-center mb-6 font-black uppercase">Selecione um segundo atleta para comparar</p>
+                  <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                    {jogadores.filter(p => p.Jogador !== comparisonModal.player1.Jogador).map(p => (
+                      <button key={p.Jogador} onClick={() => setComparisonModal({ ...comparisonModal, player2: p })} className="w-full p-3 bg-slate-900 border border-slate-700 rounded-lg text-left hover:border-brand-yellow transition-all text-sm font-black uppercase text-slate-300 hover:text-brand-yellow">
+                        {p.Jogador}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-slate-950/50 p-8 rounded-2xl border border-slate-800">
+                  <h3 className="text-lg font-black italic uppercase text-white mb-4">{comparisonModal.player2.Jogador}</h3>
+                  <div className="space-y-2 text-sm">
+                    <p className="text-slate-400"><strong className="text-slate-300">Time:</strong> {comparisonModal.player2.Time}</p>
+                    <p className="text-slate-400"><strong className="text-slate-300">Posição:</strong> {comparisonModal.player2.Posição}</p>
+                    <p className="text-slate-400"><strong className="text-slate-300">Idade:</strong> {comparisonModal.player2.Idade}</p>
+                    <p className="text-slate-400"><strong className="text-slate-300">Minutos:</strong> {comparisonModal.player2['Minutos jogados']}</p>
+                  </div>
+                  <button onClick={() => setComparisonModal({ ...comparisonModal, player2: null })} className="mt-6 w-full py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-[10px] font-black uppercase transition-all">
+                    Trocar Atleta
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {comparisonModal.player2 && (
+              <div className="bg-slate-950/30 p-8 rounded-2xl border border-slate-800/50">
+                <h4 className="text-brand-yellow font-black uppercase mb-6 text-lg">Análise Completa de Métricas</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {Object.keys(comparisonModal.player1)
+                    .filter(key => !['Jogador', 'Time', 'Posição', 'Idade', 'Nacionalidade', 'Minutos jogados', 'historicoIndex', 'ID_ATLETA', 'scoreSimilaridade', 'nota'].includes(key))
+                    .sort()
+                    .map(metric => {
+                      const val1 = safeParseFloat(comparisonModal.player1[metric]);
+                      const val2 = safeParseFloat(comparisonModal.player2[metric]);
+                      const winner = val1 > val2 ? 1 : val2 > val1 ? 2 : 0;
+                      const menorEhMelhor = ['Faltas', 'Erros graves', 'Falhas em gols', 'Bolas perdidas'].includes(metric);
+                      const winner_adjusted = menorEhMelhor ? (val1 < val2 ? 1 : val2 < val1 ? 2 : 0) : winner;
+                      
+                      return (
+                        <div key={metric} className="bg-slate-900/50 p-4 rounded-xl border border-slate-700/50">
+                          <p className="text-[9px] font-black uppercase text-slate-500 mb-3 tracking-widest">{metric}</p>
+                          <div className="space-y-2">
+                            <div className={`p-3 rounded-lg text-center text-sm font-black transition-all ${
+                              winner_adjusted === 1 ? 'bg-green-900/40 text-green-300 border border-green-700/50' : 'bg-slate-800 text-slate-400'
+                            }`}>
+                              {val1}
+                            </div>
+                            <div className="text-center text-[8px] text-slate-600 font-bold">vs</div>
+                            <div className={`p-3 rounded-lg text-center text-sm font-black transition-all ${
+                              winner_adjusted === 2 ? 'bg-green-900/40 text-green-300 border border-green-700/50' : 'bg-slate-800 text-slate-400'
+                            }`}>
+                              {val2}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
