@@ -35,7 +35,7 @@ export default function CentralDados() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vS6y_t067m-f-p0M7r_9XmO5eYp-o0E_3m5Wv0E_o0E_o0E_o0E_o0E_o0E_o0E_o0E_o0E_o0E_o0E/pub?output=csv')
+        const response = await fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vSVC0eenchMDxK3wsOTXjq9kQiy3aHTFl0X1o5vwJZR7RiZzg1Irxxe_SL2IDrqb3c1i7ZL2ugpBJkN/pub?output=csv')
         const csv = await response.text()
         
         Papa.parse(csv, {
