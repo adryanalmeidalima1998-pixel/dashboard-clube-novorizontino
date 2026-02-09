@@ -15,7 +15,7 @@ export default function PlantelPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const url = `https://docs.google.com/spreadsheets/d/e/2PACX-1vTx73GpGdTLkIPTmBfkYujRILN3DmPV5FG2dH4-bbELYZJ4STAIYrOSJ7AOPDOTq_tB0ib_xFKHLiHZ/pub?output=csv&t=${Date.now()}`
+        const url = `https://docs.google.com/spreadsheets/d/e/2PACX-1vTmwbp8vD9bx7WhL_CMwZqwI_5k6Uol2qCGY_DiViTs-OdDTzMuWHeeGFwXARGGgvPzMZVuPgKwkXqm/pub?output=csv&t=${Date.now()}`
         const response = await fetch(url)
         const csvText = await response.text()
 
