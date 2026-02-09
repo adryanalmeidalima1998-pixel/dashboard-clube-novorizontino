@@ -83,3 +83,22 @@ export const safeParseFloat = (val, columnName = '') => {
     
   return num;
 };
+
+/**
+ * Normaliza nomes de times para evitar duplicatas por erro de digitação
+ */
+export const normalizeTeamName = (teamName) => {
+  if (!teamName) return '';
+  
+  const name = teamName.trim();
+  
+  const normalizationMap = {
+    'novorizontino': 'Grêmio Novorizontino',
+    'gremio novorizontino': 'Grêmio Novorizontino',
+    'grêmio novorizontino': 'Grêmio Novorizontino',
+    'novorizontino sp': 'Grêmio Novorizontino',
+  };
+
+  const lowerName = name.toLowerCase();
+  return normalizationMap[lowerName] || name;
+};

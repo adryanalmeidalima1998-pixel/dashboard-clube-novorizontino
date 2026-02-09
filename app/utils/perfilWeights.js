@@ -236,3 +236,45 @@ export const POSICAO_TO_PERFIS = {
   'SEGUNDO ATACANTE': ['Segundo Atacante', 'Centroavante Móvel'],
   'ATACANTE': ['Centroavante Finalizador', 'Centroavante Referência', 'Centroavante Móvel', 'Centroavante Físico']
 };
+
+/**
+ * Descrições dos perfis técnicos
+ */
+export const PERFIL_DESCRICOES = {
+  'Goleiro Defensor da Meta': 'Se destaca por sua capacidade de defender a meta.',
+  'Goleiro Defensor do Setor': 'Se destaca por sua capacidade de defender a área (saídas aéreas, coberturas). Proativo.',
+  'Goleiro Líder': 'Se destaca por sua capacidade de comunicação e liderança.',
+  'Goleiro Construtor': 'Se destaca por sua capacidade de jogo com os pés.',
+  'Lateral Construtor': 'Se destaca pelo jogo associativo. Mais combinação, menos ultrapassagem.',
+  'Lateral Físico': 'Se destaca por capacidades físicas. Volume, intensidade e sucesso em duelos.',
+  'Lateral Ofensivo': 'Se destaca por ser influente no ataque.',
+  'Lateral Defensivo': 'Se destaca pelas características defensivas.',
+  'Lateral Dinâmico': 'Se destaca pela adaptação a diferentes cenários. Boa mobilidade.',
+  'Lateral Equilibrado': 'Combinação equilibrada entre defesa, construção e ataque.',
+  'Zagueiro Defensor de Área': 'Se destaca pela capacidade de defender a área, vencendo duelos e protegendo a meta.',
+  'Zagueiro Construtor': 'Se destaca pela capacidade de construção, ativo para verticalizar com passes.',
+  'Zagueiro Gestor de Espaço': 'Se destaca pelo posicionamento, interceptações e boas leituras.',
+  'Zagueiro Veloz': 'Se destaca pela velocidade, capaz de jogar em linha alta com boas coberturas.',
+  'Zagueiro Agressivo': 'Se destaca pela abordagem agressiva, tende a saltar da linha e antecipar.',
+  'Zagueiro Físico': 'Se destaca pelos atributos físicos (força, velocidade, potência).',
+  'Volante Defensivo': 'Se destaca pelas qualidades defensivas, pouco influente com bola.',
+  'Volante Construtor': 'Se destaca pela capacidade de construção e verticalidade no passe.',
+  'Volante Organizador': 'Se destaca pela capacidade associativa, participativo e joga curto.',
+  'Volante Gestor de Espaço': 'Se destaca pela capacidade posicional. Menos móvel, guarda a posição.',
+  'Volante Dinâmico': 'Se destaca pela adaptação a diferentes cenários. Boa mobilidade.',
+  'Volante Físico': 'Se destaca pelos atributos físicos (força, velocidade, potência).',
+  'Meia Finalizador': 'Se destaca pela alta influência com finalizações. Chega bem na área.',
+  'Meia Criativo': 'Se destaca pela influência no último terço. Técnico e inteligente.',
+  'Meia Dinâmico': 'Se destaca pela mobilidade e capacidade associativa. Versátil.',
+  'Extremo Construtor': 'Se destaca por atuar entrelinhas, móvel. Característica de meia.',
+  'Extremo Vertical': 'Se destaca pela verticalidade. Boa capacidade de progredir e gerar volume.',
+  'Extremo Finalizador': 'Se destaca pelo volume de finalizações. Chega na área.',
+  'Extremo Driblador': 'Se destaca por gerar desequilíbrio no 1x1 ofensivo.',
+  'Extremo Físico': 'Se destaca pelos atributos físicos (velocidade, potência, força).',
+  'Extremo Tático': 'Se destaca pela taxa de trabalho e comprometimento tático.',
+  'Segundo Atacante': 'Se destaca pela atuação complementar ao centroavante. Influente fora da área.',
+  'Centroavante Referência': 'Se destaca por atuar fixo entre zagueiros. Alvo em bolas longas.',
+  'Centroavante Finalizador': 'Se destaca pela capacidade de finalização. Bom posicionamento.',
+  'Centroavante Móvel': 'Se destaca pela boa mobilidade. Bons movimentos de apoio e ruptura.',
+  'Centroavante Físico': 'Se destaca pelos atributos físicos. Vencedor nas disputas.'
+};
