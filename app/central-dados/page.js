@@ -532,7 +532,7 @@ export default function CentralDados() {
                 <div className="bg-slate-950/50 p-8 rounded-2xl border border-slate-800 flex flex-col justify-center">
                   <p className="text-slate-500 text-center mb-6 font-black uppercase">Selecione um segundo atleta para comparar</p>
                   <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                    {jogadoresFiltrados.filter(p => p.Jogador !== comparisonModal.player1.Jogador).map(p => (
+                    {listaParaExibir.filter(p => p.Jogador !== comparisonModal.player1.Jogador).map(p => (
                       <button key={p.Jogador} onClick={() => setComparisonModal({ ...comparisonModal, player2: p })} className="w-full p-3 bg-slate-900 border border-slate-700 rounded-lg text-left hover:border-brand-yellow transition-all text-sm font-black uppercase text-slate-300 hover:text-brand-yellow">
                         {p.Jogador}
                       </button>
