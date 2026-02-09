@@ -209,108 +209,116 @@ export default function RankingPerfil() {
 
   // Exportar PDF da Comparação
   
-  const exportComparisonPDF = () => {
-    if (!selectedPlayer1 || !selectedPlayer2) return
-
-    const jsPDF = require('jspdf').jsPDF
-    const doc = new jsPDF()
-    
-    // Cores
-    const amarelo = [251, 191, 36]
-    const preto = [10, 12, 16]
-    const branco = [255, 255, 255]
-    const cinza = [100, 116, 139]
-
-    // Cabeçalho
-    doc.setFillColor(...amarelo)
-    doc.rect(10, 10, 190, 25, 'F')
-    doc.setTextColor(...preto)
-    doc.setFontSize(20)
-    doc.setFont('helvetica', 'bold')
-    doc.text('COMPARAÇÃO DE ATLETAS', 15, 28)
-
-    // Info dos atletas
-    doc.setTextColor(...preto)
-    doc.setFontSize(10)
-    doc.setFont('helvetica', 'normal')
-    doc.text(`${selectedPlayer1.Jogador} (${selectedPlayer1.Posição})`, 15, 45)
-    doc.text(`${selectedPlayer2.Jogador} (${selectedPlayer2.Posição})`, 15, 52)
-
-    // Tabela de métricas
-    let yPos = 65
-    const colWidth = 60
-    const rowHeight = 8
-
-    // Cabeçalho da tabela
-    doc.setFillColor(...preto)
-    doc.setTextColor(...branco)
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(9)
-    
-    doc.rect(10, yPos - 5, colWidth, rowHeight, 'F')
-    doc.text('MÉTRICA', 12, yPos)
-    
-    doc.rect(10 + colWidth, yPos - 5, colWidth, rowHeight, 'F')
-    doc.text(selectedPlayer1.Jogador.substring(0, 15), 12 + colWidth, yPos)
-    
-    doc.rect(10 + colWidth * 2, yPos - 5, colWidth, rowHeight, 'F')
-    doc.text(selectedPlayer2.Jogador.substring(0, 15), 12 + colWidth * 2, yPos)
-
-    yPos += rowHeight + 2
-
-    // Linhas de dados
-    doc.setTextColor(...preto)
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(8)
-
-    const metricas = Object.keys(selectedPlayer1).filter(k => 
-      !['Jogador', 'Posição', 'Time', 'Idade', 'Altura', 'Nacionalidade', 'Minutos jogados'].includes(k)
-    )
-
-    metricas.forEach((metrica, idx) => {
-      const val1 = parseFloat(String(selectedPlayer1[metrica] || 0).replace('%', '').replace(',', '.')) || 0
-      const val2 = parseFloat(String(selectedPlayer2[metrica] || 0).replace('%', '').replace(',', '.')) || 0
-      
-      // Determinar o vencedor
-      const isPositive = !['Falta', 'Erro', 'Cartão', 'Bola perdida'].some(w => metrica.toLowerCase().includes(w.toLowerCase()))
-      const player1Wins = isPositive ? val1 > val2 : val1 < val2
-
-      // Linha de métrica
-      doc.setFillColor(240, 240, 240)
-      doc.rect(10, yPos, colWidth, rowHeight, 'F')
-      doc.setTextColor(...preto)
-      doc.text(metrica.substring(0, 20), 12, yPos + 5)
-
-      // Valor Player 1
-      doc.setFillColor(...(player1Wins ? [220, 220, 100] : [255, 255, 255]))
-      doc.rect(10 + colWidth, yPos, colWidth, rowHeight, 'F')
-      doc.setTextColor(...preto)
-      const displayVal1 = val1 === 0 ? '-' : val1.toFixed(2)
-      doc.text(displayVal1, 12 + colWidth, yPos + 5)
-
-      // Valor Player 2
-      doc.setFillColor(...(!player1Wins && val2 > 0 ? [220, 220, 100] : [255, 255, 255]))
-      doc.rect(10 + colWidth * 2, yPos, colWidth, rowHeight, 'F')
-      doc.setTextColor(...preto)
-      const displayVal2 = val2 === 0 ? '-' : val2.toFixed(2)
-      doc.text(displayVal2, 12 + colWidth * 2, yPos + 5)
-
-      yPos += rowHeight
-
-      // Quebra de página se necessário
-      if (yPos > 270) {
-        doc.addPage()
-        yPos = 20
+  const exportComparisonPDF = async () => {
+    try {
+      if (!selectedPlayer1 || !selectedPlayer2) {
+        alert('Selecione dois atletas para comparar')
+        return
       }
-    })
 
-    // Rodapé
-    doc.setTextColor(...cinza)
-    doc.setFontSize(8)
-    doc.text(`Relatório gerado em ${new Date().toLocaleDateString('pt-BR')}`, 15, doc.internal.pageSize.getHeight() - 10)
+      const { jsPDF } = await import('jspdf')
+      const doc = new jsPDF()
+      
+      // Cores
+      const amarelo = [251, 191, 36]
+      const preto = [10, 12, 16]
+      const branco = [255, 255, 255]
+      const cinza = [100, 116, 139]
 
-    // Salvar
-    doc.save(`comparacao-${selectedPlayer1.Jogador}-vs-${selectedPlayer2.Jogador}.pdf`)
+      // Cabeçalho
+      doc.setFillColor(...amarelo)
+      doc.rect(10, 10, 190, 25, 'F')
+      doc.setTextColor(...preto)
+      doc.setFontSize(20)
+      doc.setFont('helvetica', 'bold')
+      doc.text('COMPARAÇÃO DE ATLETAS', 15, 28)
+
+      // Info dos atletas
+      doc.setTextColor(...preto)
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'normal')
+      doc.text(`${selectedPlayer1.Jogador} (${selectedPlayer1.Posição})`, 15, 45)
+      doc.text(`${selectedPlayer2.Jogador} (${selectedPlayer2.Posição})`, 15, 52)
+
+      // Tabela de métricas
+      let yPos = 65
+      const colWidth = 60
+      const rowHeight = 8
+
+      // Cabeçalho da tabela
+      doc.setFillColor(...preto)
+      doc.setTextColor(...branco)
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(9)
+      
+      doc.rect(10, yPos - 5, colWidth, rowHeight, 'F')
+      doc.text('MÉTRICA', 12, yPos)
+      
+      doc.rect(10 + colWidth, yPos - 5, colWidth, rowHeight, 'F')
+      doc.text(selectedPlayer1.Jogador.substring(0, 15), 12 + colWidth, yPos)
+      
+      doc.rect(10 + colWidth * 2, yPos - 5, colWidth, rowHeight, 'F')
+      doc.text(selectedPlayer2.Jogador.substring(0, 15), 12 + colWidth * 2, yPos)
+
+      yPos += rowHeight + 2
+
+      // Linhas de dados
+      doc.setTextColor(...preto)
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(8)
+
+      const metricas = Object.keys(selectedPlayer1).filter(k => 
+        !['Jogador', 'Posição', 'Time', 'Idade', 'Altura', 'Nacionalidade', 'Minutos jogados'].includes(k)
+      )
+
+      metricas.forEach((metrica) => {
+        const val1 = parseFloat(String(selectedPlayer1[metrica] || 0).replace('%', '').replace(',', '.')) || 0
+        const val2 = parseFloat(String(selectedPlayer2[metrica] || 0).replace('%', '').replace(',', '.')) || 0
+        
+        // Determinar o vencedor
+        const isPositive = !['Falta', 'Erro', 'Cartão', 'Bola perdida'].some(w => metrica.toLowerCase().includes(w.toLowerCase()))
+        const player1Wins = isPositive ? val1 > val2 : val1 < val2
+
+        // Linha de métrica
+        doc.setFillColor(240, 240, 240)
+        doc.rect(10, yPos, colWidth, rowHeight, 'F')
+        doc.setTextColor(...preto)
+        doc.text(metrica.substring(0, 20), 12, yPos + 5)
+
+        // Valor Player 1
+        doc.setFillColor(...(player1Wins ? [220, 220, 100] : [255, 255, 255]))
+        doc.rect(10 + colWidth, yPos, colWidth, rowHeight, 'F')
+        doc.setTextColor(...preto)
+        const displayVal1 = val1 === 0 ? '-' : val1.toFixed(2)
+        doc.text(displayVal1, 12 + colWidth, yPos + 5)
+
+        // Valor Player 2
+        doc.setFillColor(...(!player1Wins && val2 > 0 ? [220, 220, 100] : [255, 255, 255]))
+        doc.rect(10 + colWidth * 2, yPos, colWidth, rowHeight, 'F')
+        doc.setTextColor(...preto)
+        const displayVal2 = val2 === 0 ? '-' : val2.toFixed(2)
+        doc.text(displayVal2, 12 + colWidth * 2, yPos + 5)
+
+        yPos += rowHeight
+
+        // Quebra de página se necessário
+        if (yPos > 270) {
+          doc.addPage()
+          yPos = 20
+        }
+      })
+
+      // Rodapé
+      doc.setTextColor(...cinza)
+      doc.setFontSize(8)
+      doc.text(`Relatório gerado em ${new Date().toLocaleDateString('pt-BR')}`, 15, doc.internal.pageSize.getHeight() - 10)
+
+      // Salvar
+      doc.save(`comparacao-${selectedPlayer1.Jogador}-vs-${selectedPlayer2.Jogador}.pdf`)
+    } catch (error) {
+      console.error('Erro ao gerar PDF:', error)
+      alert('Erro ao gerar PDF. Verifique o console.')
+    }
   }
 ;
 

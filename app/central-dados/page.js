@@ -253,203 +253,86 @@ export default function CentralDados() {
     doc.save('relatorio-novorizontino.pdf')
   }
 
-        const exportComparisonPDF = () => {
-    if (!comparisonModal.player1 || !comparisonModal.player2) return;
-    
-    const doc = new jsPDF('p', 'mm', 'a4');
-    const pageWidth = doc.internal.pageSize.getWidth();
-    
-    const nomeP1 = comparisonModal.player1.Jogador || 'DESCONHECIDO';
-    const nomeP2 = comparisonModal.player2.Jogador || 'DESCONHECIDO';
-    
-    // Header
-    doc.setFillColor(10, 12, 16);
-    doc.rect(0, 0, pageWidth, 30, 'F');
-    
-    doc.setTextColor(251, 191, 36);
-    doc.setFontSize(20);
-    doc.setFont(undefined, 'bold');
-    doc.text('COMPARAÇÃO HEAD-TO-HEAD', 20, 20);
-    
-    doc.setTextColor(100, 116, 139);
-    doc.setFontSize(9);
-    doc.setFont(undefined, 'normal');
-    doc.text('Central de Dados - Análise Técnica', 20, 28);
-    
-    // Atletas
-    let yPos = 45;
-    
-    // Jogador 1
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(12);
-    doc.setFont(undefined, 'bold');
-    doc.text(nomeP1.toUpperCase(), 20, yPos);
-    yPos += 8;
-    
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(10);
-    doc.setFont(undefined, 'normal');
-    doc.text(`${comparisonModal.player1.Time || comparisonModal.player1.Equipe}`, 20, yPos);
-    yPos += 6;
-    doc.text(`${comparisonModal.player1.Posição} | Idade: ${comparisonModal.player1.Idade} | Minutos: ${comparisonModal.player1['Minutos jogados']}`, 20, yPos);
-    yPos += 10;
-    
-    // Jogador 2
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(12);
-    doc.setFont(undefined, 'bold');
-    doc.text(nomeP2.toUpperCase(), 20, yPos);
-    yPos += 8;
-    
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(10);
-    doc.setFont(undefined, 'normal');
-    doc.text(`${comparisonModal.player2.Time || comparisonModal.player2.Equipe}`, 20, yPos);
-    yPos += 6;
-    doc.text(`${comparisonModal.player2.Posição} | Idade: ${comparisonModal.player2.Idade} | Minutos: ${comparisonModal.player2['Minutos jogados']}`, 20, yPos);
-    yPos += 15;
-    
-    // Tabela de comparação
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(11);
-    doc.setFont(undefined, 'bold');
-    doc.text('ANÁLISE DE MÉTRICAS', 20, yPos);
-    yPos += 10;
-    
-    const metricas = metricasSelecionadas.length > 0 ? metricasSelecionadas : Object.keys(comparisonModal.player1).filter(k => !['Jogador', 'Time', 'Equipe', 'Posição', 'Idade', 'historicoIndex'].includes(k));
-    
-    const menorEhMelhor = ['Faltas', 'Erros graves', 'Falhas em gols', 'Bolas perdidas', 'Cartões', 'Cartão amarelo', 'Cartão vermelho', 'Chutes', 'Interceptações'];
-    
-    let p1Vitorias = 0;
-    let p2Vitorias = 0;
-    const topP1 = [];
-    const topP2 = [];
-    
-    const tableData = metricas.map(metric => {
-      const val1 = safeParseFloat(comparisonModal.player1[metric]);
-      const val2 = safeParseFloat(comparisonModal.player2[metric]);
-      
-      let indicador = '';
-      
-      if (val1 !== val2) {
-        const isMenorMelhor = menorEhMelhor.some(m => metric.toLowerCase().includes(m.toLowerCase()));
-        const p1Vence = isMenorMelhor ? val1 < val2 : val1 > val2;
-        
-        if (p1Vence) {
-          indicador = '●';
-          p1Vitorias++;
-          topP1.push(metric);
-        } else {
-          indicador = '●';
-          p2Vitorias++;
-          topP2.push(metric);
-        }
+  const exportComparisonPDF = async () => {
+    try {
+      if (!comparisonModal.player1 || !comparisonModal.player2) {
+        alert('Selecione dois atletas para comparar');
+        return;
       }
+
+      const p1 = comparisonModal.player1;
+      const p2 = comparisonModal.player2;
+
+      const { jsPDF } = await import('jspdf');
+      const doc = new jsPDF();
       
-      return [metric, indicador + ' ' + val1.toString(), indicador + ' ' + val2.toString()];
-    });
-    
-    doc.autoTable({
-      startY: yPos,
-      head: [[
-        'Métrica',
-        nomeP1.substring(0, 15).toUpperCase(),
-        nomeP2.substring(0, 15).toUpperCase()
-      ]],
-      body: tableData,
-      theme: 'grid',
-      styles: { 
-        fontSize: 8, 
-        textColor: [0, 0, 0],
-        fillColor: [255, 255, 255]
-      },
-      headStyles: { 
-        fillColor: [251, 191, 36], 
-        textColor: [10, 12, 16], 
-        fontStyle: 'bold' 
-      },
-      bodyStyles: {
-        fillColor: [255, 255, 255],
-        textColor: [0, 0, 0],
-        lineColor: [200, 200, 200]
-      },
-      alternateRowStyles: { 
-        fillColor: [255, 255, 255],
-        textColor: [0, 0, 0]
-      },
-      didDrawCell: (data) => {
-        if (data.row.section === 'body') {
-          const cellText = data.cell.text[0] || '';
-          
-          if (data.column.index === 1 && cellText.includes('●')) {
-            data.cell.styles.textColor = [0, 150, 0];
-            data.cell.styles.fontStyle = 'bold';
-          } else if (data.column.index === 2 && cellText.includes('●')) {
-            data.cell.styles.textColor = [0, 150, 0];
-            data.cell.styles.fontStyle = 'bold';
-          }
-        }
-      }
-    });
-    
-    // Destaques de Pontos Fortes
-    yPos = doc.lastAutoTable.finalY + 15;
-    
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(11);
-    doc.setFont(undefined, 'bold');
-    doc.text('PONTOS FORTES', 20, yPos);
-    yPos += 8;
-    
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(9);
-    doc.setFont(undefined, 'normal');
-    
-    const top3P1 = topP1.slice(0, 3);
-    const top3P2 = topP2.slice(0, 3);
-    
-    doc.text(`${nomeP1.toUpperCase()}:`, 20, yPos);
-    yPos += 5;
-    top3P1.forEach(metric => {
-      doc.text(`• ${metric}`, 25, yPos);
-      yPos += 4;
-    });
-    
-    yPos += 3;
-    doc.text(`${nomeP2.toUpperCase()}:`, 20, yPos);
-    yPos += 5;
-    top3P2.forEach(metric => {
-      doc.text(`• ${metric}`, 25, yPos);
-      yPos += 4;
-    });
-    
-    yPos += 5;
-    
-    // Veredito Técnico
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(11);
-    doc.setFont(undefined, 'bold');
-    doc.text('VEREDITO TÉCNICO', 20, yPos);
-    yPos += 8;
-    
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(9);
-    doc.setFont(undefined, 'normal');
-    
-    const veredito = p1Vitorias > p2Vitorias 
-      ? `${nomeP1.toUpperCase()} apresenta melhor desempenho técnico, vencendo em ${p1Vitorias} métricas contra ${p2Vitorias} de ${nomeP2.toUpperCase()}. É o candidato mais adequado para este papel tático.`
-      : p2Vitorias > p1Vitorias
-      ? `${nomeP2.toUpperCase()} apresenta melhor desempenho técnico, vencendo em ${p2Vitorias} métricas contra ${p1Vitorias} de ${nomeP1.toUpperCase()}. É o candidato mais adequado para este papel tático.`
-      : `Ambos os atletas apresentam desempenho equilibrado, com ${p1Vitorias} vitórias cada um. A escolha deve considerar outros fatores como experiência e adaptação ao grupo.`;
-    
-    const splitVeredito = doc.splitTextToSize(veredito, pageWidth - 40);
-    doc.text(splitVeredito, 20, yPos);
-    
-    doc.save(`comparacao-${nomeP1}-vs-${nomeP2}.pdf`);
+      const amarelo = [251, 191, 36];
+      const preto = [10, 12, 16];
+      const branco = [255, 255, 255];
+
+      doc.setFillColor(...amarelo);
+      doc.rect(10, 10, 190, 25, 'F');
+      doc.setTextColor(...preto);
+      doc.setFontSize(20);
+      doc.setFont('helvetica', 'bold');
+      doc.text('COMPARAÇÃO DE ATLETAS', 15, 28);
+
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`${p1.Jogador} (${p1.Posição})`, 15, 45);
+      doc.text(`${p2.Jogador} (${p2.Posição})`, 15, 52);
+
+      let yPos = 65;
+      const colWidth = 60;
+      const rowHeight = 8;
+
+      doc.setFillColor(...preto);
+      doc.setTextColor(...branco);
+      doc.setFont('helvetica', 'bold');
+      doc.rect(10, yPos - 5, colWidth, rowHeight, 'F');
+      doc.text('MÉTRICA', 12, yPos);
+      doc.rect(10 + colWidth, yPos - 5, colWidth, rowHeight, 'F');
+      doc.text(p1.Jogador.substring(0, 15), 12 + colWidth, yPos);
+      doc.rect(10 + colWidth * 2, yPos - 5, colWidth, rowHeight, 'F');
+      doc.text(p2.Jogador.substring(0, 15), 12 + colWidth * 2, yPos);
+
+      yPos += rowHeight + 2;
+      doc.setTextColor(...preto);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+
+      const metricas = Object.keys(p1).filter(k => 
+        !['Jogador', 'Posição', 'Time', 'Idade', 'Altura', 'Nacionalidade', 'Minutos jogados', 'historicoIndex'].includes(k)
+      );
+
+      metricas.forEach((metrica) => {
+        const val1 = safeParseFloat(p1[metrica]);
+        const val2 = safeParseFloat(p2[metrica]);
+        const isPositive = !['Falta', 'Erro', 'Cartão', 'Bola perdida'].some(w => metrica.toLowerCase().includes(w.toLowerCase()));
+        const player1Wins = isPositive ? val1 > val2 : val1 < val2;
+
+        doc.setFillColor(240, 240, 240);
+        doc.rect(10, yPos, colWidth, rowHeight, 'F');
+        doc.text(metrica.substring(0, 20), 12, yPos + 5);
+
+        doc.setFillColor(...(player1Wins ? [220, 220, 100] : [255, 255, 255]));
+        doc.rect(10 + colWidth, yPos, colWidth, rowHeight, 'F');
+        doc.text(val1 === 0 ? '-' : val1.toString(), 12 + colWidth, yPos + 5);
+
+        doc.setFillColor(...(!player1Wins && val2 > 0 ? [220, 220, 100] : [255, 255, 255]));
+        doc.rect(10 + colWidth * 2, yPos, colWidth, rowHeight, 'F');
+        doc.text(val2 === 0 ? '-' : val2.toString(), 12 + colWidth * 2, yPos + 5);
+
+        yPos += rowHeight;
+        if (yPos > 270) { doc.addPage(); yPos = 20; }
+      });
+
+      doc.save(`comparacao-${p1.Jogador}-vs-${p2.Jogador}.pdf`);
+    } catch (error) {
+      console.error('Erro PDF:', error);
+      alert('Erro ao gerar PDF');
+    }
   };
-
-  if (carregando) return <div className="min-h-screen bg-[#0a0c10] flex items-center justify-center text-brand-yellow">Processando...</div>
-
   return (
     <div className="min-h-screen bg-[#0a0c10] text-white p-4 md:p-8 font-sans">
       <div className="max-w-[1600px] mx-auto">
