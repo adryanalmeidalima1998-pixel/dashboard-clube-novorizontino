@@ -16,6 +16,8 @@ export default function RankingsPage() {
   const [perfilAtivo, setPerfilAtivo] = useState('Centroavante Finalizador')
   const [busca, setBusca] = useState('')
   const [filtroTime, setFiltroTime] = useState('todos')
+  const [filtroNacionalidades, setFiltroNacionalidades] = useState([])
+  const [filtroPosicoes, setFiltroPosicoes] = useState([])
   const [filtroIdade, setFiltroIdade] = useState({ min: 15, max: 45 })
   const [filtroMinutagem, setFiltroMinutagem] = useState(0)
   const [ordenacao, setOrdenacao] = useState({ coluna: 'nota', direcao: 'desc' })
@@ -52,6 +54,11 @@ export default function RankingsPage() {
       .map(([pos]) => pos)
   }, [perfilAtivo])
 
+  // Inicializa as posições filtradas com as compatíveis do perfil ao trocar de perfil
+  useEffect(() => {
+    setFiltroPosicoes(posicoesCompativeis)
+  }, [posicoesCompativeis])
+
   const metricasPerfil = useMemo(() => {
     return Object.keys(PERFIL_WEIGHTS[perfilAtivo] || {})
   }, [perfilAtivo])
@@ -63,13 +70,17 @@ export default function RankingsPage() {
   const jogadoresRankeados = useMemo(() => {
     const filtrados = jogadores.filter(j => {
       const pos = (j.Posição || '').trim().toUpperCase()
-      const matchPos = posicoesCompativeis.includes(pos)
+      const nacRaw = (j.Nacionalidade || '').split('/')[0].split(',')[0].split(' ')[0].trim()
+      
+      const matchPos = filtroPosicoes.length === 0 || filtroPosicoes.includes(pos)
+      const matchNac = filtroNacionalidades.length === 0 || filtroNacionalidades.includes(nacRaw)
       const matchBusca = j.Jogador?.toLowerCase().includes(busca.toLowerCase())
       const matchTime = filtroTime === 'todos' || j.Time === filtroTime || j.Equipe === filtroTime
       const idade = parseInt(j.Idade) || 0
       const matchIdade = idade >= filtroIdade.min && idade <= filtroIdade.max
       const matchMinutos = (parseInt(j['MINUTOS JOGADOS']) || 0) >= filtroMinutagem
-      return matchPos && matchBusca && matchTime && matchIdade && matchMinutos
+      
+      return matchPos && matchNac && matchBusca && matchTime && matchIdade && matchMinutos
     })
 
     const rankeados = filtrados.map(j => ({
@@ -83,11 +94,30 @@ export default function RankingsPage() {
       const valB = b[ordenacao.coluna] || 0
       return ordenacao.direcao === 'desc' ? valB - valA : valA - valB
     })
-  }, [jogadores, perfilAtivo, busca, filtroTime, filtroIdade, filtroMinutagem, ordenacao, posicoesCompativeis])
+  }, [jogadores, perfilAtivo, busca, filtroTime, filtroNacionalidades, filtroPosicoes, filtroIdade, filtroMinutagem, ordenacao])
 
   const times = useMemo(() => {
     const uniqueTimes = new Set(jogadores.map(j => j.Time || j.Equipe).filter(Boolean))
     return ['todos', ...Array.from(uniqueTimes).sort()]
+  }, [jogadores])
+
+  const nacionalidadesDisponiveis = useMemo(() => {
+    const nacs = new Set()
+    jogadores.forEach(j => {
+      if (j.Nacionalidade) {
+        const principal = j.Nacionalidade.split('/')[0].split(',')[0].split(' ')[0].trim()
+        if (principal && principal !== '-') nacs.add(principal)
+      }
+    })
+    return Array.from(nacs).sort()
+  }, [jogadores])
+
+  const todasPosicoes = useMemo(() => {
+    const pos = new Set()
+    jogadores.forEach(j => {
+      if (j.Posição) pos.add(j.Posição.trim().toUpperCase())
+    })
+    return Array.from(pos).sort()
   }, [jogadores])
 
   const perfisPorCategoria = {
@@ -107,6 +137,14 @@ export default function RankingsPage() {
     }))
   }
 
+  const toggleFiltro = (lista, setLista, item) => {
+    if (lista.includes(item)) {
+      setLista(lista.filter(i => i !== item))
+    } else {
+      setLista([...lista, item])
+    }
+  }
+
   const exportarPDF = () => {
     try {
       const doc = new jsPDF('l', 'mm', 'a4')
@@ -115,12 +153,13 @@ export default function RankingsPage() {
       doc.setFontSize(10)
       doc.text(`Data: ${new Date().toLocaleDateString()}`, 14, 28)
       
-      const head = [['Pos', 'Jogador', 'Equipe', 'Idade', 'Nota', ...metricasPerfil]]
+      const head = [['Pos', 'Jogador', 'Equipe', 'Idade', 'Nac', 'Nota', ...metricasPerfil]]
       const body = jogadoresRankeados.map((j, idx) => [
         idx + 1,
         j.Jogador,
         j.Time || j.Equipe,
         j.Idade,
+        (j.Nacionalidade || '').split('/')[0].split(',')[0].split(' ')[0].trim(),
         j.nota.toFixed(1),
         ...metricasPerfil.map(m => j[m] || '0')
       ])
@@ -236,7 +275,7 @@ export default function RankingsPage() {
               <h3 className="text-3xl font-black italic uppercase text-brand-yellow tracking-tighter">{perfilAtivo}</h3>
               <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mt-2 flex items-center gap-2">
                 <span className="w-2 h-2 bg-brand-yellow rounded-full animate-pulse"></span>
-                Posições compatíveis: {posicoesCompativeis.join(', ')} | {jogadoresRankeados.length} atletas encontrados
+                {jogadoresRankeados.length} atletas encontrados para este perfil
               </p>
               {PERFIL_DESCRICOES[perfilAtivo] && <p className="text-xs text-slate-400 mt-4 italic leading-relaxed">{PERFIL_DESCRICOES[perfilAtivo]}</p>}
             </div>
@@ -251,29 +290,76 @@ export default function RankingsPage() {
           </div>
         </div>
 
-        {/* FILTROS */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Buscar Atleta</h3>
-            <input type="text" placeholder="NOME DO ATLETA..." value={busca} onChange={e => setBusca(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50 transition-all" />
-          </div>
-          <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Filtrar Time</h3>
-            <select value={filtroTime} onChange={e => setFiltroTime(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50 appearance-none">
-              {times.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
-            </select>
-          </div>
-          <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Idade</h3>
-            <div className="flex items-center gap-3">
-              <input type="number" value={filtroIdade.min} onChange={e => setFiltroIdade({...filtroIdade, min: parseInt(e.target.value) || 0})} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black text-center outline-none focus:border-brand-yellow/50" />
-              <span className="text-slate-500 font-black">/</span>
-              <input type="number" value={filtroIdade.max} onChange={e => setFiltroIdade({...filtroIdade, max: parseInt(e.target.value) || 0})} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black text-center outline-none focus:border-brand-yellow/50" />
+        {/* FILTROS AVANÇADOS */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
+          {/* Busca e Time */}
+          <div className="lg:col-span-4 space-y-6">
+            <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4 text-center">Busca e Equipe</h3>
+              <div className="space-y-4">
+                <input type="text" placeholder="NOME DO ATLETA..." value={busca} onChange={e => setBusca(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50 transition-all" />
+                <select value={filtroTime} onChange={e => setFiltroTime(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50 appearance-none">
+                  {times.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4 text-center">Idade e Minutagem</h3>
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <input type="number" value={filtroIdade.min} onChange={e => setFiltroIdade({...filtroIdade, min: parseInt(e.target.value) || 0})} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black text-center outline-none focus:border-brand-yellow/50" />
+                  <span className="text-slate-500 font-black">/</span>
+                  <input type="number" value={filtroIdade.max} onChange={e => setFiltroIdade({...filtroIdade, max: parseInt(e.target.value) || 0})} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black text-center outline-none focus:border-brand-yellow/50" />
+                </div>
+                <input type="number" placeholder="MINUTOS MÍNIMOS" value={filtroMinutagem} onChange={e => setFiltroMinutagem(parseInt(e.target.value) || 0)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black text-center outline-none focus:border-brand-yellow/50" />
+              </div>
             </div>
           </div>
-          <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Minutos Jogados (Mín)</h3>
-            <input type="number" value={filtroMinutagem} onChange={e => setFiltroMinutagem(parseInt(e.target.value) || 0)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black text-center outline-none focus:border-brand-yellow/50" />
+
+          {/* Nacionalidades Multi-seleção */}
+          <div className="lg:col-span-4 bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500">Nacionalidades</h3>
+              <button onClick={() => setFiltroNacionalidades([])} className="text-[8px] font-black uppercase text-brand-yellow hover:underline">Limpar</button>
+            </div>
+            <div className="flex flex-wrap gap-2 max-h-[180px] overflow-y-auto pr-2 custom-scrollbar">
+              {nacionalidadesDisponiveis.map(nac => (
+                <button
+                  key={nac}
+                  onClick={() => toggleFiltro(filtroNacionalidades, setFiltroNacionalidades, nac)}
+                  className={`px-3 py-1.5 rounded-lg text-[8px] font-black uppercase transition-all border ${
+                    filtroNacionalidades.includes(nac)
+                      ? 'bg-brand-yellow text-slate-950 border-brand-yellow'
+                      : 'bg-slate-950/50 border-slate-800 text-slate-600 hover:border-brand-yellow/30'
+                  }`}
+                >
+                  {nac}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Posições Multi-seleção */}
+          <div className="lg:col-span-4 bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500">Posições</h3>
+              <button onClick={() => setFiltroPosicoes([])} className="text-[8px] font-black uppercase text-brand-yellow hover:underline">Limpar</button>
+            </div>
+            <div className="flex flex-wrap gap-2 max-h-[180px] overflow-y-auto pr-2 custom-scrollbar">
+              {todasPosicoes.map(pos => (
+                <button
+                  key={pos}
+                  onClick={() => toggleFiltro(filtroPosicoes, setFiltroPosicoes, pos)}
+                  className={`px-3 py-1.5 rounded-lg text-[8px] font-black uppercase transition-all border ${
+                    filtroPosicoes.includes(pos)
+                      ? 'bg-brand-yellow text-slate-950 border-brand-yellow'
+                      : 'bg-slate-950/50 border-slate-800 text-slate-600 hover:border-brand-yellow/30'
+                  }`}
+                >
+                  {pos}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -319,6 +405,8 @@ export default function RankingsPage() {
                           <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mt-1 flex items-center gap-2">
                             <span>{j.Idade} anos</span>
                             <span className="w-1 h-1 bg-slate-800 rounded-full"></span>
+                            <span>{(j.Nacionalidade || '').split('/')[0].split(',')[0].split(' ')[0].trim()}</span>
+                            <span className="w-1 h-1 bg-slate-800 rounded-full"></span>
                             <span className="text-brand-yellow/60">{j.perfilDominante}</span>
                           </p>
                         </div>
@@ -360,7 +448,7 @@ export default function RankingsPage() {
         </div>
       </div>
 
-      {/* MODAL DE COMPARAÇÃO - UNIFICADO */}
+      {/* MODAL DE COMPARAÇÃO */}
       {comparisonModal.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0a0c10]/95 backdrop-blur-xl animate-in fade-in duration-300">
           <div className="bg-slate-900 w-full max-w-6xl max-h-[90vh] overflow-y-auto rounded-[3rem] border border-slate-800 shadow-2xl p-8 md:p-12 custom-scrollbar">
@@ -432,7 +520,7 @@ export default function RankingsPage() {
                   {(metricasPerfil.length > 0 ? metricasPerfil : ['GOLS', 'ASSISTÊNCIAS', 'XG']).map(m => {
                     const val1 = parseFloat(comparisonModal.player1[m]) || 0
                     const val2 = parseFloat(comparisonModal.player2[m]) || 0
-                    const total = val1 + val2 || 1
+                    const total = (val1 + val2) || 1
                     const p1 = (val1 / total) * 100
                     const p2 = (val2 / total) * 100
                     
