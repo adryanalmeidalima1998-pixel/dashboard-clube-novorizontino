@@ -24,7 +24,6 @@ export default function AgendaPage() {
           header: true,
           skipEmptyLines: true,
           complete: (results) => {
-            // Se o cleanData filtrar tudo, tentamos usar os dados brutos se houver Mandante/Visitante
             let dadosParaProcessar = cleanData(results.data);
             if (dadosParaProcessar.length === 0 && results.data.length > 0) {
               dadosParaProcessar = results.data.filter(r => r.Mandante || r.Visitante || r.Data);
@@ -36,7 +35,6 @@ export default function AgendaPage() {
               const isMandante = mandanteNorm === 'Grêmio Novorizontino'
               const adversario = isMandante ? visitanteNorm : mandanteNorm
               
-              // Extrair mês e ano para agrupamento
               const dataStr = data['Data'] || ''
               let mesAno = 'OUTROS'
               if (dataStr.includes('/')) {
@@ -48,14 +46,19 @@ export default function AgendaPage() {
                 }
               }
 
-              // Lógica de resultado
-              let resultadoExibicao = data['Resultado'] || ''
+              // Lógica de automação de status e resultado
               const golsM = data['Gols Mandante']
               const golsV = data['Gols Visitante']
+              const resultadoCSV = data['Resultado'] || ''
+              const escalacaoCode = data['código escalação'] || ''
               
+              let resultadoExibicao = resultadoCSV
               if (!resultadoExibicao && golsM !== undefined && golsV !== undefined && golsM !== '' && golsV !== '') {
                 resultadoExibicao = `${golsM} - ${golsV}`
               }
+              
+              // O jogo é considerado "passado" se tiver resultado OU gols OU código de escalação
+              const isJogoPassado = resultadoExibicao !== '' || escalacaoCode !== '' || (golsM !== '' && golsV !== '')
 
               return {
                 id: index,
@@ -69,13 +72,14 @@ export default function AgendaPage() {
                 resultado: resultadoExibicao,
                 golsM: golsM,
                 golsV: golsV,
+                isPassado: isJogoPassado,
                 competicao: data['Competição'] || 'Competição',
                 tv: data['TV'] || data['Transmissão'] || '',
                 mesAno: mesAno,
                 artilheirosMandante: data['Gols marcados mandante'] || '',
                 artilheirosVisitante: data['Gols marcados VISITANTE'] || '',
                 eventos: data['eventos'] || data['Eventos'] || '',
-                escalacaoCode: data['código escalação'] || '',
+                escalacaoCode: escalacaoCode,
                 timestamp: new Date(dataStr.split('/').reverse().join('-')).getTime() || 0
               }
             })
@@ -108,7 +112,7 @@ export default function AgendaPage() {
   if (loading) return (
     <div className="min-h-screen bg-[#0a0c10] text-white flex items-center justify-center font-sans">
       <div className="text-center">
-        <div className="w-12 h-12 border-2 border-brand-yellow/20 border-t-brand-yellow rounded-full animate-spin mx-auto mb-4"></div>
+        <div className="w-12 h-12 border-2 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin mx-auto mb-4"></div>
         <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 italic">Sincronizando Calendário...</span>
       </div>
     </div>
@@ -118,18 +122,16 @@ export default function AgendaPage() {
     <div className="min-h-screen bg-[#0a0c10] text-white p-4 md:p-8 font-sans">
       <div className="max-w-6xl mx-auto">
         
-        {/* HEADER MINIMALISTA */}
         <div className="flex items-center gap-6 mb-12">
-          <button onClick={() => router.push('/')} className="p-3 bg-slate-900/50 hover:bg-brand-yellow/10 rounded-xl border border-slate-800 transition-all group">
-            <svg className="w-5 h-5 text-slate-500 group-hover:text-brand-yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+          <button onClick={() => router.push('/')} className="p-3 bg-slate-900/50 hover:bg-emerald-500/10 rounded-xl border border-slate-800 transition-all group">
+            <svg className="w-5 h-5 text-slate-500 group-hover:text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
           </button>
           <div>
-            <h1 className="text-3xl font-black italic tracking-tighter uppercase leading-none">Calendário <span className="text-brand-yellow">2026</span></h1>
+            <h1 className="text-3xl font-black italic tracking-tighter uppercase leading-none">Calendário <span className="text-emerald-500">2026</span></h1>
             <p className="text-slate-500 text-[9px] font-bold uppercase tracking-widest mt-1">Tabela de Jogos e Detalhes Técnicos</p>
           </div>
         </div>
 
-        {/* TABELA POR MESES */}
         <div className="space-y-12">
           {Object.keys(jogosAgrupados).map(mes => (
             <div key={mes} className="space-y-4">
@@ -141,7 +143,6 @@ export default function AgendaPage() {
               <div className="bg-slate-900/20 rounded-3xl border border-slate-800/50 overflow-hidden">
                 <div className="w-full overflow-x-auto">
                   <div className="min-w-[800px]">
-                    {/* CABEÇALHO FIXO */}
                     <div className="grid grid-cols-[15%_10%_30%_8%_8%_14%_15%] bg-slate-950/40 border-b border-slate-800/50 px-6 py-4">
                       <div className="text-[9px] font-black uppercase tracking-widest text-slate-500">Data</div>
                       <div className="text-[9px] font-black uppercase tracking-widest text-slate-500 text-center">Hora</div>
@@ -152,7 +153,6 @@ export default function AgendaPage() {
                       <div className="text-[9px] font-black uppercase tracking-widest text-slate-500">Competição</div>
                     </div>
 
-                    {/* CORPO DA TABELA */}
                     <div className="divide-y divide-slate-800/30">
                       {jogosAgrupados[mes].map((jogo) => (
                         <div key={jogo.id} className="group">
@@ -160,7 +160,7 @@ export default function AgendaPage() {
                             onClick={() => toggleExpandir(jogo.id)}
                             className={`grid grid-cols-[15%_10%_30%_8%_8%_14%_15%] items-center px-6 py-4 hover:bg-white/[0.02] transition-colors cursor-pointer ${jogoExpandido === jogo.id ? 'bg-white/[0.03]' : ''}`}
                           >
-                            <div className="text-[11px] font-black italic text-slate-300 group-hover:text-brand-yellow transition-colors">{jogo.data}</div>
+                            <div className="text-[11px] font-black italic text-slate-300 group-hover:text-emerald-500 transition-colors">{jogo.data}</div>
                             <div className="text-[10px] font-bold text-slate-500 text-center">{jogo.hora}</div>
                             <div className="flex items-center gap-3 overflow-hidden">
                               <div className="w-6 h-6 bg-slate-950 rounded-lg p-1 border border-slate-800 flex items-center justify-center shadow-inner flex-shrink-0">
@@ -170,7 +170,7 @@ export default function AgendaPage() {
                             </div>
                             <div className="flex justify-center">
                               {jogo.tv ? (
-                                <svg className="w-4 h-4 text-slate-600 group-hover:text-brand-yellow transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                                <svg className="w-4 h-4 text-slate-600 group-hover:text-emerald-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
                               ) : <span className="text-slate-800">-</span>}
                             </div>
                             <div className="text-center">
@@ -179,15 +179,15 @@ export default function AgendaPage() {
                               </span>
                             </div>
                             <div className="flex items-center justify-center gap-2">
-                              {jogo.resultado && (jogo.resultado.includes('-') || ['V', 'E', 'D'].includes(jogo.resultado)) ? (
+                              {jogo.isPassado ? (
                                 <>
                                   <div className={`w-2 h-2 rounded-full ${
                                     jogo.resultado.includes('V') || (jogo.resultado.includes('-') && parseInt(jogo.resultado.split('-')[0]) > parseInt(jogo.resultado.split('-')[1])) ? 'bg-emerald-500' : 
                                     jogo.resultado.includes('D') || (jogo.resultado.includes('-') && parseInt(jogo.resultado.split('-')[0]) < parseInt(jogo.resultado.split('-')[1])) ? 'bg-red-500' : 
-                                    'bg-brand-yellow'
+                                    'bg-emerald-500/50'
                                   }`}></div>
                                   <span className="text-xs font-black italic text-white tracking-widest">
-                                    {jogo.resultado.length === 1 ? `${jogo.golsM} - ${jogo.golsV}` : jogo.resultado}
+                                    {jogo.resultado ? (jogo.resultado.length === 1 ? `${jogo.golsM} - ${jogo.golsV}` : jogo.resultado) : 'FIM'}
                                   </span>
                                 </>
                               ) : (
@@ -197,14 +197,13 @@ export default function AgendaPage() {
                             <div className="text-[9px] font-black uppercase tracking-widest text-slate-500 group-hover:text-slate-300 transition-colors truncate">{jogo.competicao}</div>
                           </div>
 
-                          {/* EXPANSÃO */}
                           {jogoExpandido === jogo.id && (
                             <div className="bg-slate-950/60 border-t border-slate-800/50 px-8 py-8 animate-in fade-in slide-in-from-top-2 duration-300">
                               <div className="flex flex-col gap-8">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-12 border-b border-slate-800/50 pb-8">
                                   <div className="space-y-4">
                                     <div className="flex items-center gap-3">
-                                      <div className="w-1 h-4 bg-brand-yellow rounded-full"></div>
+                                      <div className="w-1 h-4 bg-emerald-500 rounded-full"></div>
                                       <h4 className="text-[10px] font-black uppercase tracking-widest text-white">Gols {jogo.mandante}</h4>
                                     </div>
                                     <p className="text-[11px] font-bold text-slate-300 italic leading-relaxed whitespace-pre-line">
@@ -213,7 +212,7 @@ export default function AgendaPage() {
                                   </div>
                                   <div className="space-y-4">
                                     <div className="flex items-center gap-3">
-                                      <div className="w-1 h-4 bg-brand-yellow rounded-full"></div>
+                                      <div className="w-1 h-4 bg-emerald-500 rounded-full"></div>
                                       <h4 className="text-[10px] font-black uppercase tracking-widest text-white">Gols {jogo.visitante}</h4>
                                     </div>
                                     <p className="text-[11px] font-bold text-slate-300 italic leading-relaxed whitespace-pre-line">
@@ -225,7 +224,7 @@ export default function AgendaPage() {
                                 {jogo.escalacaoCode ? (
                                   <div className="space-y-6">
                                     <div className="flex items-center gap-3">
-                                      <div className="w-1 h-4 bg-brand-yellow rounded-full"></div>
+                                      <div className="w-1 h-4 bg-emerald-500 rounded-full"></div>
                                       <h4 className="text-[10px] font-black uppercase tracking-widest text-white">Escalação e Estatísticas</h4>
                                     </div>
                                     <div className="w-full bg-white rounded-2xl overflow-hidden shadow-2xl">
@@ -244,7 +243,7 @@ export default function AgendaPage() {
                                 {jogo.eventos && (
                                   <div className="pt-4">
                                     <div className="flex items-center gap-3 mb-4">
-                                      <div className="w-1 h-4 bg-brand-yellow rounded-full"></div>
+                                      <div className="w-1 h-4 bg-emerald-500 rounded-full"></div>
                                       <h4 className="text-[10px] font-black uppercase tracking-widest text-white">Observações</h4>
                                     </div>
                                     <p className="text-[11px] font-bold text-slate-400 italic leading-relaxed">
@@ -265,7 +264,6 @@ export default function AgendaPage() {
           ))}
         </div>
 
-        {/* FOOTER */}
         <div className="mt-12 pt-8 border-t border-slate-800/50 flex flex-col md:flex-row justify-between items-center gap-6">
           <p className="text-[9px] font-bold text-slate-600 uppercase tracking-widest">© 2026 Grêmio Novorizontino • Departamento de Análise de Desempenho</p>
           <div className="flex gap-6">
@@ -274,7 +272,7 @@ export default function AgendaPage() {
               <span className="text-[8px] font-black uppercase text-slate-500 tracking-widest">Vitória</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-brand-yellow shadow-[0_0_8px_rgba(251,191,36,0.5)]"></div>
+              <div className="w-2 h-2 rounded-full bg-emerald-500/50 shadow-[0_0_8px_rgba(16,185,129,0.3)]"></div>
               <span className="text-[8px] font-black uppercase text-slate-500 tracking-widest">Empate</span>
             </div>
             <div className="flex items-center gap-2">
