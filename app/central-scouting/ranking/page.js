@@ -181,10 +181,12 @@ export default function RankingPerfil() {
       
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(11);
-      doc.text(`${idx + 1}. ${nomeAtleta}`, 20, yPos);
+      doc.setFont(undefined, 'bold');
+      doc.text(`${idx + 1}. ${nomeAtleta} | ${nomeTime}`, 20, yPos);
       doc.setTextColor(100, 116, 139);
       doc.setFontSize(9);
-      doc.text(`${nomeTime} | ${posicao} | Nota: ${nota}`, 20, yPos + 5);
+      doc.setFont(undefined, 'normal');
+      doc.text(`${posicao} - Nota: ${nota}`, 20, yPos + 5);
       yPos += 15;
     });
     
