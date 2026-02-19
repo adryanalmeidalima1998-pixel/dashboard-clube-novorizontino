@@ -28,7 +28,6 @@ export default function PlantelPage() {
             const dadosLimpos = cleanData(results.data)
             
             if (dadosLimpos.length > 0) {
-              // Detectar automaticamente qual coluna contém o nome do jogador
               const primeiroJogador = dadosLimpos[0]
               let colunaNome = 'Jogador'
               
@@ -42,14 +41,12 @@ export default function PlantelPage() {
               
               setNomeColuna(colunaNome)
               
-              // Processar dados com mapeamento dinâmico
               const dadosProcessados = dadosLimpos.map(j => ({
                 ...j,
                 Jogador: j[colunaNome] || '',
                 Time: normalizeTeamName(j.Time || j.Equipe || 'Grêmio Novorizontino')
               }))
               
-              // Detectar colunas fixas (não-métricas) dinamicamente
               const todasAsColunas = Object.keys(dadosProcessados[0])
               const colunasFixasComuns = [
                 'Jogador', 'Nome', 'Atleta', 'Idade', 'Altura', 'Peso', 
@@ -61,7 +58,6 @@ export default function PlantelPage() {
                 colunasFixasComuns.includes(col)
               )
               
-              // Métricas são todas as colunas que não estão em colunasFixas
               const metricas = todasAsColunas.filter(h => 
                 !colunasFixasDetectadas.includes(h) && h.trim() !== ''
               )
@@ -91,7 +87,6 @@ export default function PlantelPage() {
     if (!dataNascimento || dataNascimento === '-' || dataNascimento === '') return '-'
     
     try {
-      // Esperado formato: DD/MM/YYYY
       const partes = String(dataNascimento).split('/')
       if (partes.length !== 3) return '-'
       
@@ -148,33 +143,19 @@ export default function PlantelPage() {
     setSortConfig({ key, direction })
   }
 
-  // Função melhorada para categorizar posições
   const getCategoria = (pos) => {
     const p = (pos || '').toUpperCase()
-    
-    // Goleiros
     if (p.includes('GOLEIRO') || p.includes('GK') || p === 'GK') return 'Goleiros'
-    
-    // Zagueiros (separado de Laterais)
     if (p.includes('ZAGUEIRO') || p.includes('ZAG') || p.includes('DC')) return 'Zagueiros'
-    
-    // Laterais (Lateral Direito, Lateral Esquerdo, LD, LE)
     if (p.includes('LATERAL') || p.includes('LD') || p.includes('LE') || p.includes('LAT')) return 'Laterais'
-    
-    // Defensores genéricos (se não for zagueiro ou lateral)
     if (p.includes('DEFENSOR') || p.includes('DEF')) return 'Defensores'
-    
-    // Meio-Campistas (Volantes, Médios, Organizadores)
     if (p.includes('VOLANTE') || p.includes('MÉDIO') || p.includes('MEIA') || p.includes('ORGANIZADOR') ||
         p.includes('VOL') || p.includes('MEI') || p.includes('MC') || p.includes('CM') || 
         p.includes('DM') || p.includes('AM') || p.includes('CAM')) return 'Meio-Campistas'
-    
-    // Atacantes (Extremos, Atacantes, 2º Atacante, Finalizadores)
     if (p.includes('ATACANTE') || p.includes('EXTREMO') || p.includes('FINALIZADOR') || 
         p.includes('2º ATACANTE') || p.includes('SEGUNDO ATACANTE') ||
         p.includes('ATK') || p.includes('EXT') || p.includes('ST') || p.includes('CF') || 
         p.includes('RW') || p.includes('LW') || p.includes('FW')) return 'Atacantes'
-    
     return 'Atacantes'
   }
 
@@ -216,8 +197,6 @@ export default function PlantelPage() {
   return (
     <div className="min-h-screen bg-[#0a0c10] text-white p-4 md:p-10 font-sans">
       <div className="max-w-7xl mx-auto">
-        
-        {/* Header Moderno */}
         <div className="flex flex-col md:flex-row items-center justify-between mb-16 gap-8">
           <div className="flex items-center gap-6">
             <button onClick={() => router.push('/')} className="p-4 bg-slate-900/80 hover:bg-brand-yellow/20 rounded-2xl border border-slate-800 transition-all group">
@@ -239,12 +218,10 @@ export default function PlantelPage() {
           </div>
         </div>
 
-        {/* Listagem por Grupos em Ordem Específica */}
         <div className="space-y-20">
           {['Goleiros', 'Zagueiros', 'Laterais', 'Defensores', 'Meio-Campistas', 'Atacantes'].map(titulo => {
             const jogadores = grupos[titulo]
-            return (
-            jogadores.length > 0 && (
+            return jogadores.length > 0 && (
               <div key={titulo} className="relative">
                 <div className="flex items-center gap-4 mb-8">
                   <div className="h-10 w-2 bg-brand-yellow rounded-full shadow-[0_0_20px_rgba(251,191,36,0.4)]"></div>
@@ -259,7 +236,6 @@ export default function PlantelPage() {
                         <tr className="bg-slate-950/80 border-b border-brand-yellow/20">
                           <th onClick={() => requestSort('Jogador')} className="p-6 font-black text-slate-500 uppercase text-[10px] tracking-widest cursor-pointer hover:text-brand-yellow transition-colors sticky left-0 bg-slate-950 z-10"># JOGADOR</th>
                           
-                          {/* Colunas Fixas em Ordem Específica */}
                           {['Posição', 'Data de Nascimento', 'Altura', 'Peso', 'Nacionalidade'].map(col => {
                             if (!colunasFixas.includes(col)) return null
                             return (
@@ -276,16 +252,12 @@ export default function PlantelPage() {
                             )
                           })}
                           
-                          {/* Coluna de Idade Calculada */}
                           {colunasFixas.includes('Data de Nascimento') && (
                             <th className="p-6 font-black text-slate-500 uppercase text-[10px] tracking-widest text-center">
-                              <div className="flex flex-col items-center gap-1">
-                                IDADE
-                              </div>
+                              IDADE
                             </th>
                           )}
                           
-                          {/* Métricas Dinâmicas */}
                           {colunasMetricas.slice(0, 8).map(k => (
                             <th key={k} onClick={() => requestSort(k)} className="p-6 font-black text-slate-500 uppercase text-[10px] tracking-widest text-center cursor-pointer hover:text-brand-yellow transition-colors">
                               <div className="flex flex-col items-center gap-1">
@@ -309,7 +281,6 @@ export default function PlantelPage() {
                               </div>
                             </td>
                             
-                            {/* Colunas Fixas em Ordem Específica */}
                             {['Posição', 'Data de Nascimento', 'Altura', 'Peso', 'Nacionalidade'].map(col => {
                               if (!colunasFixas.includes(col)) return null
                               return (
@@ -323,14 +294,12 @@ export default function PlantelPage() {
                               )
                             })}
                             
-                            {/* Coluna de Idade Calculada */}
                             {colunasFixas.includes('Data de Nascimento') && (
                               <td className="p-6 text-center text-slate-400 font-bold">
                                 {calcularIdade(j['Data de Nascimento'])}
                               </td>
                             )}
                             
-                            {/* Métricas Dinâmicas */}
                             {colunasMetricas.slice(0, 8).map(k => {
                               const val = parseNum(j[k])
                               const media = medias[k]
@@ -361,7 +330,8 @@ export default function PlantelPage() {
               </div>
             )
           })}
-        </div>      </div>
+        </div>
+      </div>
     </div>
   )
 }
