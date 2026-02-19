@@ -27,6 +27,7 @@ export const cleanData = (data) => {
   }).filter(row => {
     return (row.Jogador && row.Jogador.trim() !== '') || 
            (row.Atleta && row.Atleta.trim() !== '') ||
+           (row.Nome && row.Nome.trim() !== '') ||
            (row.Mandante && row.Mandante.trim() !== '') ||
            (row.Data && row.Data.trim() !== '');
   });
