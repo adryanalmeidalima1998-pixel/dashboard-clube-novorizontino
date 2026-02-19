@@ -9,6 +9,8 @@ export default function PlantelPage() {
   const router = useRouter()
   const [elenco, setElenco] = useState([])
   const [colunasMetricas, setColunasMetricas] = useState([])
+  const [colunasFixas, setColunasFixas] = useState([])
+  const [nomeColuna, setNomeColuna] = useState('Jogador')
   const [loading, setLoading] = useState(true)
   const [sortConfig, setSortConfig] = useState({ key: 'Jogador', direction: 'asc' })
 
@@ -23,26 +25,50 @@ export default function PlantelPage() {
           header: true,
           skipEmptyLines: true,
           complete: (results) => {
-            const dadosLimpos = cleanData(results.data).map(j => ({
-              ...j,
-              Jogador: j.Nome || j.Jogador || '',
-              'Data de Nascimento': j['Data de Nascimento'] || '',
-              Idade: j.Idade || '',
-              Nacionalidade: j.Nacionalidade || '',
-              Posição: j.Posição || '',
-              Altura: j.Altura || '',
-              Peso: j.Peso || '',
-              Naturalidade: j.Naturalidade || '',
-              'Clubes Anteriores': j['Clubes Anteriores'] || '',
-              Time: normalizeTeamName(j.Time || j.Equipe || 'Grêmio Novorizontino')
-            }))
+            const dadosLimpos = cleanData(results.data)
             
             if (dadosLimpos.length > 0) {
-              const headers = Object.keys(dadosLimpos[0])
-              const metaCols = ['Jogador', 'Idade', 'Altura', 'Nacionalidade', 'Posição', 'Time', 'Minutos jogados', 'Data de Nascimento', 'Peso', 'Naturalidade', 'Clubes Anteriores']
-              const metricas = headers.filter(h => !metaCols.includes(h))
+              // Detectar automaticamente qual coluna contém o nome do jogador
+              const primeiroJogador = dadosLimpos[0]
+              let colunaNome = 'Jogador'
+              
+              if (primeiroJogador['Nome']) {
+                colunaNome = 'Nome'
+              } else if (primeiroJogador['Atleta']) {
+                colunaNome = 'Atleta'
+              } else if (primeiroJogador['Jogador']) {
+                colunaNome = 'Jogador'
+              }
+              
+              setNomeColuna(colunaNome)
+              
+              // Processar dados com mapeamento dinâmico
+              const dadosProcessados = dadosLimpos.map(j => ({
+                ...j,
+                Jogador: j[colunaNome] || '',
+                Time: normalizeTeamName(j.Time || j.Equipe || 'Grêmio Novorizontino')
+              }))
+              
+              // Detectar colunas fixas (não-métricas) dinamicamente
+              const todasAsColunas = Object.keys(dadosProcessados[0])
+              const colunasFixasComuns = [
+                'Jogador', 'Nome', 'Atleta', 'Idade', 'Altura', 'Peso', 
+                'Nacionalidade', 'Posição', 'Time', 'Equipe', 'Data de Nascimento', 
+                'Naturalidade', 'Clubes Anteriores', 'Minutos jogados'
+              ]
+              
+              const colunasFixasDetectadas = todasAsColunas.filter(col => 
+                colunasFixasComuns.includes(col)
+              )
+              
+              // Métricas são todas as colunas que não estão em colunasFixas
+              const metricas = todasAsColunas.filter(h => 
+                !colunasFixasDetectadas.includes(h) && h.trim() !== ''
+              )
+              
+              setColunasFixas(colunasFixasDetectadas)
               setColunasMetricas(metricas)
-              setElenco(dadosLimpos)
+              setElenco(dadosProcessados)
             }
             setLoading(false)
           }
@@ -68,7 +94,8 @@ export default function PlantelPage() {
         let aVal = a[sortConfig.key]
         let bVal = b[sortConfig.key]
 
-        const isNumeric = colunasMetricas.includes(sortConfig.key) || ['Idade', 'Altura'].includes(sortConfig.key)
+        const isNumeric = colunasMetricas.includes(sortConfig.key) || 
+                         ['Idade', 'Altura', 'Peso'].includes(sortConfig.key)
         if (isNumeric) {
           aVal = parseNum(aVal)
           bVal = parseNum(bVal)
@@ -94,26 +121,18 @@ export default function PlantelPage() {
   const getCategoria = (pos) => {
     const p = (pos || '').toUpperCase()
     
-    // Goleiros
     if (p.includes('GOLEIRO') || p.includes('GK') || p === 'GK') return 'Goleiros'
-    
-    // Defensores (Laterais e Zagueiros)
     if (p.includes('LATERAL') || p.includes('ZAGUEIRO') || p.includes('DEFENSOR') ||
         p.includes('LD') || p.includes('LE') || p.includes('LAT') || p.includes('DC') || 
         p.includes('ZAG') || p.includes('DEF')) return 'Defensores'
-    
-    // Meio-Campistas (Volantes, Médios, Organizadores)
     if (p.includes('VOLANTE') || p.includes('MÉDIO') || p.includes('MEIA') || p.includes('ORGANIZADOR') ||
         p.includes('VOL') || p.includes('MEI') || p.includes('MC') || p.includes('CM') || 
         p.includes('DM') || p.includes('AM') || p.includes('CAM')) return 'Meio-Campistas'
-    
-    // Atacantes (Extremos, Atacantes, 2º Atacante, Finalizadores)
     if (p.includes('ATACANTE') || p.includes('EXTREMO') || p.includes('FINALIZADOR') || 
         p.includes('2º ATACANTE') || p.includes('SEGUNDO ATACANTE') ||
         p.includes('ATK') || p.includes('EXT') || p.includes('ST') || p.includes('CF') || 
         p.includes('RW') || p.includes('LW') || p.includes('FW')) return 'Atacantes'
     
-    // Padrão: Atacantes
     return 'Atacantes'
   }
 
@@ -188,10 +207,24 @@ export default function PlantelPage() {
                       <thead>
                         <tr className="bg-slate-950/80 border-b border-brand-yellow/20">
                           <th onClick={() => requestSort('Jogador')} className="p-6 font-black text-slate-500 uppercase text-[10px] tracking-widest cursor-pointer hover:text-brand-yellow transition-colors sticky left-0 bg-slate-950 z-10"># JOGADOR</th>
-                          <th className="p-6 font-black text-slate-500 uppercase text-[10px] tracking-widest text-center">POSIÇÃO</th>
-                          <th className="p-6 font-black text-slate-500 uppercase text-[10px] tracking-widest text-center">IDADE</th>
-                          <th className="p-6 font-black text-slate-500 uppercase text-[10px] tracking-widest text-center">ALTURA</th>
-                          <th className="p-6 font-black text-slate-500 uppercase text-[10px] tracking-widest text-center">NACIONALIDADE</th>
+                          
+                          {/* Colunas Fixas Dinâmicas */}
+                          {colunasFixas.filter(col => 
+                            col !== 'Jogador' && col !== 'Nome' && col !== 'Atleta' && col !== 'Time'
+                          ).slice(0, 5).map(col => (
+                            <th 
+                              key={col}
+                              onClick={() => requestSort(col)}
+                              className="p-6 font-black text-slate-500 uppercase text-[10px] tracking-widest text-center cursor-pointer hover:text-brand-yellow transition-colors"
+                            >
+                              <div className="flex flex-col items-center gap-1">
+                                {col.substring(0, 12).toUpperCase()}
+                                {sortConfig.key === col && <span className="text-brand-yellow text-[8px]">{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>}
+                              </div>
+                            </th>
+                          ))}
+                          
+                          {/* Métricas Dinâmicas */}
                           {colunasMetricas.slice(0, 8).map(k => (
                             <th key={k} onClick={() => requestSort(k)} className="p-6 font-black text-slate-500 uppercase text-[10px] tracking-widest text-center cursor-pointer hover:text-brand-yellow transition-colors">
                               <div className="flex flex-col items-center gap-1">
@@ -214,12 +247,21 @@ export default function PlantelPage() {
                                 </div>
                               </div>
                             </td>
-                            <td className="p-6 text-center">
-                              <span className="bg-slate-950 px-3 py-1.5 rounded-xl text-[10px] font-black border border-brand-yellow/30 text-brand-yellow shadow-inner">{j['Posição']}</span>
-                            </td>
-                            <td className="p-6 text-center text-slate-400 font-bold">{j['Idade']}</td>
-                            <td className="p-6 text-center text-slate-400 font-bold">{j['Altura']}</td>
-                            <td className="p-6 text-center text-slate-400 font-bold text-[10px]">{j['Nacionalidade']}</td>
+                            
+                            {/* Colunas Fixas Dinâmicas */}
+                            {colunasFixas.filter(col => 
+                              col !== 'Jogador' && col !== 'Nome' && col !== 'Atleta' && col !== 'Time'
+                            ).slice(0, 5).map(col => (
+                              <td key={col} className="p-6 text-center text-slate-400 font-bold text-[10px]">
+                                {col === 'Posição' ? (
+                                  <span className="bg-slate-950 px-3 py-1.5 rounded-xl text-[10px] font-black border border-brand-yellow/30 text-brand-yellow shadow-inner">{j[col]}</span>
+                                ) : (
+                                  j[col] || '-'
+                                )}
+                              </td>
+                            ))}
+                            
+                            {/* Métricas Dinâmicas */}
                             {colunasMetricas.slice(0, 8).map(k => {
                               const val = parseNum(j[k])
                               const media = medias[k]
@@ -232,7 +274,10 @@ export default function PlantelPage() {
                                       {j[k] === '0' || j[k] === '0%' || j[k] === '-' ? '-' : j[k]}
                                     </span>
                                     <div className="w-12 h-1 bg-slate-800 rounded-full overflow-hidden">
-                                      <div className={`h-full rounded-full transition-all duration-1000 ${isGood ? 'bg-brand-yellow shadow-[0_0_10px_rgba(251,191,36,0.3)]' : 'bg-red-500/30'}`} style={{ width: `${Math.min(percent, 100)}%` }}></div>
+                                      <div 
+                                        className={`h-full rounded-full transition-all ${isGood ? 'bg-brand-yellow' : 'bg-slate-700'}`}
+                                        style={{ width: `${Math.min(percent, 100)}%` }}
+                                      />
                                     </div>
                                   </div>
                                 </td>
@@ -247,21 +292,6 @@ export default function PlantelPage() {
               </div>
             )
           ))}
-        </div>
-
-        {/* Legenda */}
-        <div className="mt-20 flex flex-wrap items-center gap-10 bg-slate-900/20 p-8 rounded-[2.5rem] border border-brand-yellow/20">
-          <div className="flex items-center gap-3">
-            <div className="w-5 h-2 bg-brand-yellow rounded-full shadow-[0_0_10px_rgba(251,191,36,0.5)]"></div>
-            <span className="text-[10px] text-slate-500 uppercase font-black tracking-widest">Acima da Média</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="w-5 h-2 bg-red-500/30 rounded-full"></div>
-            <span className="text-[10px] text-slate-500 uppercase font-black tracking-widest">Abaixo da Média</span>
-          </div>
-          <div className="ml-auto text-[10px] text-slate-600 font-bold italic uppercase tracking-widest">
-            * Dados sincronizados via Google Sheets API (CSV Engine)
-          </div>
         </div>
       </div>
     </div>
