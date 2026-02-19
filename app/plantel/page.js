@@ -87,6 +87,37 @@ export default function PlantelPage() {
     return parseFloat(clean) || 0
   }
 
+  const calcularIdade = (dataNascimento) => {
+    if (!dataNascimento || dataNascimento === '-' || dataNascimento === '') return '-'
+    
+    try {
+      // Esperado formato: DD/MM/YYYY
+      const partes = String(dataNascimento).split('/')
+      if (partes.length !== 3) return '-'
+      
+      const dia = parseInt(partes[0], 10)
+      const mes = parseInt(partes[1], 10)
+      const ano = parseInt(partes[2], 10)
+      
+      if (isNaN(dia) || isNaN(mes) || isNaN(ano)) return '-'
+      
+      const dataNasc = new Date(ano, mes - 1, dia)
+      const dataAtual = new Date()
+      
+      let idade = dataAtual.getFullYear() - dataNasc.getFullYear()
+      const mesAtual = dataAtual.getMonth()
+      const mesNasc = dataNasc.getMonth()
+      
+      if (mesAtual < mesNasc || (mesAtual === mesNasc && dataAtual.getDate() < dia)) {
+        idade--
+      }
+      
+      return idade >= 0 ? idade : '-'
+    } catch (e) {
+      return '-'
+    }
+  }
+
   const sortedElenco = useMemo(() => {
     let sortable = [...elenco]
     if (sortConfig.key) {
@@ -223,8 +254,18 @@ export default function PlantelPage() {
                                 </div>
                               </th>
                             )
-                          })}                          
-                          {/* Métricas Dinâmicas */
+                          })}
+                          
+                          {/* Coluna de Idade Calculada */}
+                          {colunasFixas.includes('Data de Nascimento') && (
+                            <th className="p-6 font-black text-slate-500 uppercase text-[10px] tracking-widest text-center">
+                              <div className="flex flex-col items-center gap-1">
+                                IDADE
+                              </div>
+                            </th>
+                          )}
+                          
+                          {/* Métricas Dinâmicas */}
                           {colunasMetricas.slice(0, 8).map(k => (
                             <th key={k} onClick={() => requestSort(k)} className="p-6 font-black text-slate-500 uppercase text-[10px] tracking-widest text-center cursor-pointer hover:text-brand-yellow transition-colors">
                               <div className="flex flex-col items-center gap-1">
@@ -261,6 +302,13 @@ export default function PlantelPage() {
                                 </td>
                               )
                             })}
+                            
+                            {/* Coluna de Idade Calculada */}
+                            {colunasFixas.includes('Data de Nascimento') && (
+                              <td className="p-6 text-center text-slate-400 font-bold">
+                                {calcularIdade(j['Data de Nascimento'])}
+                              </td>
+                            )}
                             
                             {/* Métricas Dinâmicas */}
                             {colunasMetricas.slice(0, 8).map(k => {
