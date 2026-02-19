@@ -120,11 +120,20 @@ export default function PlantelPage() {
         let aVal = a[sortConfig.key]
         let bVal = b[sortConfig.key]
 
-        const isNumeric = colunasMetricas.includes(sortConfig.key) || 
-                         ['Idade', 'Altura', 'Peso'].includes(sortConfig.key)
-        if (isNumeric) {
-          aVal = parseNum(aVal)
-          bVal = parseNum(bVal)
+        // Tratamento especial para Idade calculada
+        if (sortConfig.key === 'Idade') {
+          aVal = calcularIdade(a['Data de Nascimento'])
+          bVal = calcularIdade(b['Data de Nascimento'])
+          aVal = aVal === '-' ? 0 : parseInt(aVal, 10)
+          bVal = bVal === '-' ? 0 : parseInt(bVal, 10)
+        } else {
+          // Detectar se é coluna numérica
+          const isNumeric = colunasMetricas.includes(sortConfig.key) || 
+                           ['Altura', 'Peso', 'Idade'].includes(sortConfig.key)
+          if (isNumeric) {
+            aVal = parseNum(aVal)
+            bVal = parseNum(bVal)
+          }
         }
 
         if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1
@@ -253,12 +262,18 @@ export default function PlantelPage() {
                           })}
                           
                           {colunasFixas.includes('Data de Nascimento') && (
-                            <th className="p-6 font-black text-slate-500 uppercase text-[10px] tracking-widest text-center">
-                              IDADE
+                            <th 
+                              onClick={() => requestSort('Idade')}
+                              className="p-6 font-black text-slate-500 uppercase text-[10px] tracking-widest text-center cursor-pointer hover:text-brand-yellow transition-colors"
+                            >
+                              <div className="flex flex-col items-center gap-1">
+                                IDADE
+                                {sortConfig.key === 'Idade' && <span className="text-brand-yellow text-[8px]">{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>}
+                              </div>
                             </th>
                           )}
                           
-                          {colunasMetricas.slice(0, 8).map(k => (
+                          {colunasMetricas.map(k => (
                             <th key={k} onClick={() => requestSort(k)} className="p-6 font-black text-slate-500 uppercase text-[10px] tracking-widest text-center cursor-pointer hover:text-brand-yellow transition-colors">
                               <div className="flex flex-col items-center gap-1">
                                 {k.substring(0, 8).toUpperCase()}
@@ -300,7 +315,7 @@ export default function PlantelPage() {
                               </td>
                             )}
                             
-                            {colunasMetricas.slice(0, 8).map(k => {
+                            {colunasMetricas.map(k => {
                               const val = parseNum(j[k])
                               const media = medias[k]
                               const percent = (val / (media || 1)) * 100
