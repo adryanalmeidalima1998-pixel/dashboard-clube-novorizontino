@@ -211,6 +211,7 @@ export default function RankingPerfil() {
   
   const exportComparisonPDF = async () => {
     try {
+      const { player1: selectedPlayer1, player2: selectedPlayer2 } = comparisonModal;
       if (!selectedPlayer1 || !selectedPlayer2) {
         alert('Selecione dois atletas para comparar')
         return
@@ -272,8 +273,8 @@ export default function RankingPerfil() {
       )
 
       metricas.forEach((metrica) => {
-        const val1 = parseFloat(String(selectedPlayer1[metrica] || 0).replace('%', '').replace(',', '.')) || 0
-        const val2 = parseFloat(String(selectedPlayer2[metrica] || 0).replace('%', '').replace(',', '.')) || 0
+        const val1 = safeParseFloat(selectedPlayer1[metrica])
+        const val2 = safeParseFloat(selectedPlayer2[metrica])
         
         // Determinar o vencedor
         const isPositive = !['Falta', 'Erro', 'Cartão', 'Bola perdida'].some(w => metrica.toLowerCase().includes(w.toLowerCase()))
