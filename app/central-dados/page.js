@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import Papa from 'papaparse'
 import { jsPDF } from 'jspdf'
 import 'jspdf-autotable'
-import { cleanData } from '../utils/dataCleaner'
+import { cleanData, safeParseFloat } from '../utils/dataCleaner'
+import { columnMapping } from '../utils/column_mapping'
 
 export default function CentralDados() {
   const router = useRouter()
@@ -41,7 +42,20 @@ export default function CentralDados() {
         Papa.parse(csv, {
           header: true,
           complete: (results) => {
-            const cleaned = cleanData(results.data)
+                        const cleaned = cleanData(results.data).map(player => {
+              const newPlayer = {};
+              for (const key in player) {
+                newPlayer[key] = player[key];
+              }
+              // Apply safeParseFloat to all metric values using the columnMapping
+              for (const metricKey in columnMapping) {
+                const csvColumnName = columnMapping[metricKey];
+                if (newPlayer[csvColumnName] !== undefined) {
+                  newPlayer[metricKey] = safeParseFloat(newPlayer[csvColumnName], csvColumnName);
+                }
+              }
+              return newPlayer;
+            })
             setJogadores(cleaned)
             setCarregando(false)
           }
@@ -82,15 +96,15 @@ export default function CentralDados() {
       const matchPos = filtroPosicao.length === 0 || filtroPosicao.includes(j.Posição?.trim().toUpperCase())
       const idade = parseInt(j.Idade) || 0
       const matchIdade = idade >= filtroIdade.min && idade <= filtroIdade.max
-      const matchMinutos = (parseInt(j['MINUTOS JOGADOS']) || 0) >= filtroMinutagem
+            const matchMinutos = (j['MINUTOS JOGADOS'] || 0) >= filtroMinutagem
       return matchBusca && matchTime && matchPos && matchIdade && matchMinutos
     }).map(j => {
       if (atletaReferencia) {
         let scoreTotal = 0
         let count = 0
         metricasSelecionadas.forEach(m => {
-          const valRef = parseFloat(atletaReferencia[m]) || 0
-          const valAtleta = parseFloat(j[m]) || 0
+                    const valRef = atletaReferencia[m] || 0
+                    const valAtleta = j[m] || 0
           if (valRef > 0) {
             const diff = 1 - Math.abs(valRef - valAtleta) / valRef
             scoreTotal += Math.max(0, diff)
@@ -126,7 +140,7 @@ export default function CentralDados() {
         j.Jogador, 
         j.Time || j.Equipe, 
         j.Posição, 
-        ...metricasSelecionadas.map(m => j[m] || '0')
+        ...      metricasSelecionadas.map(m => (j[m] !== undefined && j[m] !== null) ? j[m].toString() : '0')
       ])
       
       doc.autoTable({ 
@@ -160,8 +174,8 @@ export default function CentralDados() {
       
       const head = [['Métrica', player1.Jogador, player2.Jogador]]
       const body = metrics.map(m => {
-        const val1 = parseFloat(player1[m]) || 0
-        const val2 = parseFloat(player2[m]) || 0
+                const val1 = player1[m] || 0
+                const val2 = player2[m] || 0
         return [m, val1.toString(), val2.toString()]
       })
 
@@ -376,8 +390,8 @@ export default function CentralDados() {
               <div className="max-h-[400px] overflow-y-auto pr-4 custom-scrollbar">
                 <div className="space-y-4">
                   {(metricasSelecionadas.length > 0 ? metricasSelecionadas : ['GOLS', 'ASSISTÊNCIAS', 'MINUTOS JOGADOS']).map(m => {
-                    const v1 = parseFloat(comparisonModal.player1[m]) || 0
-                    const v2 = parseFloat(comparisonModal.player2[m]) || 0
+                    const v1 = comparisonModal.player1[m] || 0
+                    const v2 = comparisonModal.player2[m] || 0
                     const total = v1 + v2 || 1
                     const p1 = (v1 / total) * 100
                     const p2 = (v2 / total) * 100

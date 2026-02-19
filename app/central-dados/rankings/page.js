@@ -76,7 +76,7 @@ export default function RankingsPage() {
       const matchTime = filtroTime === 'todos' || j.Time === filtroTime || j.Equipe === filtroTime
       const idade = parseInt(j.Idade) || 0
       const matchIdade = idade >= filtroIdade.min && idade <= filtroIdade.max
-      const matchMinutos = (parseInt(j['MINUTOS JOGADOS']) || 0) >= filtroMinutagem
+      const matchMinutos = (parseInt(j['Minutos jogados']) || 0) >= filtroMinutagem
       
       return matchPos && matchNac && matchBusca && matchTime && matchIdade && matchMinutos
     })
@@ -194,8 +194,8 @@ export default function RankingsPage() {
       
       const head = [['Métrica', player1.Jogador, player2.Jogador]]
       const body = metrics.map(m => {
-        const val1 = parseFloat(player1[m]) || 0
-        const val2 = parseFloat(player2[m]) || 0
+        const val1 = player1[m] || 0
+        const val2 = player2[m] || 0
         return [m, val1.toString(), val2.toString()]
       })
 
