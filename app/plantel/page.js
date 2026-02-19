@@ -208,23 +208,23 @@ export default function PlantelPage() {
                         <tr className="bg-slate-950/80 border-b border-brand-yellow/20">
                           <th onClick={() => requestSort('Jogador')} className="p-6 font-black text-slate-500 uppercase text-[10px] tracking-widest cursor-pointer hover:text-brand-yellow transition-colors sticky left-0 bg-slate-950 z-10"># JOGADOR</th>
                           
-                          {/* Colunas Fixas Dinâmicas */}
-                          {colunasFixas.filter(col => 
-                            col !== 'Jogador' && col !== 'Nome' && col !== 'Atleta' && col !== 'Time'
-                          ).slice(0, 5).map(col => (
-                            <th 
-                              key={col}
-                              onClick={() => requestSort(col)}
-                              className="p-6 font-black text-slate-500 uppercase text-[10px] tracking-widest text-center cursor-pointer hover:text-brand-yellow transition-colors"
-                            >
-                              <div className="flex flex-col items-center gap-1">
-                                {col.substring(0, 12).toUpperCase()}
-                                {sortConfig.key === col && <span className="text-brand-yellow text-[8px]">{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>}
-                              </div>
-                            </th>
-                          ))}
-                          
-                          {/* Métricas Dinâmicas */}
+                          {/* Colunas Fixas em Ordem Específica */}
+                          {['Posição', 'Data de Nascimento', 'Altura', 'Peso', 'Nacionalidade'].map(col => {
+                            if (!colunasFixas.includes(col)) return null
+                            return (
+                              <th 
+                                key={col}
+                                onClick={() => requestSort(col)}
+                                className="p-6 font-black text-slate-500 uppercase text-[10px] tracking-widest text-center cursor-pointer hover:text-brand-yellow transition-colors"
+                              >
+                                <div className="flex flex-col items-center gap-1">
+                                  {col.substring(0, 12).toUpperCase()}
+                                  {sortConfig.key === col && <span className="text-brand-yellow text-[8px]">{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>}
+                                </div>
+                              </th>
+                            )
+                          })}                          
+                          {/* Métricas Dinâmicas */
                           {colunasMetricas.slice(0, 8).map(k => (
                             <th key={k} onClick={() => requestSort(k)} className="p-6 font-black text-slate-500 uppercase text-[10px] tracking-widest text-center cursor-pointer hover:text-brand-yellow transition-colors">
                               <div className="flex flex-col items-center gap-1">
@@ -248,18 +248,19 @@ export default function PlantelPage() {
                               </div>
                             </td>
                             
-                            {/* Colunas Fixas Dinâmicas */}
-                            {colunasFixas.filter(col => 
-                              col !== 'Jogador' && col !== 'Nome' && col !== 'Atleta' && col !== 'Time'
-                            ).slice(0, 5).map(col => (
-                              <td key={col} className="p-6 text-center text-slate-400 font-bold text-[10px]">
-                                {col === 'Posição' ? (
-                                  <span className="bg-slate-950 px-3 py-1.5 rounded-xl text-[10px] font-black border border-brand-yellow/30 text-brand-yellow shadow-inner">{j[col]}</span>
-                                ) : (
-                                  j[col] || '-'
-                                )}
-                              </td>
-                            ))}
+                            {/* Colunas Fixas em Ordem Específica */}
+                            {['Posição', 'Data de Nascimento', 'Altura', 'Peso', 'Nacionalidade'].map(col => {
+                              if (!colunasFixas.includes(col)) return null
+                              return (
+                                <td key={col} className="p-6 text-center text-slate-400 font-bold text-[10px]">
+                                  {col === 'Posição' ? (
+                                    <span className="bg-slate-950 px-3 py-1.5 rounded-xl text-[10px] font-black border border-brand-yellow/30 text-brand-yellow shadow-inner">{j[col]}</span>
+                                  ) : (
+                                    j[col] || '-'
+                                  )}
+                                </td>
+                              )
+                            })}
                             
                             {/* Métricas Dinâmicas */}
                             {colunasMetricas.slice(0, 8).map(k => {
