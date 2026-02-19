@@ -25,12 +25,21 @@ export default function PlantelPage() {
           complete: (results) => {
             const dadosLimpos = cleanData(results.data).map(j => ({
               ...j,
-              Time: normalizeTeamName(j.Time || j.Equipe)
+              Jogador: j.Nome || j.Jogador || '',
+              'Data de Nascimento': j['Data de Nascimento'] || '',
+              Idade: j.Idade || '',
+              Nacionalidade: j.Nacionalidade || '',
+              Posição: j.Posição || '',
+              Altura: j.Altura || '',
+              Peso: j.Peso || '',
+              Naturalidade: j.Naturalidade || '',
+              'Clubes Anteriores': j['Clubes Anteriores'] || '',
+              Time: normalizeTeamName(j.Time || j.Equipe || 'Grêmio Novorizontino')
             }))
             
             if (dadosLimpos.length > 0) {
               const headers = Object.keys(dadosLimpos[0])
-              const metaCols = ['Jogador', 'Idade', 'Altura', 'Nacionalidade', 'Posição', 'Time', 'Minutos jogados']
+              const metaCols = ['Jogador', 'Idade', 'Altura', 'Nacionalidade', 'Posição', 'Time', 'Minutos jogados', 'Data de Nascimento', 'Peso', 'Naturalidade', 'Clubes Anteriores']
               const metricas = headers.filter(h => !metaCols.includes(h))
               setColunasMetricas(metricas)
               setElenco(dadosLimpos)
