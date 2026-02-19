@@ -152,13 +152,24 @@ export default function PlantelPage() {
   const getCategoria = (pos) => {
     const p = (pos || '').toUpperCase()
     
+    // Goleiros
     if (p.includes('GOLEIRO') || p.includes('GK') || p === 'GK') return 'Goleiros'
-    if (p.includes('LATERAL') || p.includes('ZAGUEIRO') || p.includes('DEFENSOR') ||
-        p.includes('LD') || p.includes('LE') || p.includes('LAT') || p.includes('DC') || 
-        p.includes('ZAG') || p.includes('DEF')) return 'Defensores'
+    
+    // Zagueiros (separado de Laterais)
+    if (p.includes('ZAGUEIRO') || p.includes('ZAG') || p.includes('DC')) return 'Zagueiros'
+    
+    // Laterais (Lateral Direito, Lateral Esquerdo, LD, LE)
+    if (p.includes('LATERAL') || p.includes('LD') || p.includes('LE') || p.includes('LAT')) return 'Laterais'
+    
+    // Defensores genéricos (se não for zagueiro ou lateral)
+    if (p.includes('DEFENSOR') || p.includes('DEF')) return 'Defensores'
+    
+    // Meio-Campistas (Volantes, Médios, Organizadores)
     if (p.includes('VOLANTE') || p.includes('MÉDIO') || p.includes('MEIA') || p.includes('ORGANIZADOR') ||
         p.includes('VOL') || p.includes('MEI') || p.includes('MC') || p.includes('CM') || 
         p.includes('DM') || p.includes('AM') || p.includes('CAM')) return 'Meio-Campistas'
+    
+    // Atacantes (Extremos, Atacantes, 2º Atacante, Finalizadores)
     if (p.includes('ATACANTE') || p.includes('EXTREMO') || p.includes('FINALIZADOR') || 
         p.includes('2º ATACANTE') || p.includes('SEGUNDO ATACANTE') ||
         p.includes('ATK') || p.includes('EXT') || p.includes('ST') || p.includes('CF') || 
@@ -168,7 +179,14 @@ export default function PlantelPage() {
   }
 
   const grupos = useMemo(() => {
-    const g = { 'Goleiros': [], 'Defensores': [], 'Meio-Campistas': [], 'Atacantes': [] }
+    const g = { 
+      'Goleiros': [], 
+      'Zagueiros': [], 
+      'Laterais': [], 
+      'Defensores': [], 
+      'Meio-Campistas': [], 
+      'Atacantes': [] 
+    }
     sortedElenco.forEach(j => {
       const cat = getCategoria(j['Posição'])
       if (g[cat]) g[cat].push(j)
@@ -221,9 +239,11 @@ export default function PlantelPage() {
           </div>
         </div>
 
-        {/* Listagem por Grupos */}
+        {/* Listagem por Grupos em Ordem Específica */}
         <div className="space-y-20">
-          {Object.entries(grupos).map(([titulo, jogadores]) => (
+          {['Goleiros', 'Zagueiros', 'Laterais', 'Defensores', 'Meio-Campistas', 'Atacantes'].map(titulo => {
+            const jogadores = grupos[titulo]
+            return (
             jogadores.length > 0 && (
               <div key={titulo} className="relative">
                 <div className="flex items-center gap-4 mb-8">
@@ -340,9 +360,8 @@ export default function PlantelPage() {
                 </div>
               </div>
             )
-          ))}
-        </div>
-      </div>
+          })}
+        </div>      </div>
     </div>
   )
 }
