@@ -243,6 +243,15 @@ function ListaPreferencialContent() {
             <svg className="w-6 h-6 text-slate-500 group-hover:text-brand-yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
           </button>
           <h1 className="text-4xl md:text-6xl font-black italic uppercase tracking-tighter leading-none">Lista <span className="text-brand-yellow">Preferencial</span></h1>
+          <div className="flex-1 flex justify-end">
+            <button 
+              onClick={() => router.push('/central-scouting/lista-preferencial/radar-comparativo')}
+              className="px-6 py-3 bg-brand-yellow text-black font-black uppercase text-[10px] rounded-xl hover:bg-yellow-500 transition-all flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" /></svg>
+              Relatórios Radar
+            </button>
+          </div>
         </div>
 
         {/* FILTROS PRINCIPAIS */}
