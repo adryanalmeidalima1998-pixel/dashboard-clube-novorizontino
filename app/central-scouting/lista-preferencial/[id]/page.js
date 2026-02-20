@@ -14,8 +14,8 @@ const Plot = dynamic(() => import('react-plotly.js'), {
 
 const METRICAS_RADAR = [
   { label: 'Passes Chave', key: 'Passes chave', type: 'per90' },
-  { label: 'Passes Progressivos %', key: 'Passes progressivos precisos\n%', type: 'raw' },
-  { label: 'Passes na Área %', key: 'Passes dentro da área / precisos\n%', type: 'raw' },
+  { label: 'Passes Progressivos %', key: 'Passes progressivos precisos,%', type: 'raw' },
+  { label: 'Passes na Área %', key: 'Passes dentro da área / precisos, %', type: 'raw' },
   { label: 'Dribles Certos/90', key: 'Dribles bem sucedidos', type: 'per90' },
   { label: 'Dribles 1/3 Final Certos/90', key: 'Dribles no último terço do campo com sucesso', type: 'per90' },
   { label: 'Entradas 1/3 Final (C)', key: 'Entradas no terço final carregando a bola', type: 'per90' },
@@ -339,7 +339,7 @@ function PlayerProfileContent() {
                       <tr key={idx} className="hover:bg-slate-800/50">
                         <td className="px-2 py-1.5 text-slate-300 font-medium print:text-slate-800">{m.label}</td>
                         <td className="px-2 py-1.5 text-right font-bold text-amber-400 print:text-black">
-                          {getValorMetrica(player, m).toFixed(2)}{m.key.includes('%') ? '%' : ''}
+                          {getValorMetrica(player, m).toFixed(2)}{m.label.includes('%') ? '%' : ''}
                         </td>
                       </tr>
                     ))}
