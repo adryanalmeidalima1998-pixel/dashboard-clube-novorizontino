@@ -134,7 +134,7 @@ function DistorsaoContent() {
   const getValorMetrica = (jogador, key, type) => {
     if (!jogador) return 0;
     if (type === 'per90') {
-      if (jogador.aba === undefined) return safeParseFloat(jogador[key]); // Série B já está per90
+      if (jogador.aba === undefined) return safeParseFloat(jogador[key]);
       return safeParseFloat(jogador[`${key}_per90`]);
     }
     return safeParseFloat(jogador[key]);
@@ -143,7 +143,6 @@ function DistorsaoContent() {
   const criarGraficoCorrelacao = (config) => {
     const plotData = [];
 
-    // Jogadores da Lista Preferencial com primeiro nome no gráfico
     listaPreferencial.forEach(jogador => {
       const primeiroNome = jogador.Jogador.split(' ')[0];
       plotData.push({
@@ -154,23 +153,21 @@ function DistorsaoContent() {
         name: jogador.Jogador,
         text: [primeiroNome],
         textposition: 'top center',
-        textfont: { size: 9, color: '#fff' },
-        marker: { size: 12, color: mapaCores[jogador.Jogador], line: { color: '#fff', width: 1 } },
+        textfont: { size: 10, color: '#fff' },
+        marker: { size: 14, color: mapaCores[jogador.Jogador], line: { color: '#fff', width: 1.5 } },
         hovertemplate: `<b>${jogador.Jogador}</b><br>${config.xLabel}: %{x:.2f}<br>${config.yLabel}: %{y:.2f}<extra></extra>`
       });
     });
 
-    // Elenco GN
     const gremioX = gremioNovorizontino.map(j => getValorMetrica(j, config.xKey, config.xType));
     const gremioY = gremioNovorizontino.map(j => getValorMetrica(j, config.yKey, config.yType));
     plotData.push({
       x: gremioX, y: gremioY, mode: 'markers', type: 'scatter', name: 'Elenco GN',
-      marker: { size: 10, color: '#3b82f6', symbol: 'diamond', line: { color: '#fff', width: 1 } },
+      marker: { size: 12, color: '#3b82f6', symbol: 'diamond', line: { color: '#fff', width: 1 } },
       text: gremioNovorizontino.map(j => j.Jogador),
       hovertemplate: `<b>%{text}</b><br>${config.xLabel}: %{x:.2f}<br>${config.yLabel}: %{y:.2f}<extra></extra>`
     });
 
-    // Média Série B
     const serieBX = serieB.map(j => safeParseFloat(j[config.xKey]));
     const serieBY = serieB.map(j => safeParseFloat(j[config.yKey]));
     const avgX = serieBX.reduce((a, b) => a + b, 0) / (serieBX.length || 1);
@@ -178,18 +175,18 @@ function DistorsaoContent() {
     plotData.push({
       x: [avgX], y: [avgY], mode: 'markers+text', type: 'scatter', name: 'Média Série B',
       text: ['SÉRIE B'], textposition: 'bottom center',
-      textfont: { size: 10, color: '#ef4444', weight: 'bold' },
-      marker: { size: 16, color: 'rgba(239, 68, 68, 0.8)', symbol: 'star', line: { color: '#fff', width: 2 } },
+      textfont: { size: 11, color: '#ef4444', weight: 'bold' },
+      marker: { size: 18, color: 'rgba(239, 68, 68, 0.9)', symbol: 'star', line: { color: '#fff', width: 2 } },
       hovertemplate: `<b>Média Série B</b><br>${config.xLabel}: %{x:.2f}<br>${config.yLabel}: %{y:.2f}<extra></extra>`
     });
 
     const layout = {
-      title: { text: config.titulo, font: { size: 16, color: '#fbbf24', family: 'Arial Black' } },
-      xaxis: { title: { text: config.xLabel, font: { size: 10, color: '#fff' } }, gridcolor: 'rgba(255,255,255,0.1)', tickfont: { size: 9, color: '#fff' } },
-      yaxis: { title: { text: config.yLabel, font: { size: 10, color: '#fff' } }, gridcolor: 'rgba(255,255,255,0.1)', tickfont: { size: 9, color: '#fff' } },
+      title: { text: config.titulo, font: { size: 20, color: '#fbbf24', family: 'Arial Black' } },
+      xaxis: { title: { text: config.xLabel, font: { size: 12, color: '#fff', weight: 'bold' } }, gridcolor: 'rgba(255,255,255,0.1)', tickfont: { size: 11, color: '#fff' } },
+      yaxis: { title: { text: config.yLabel, font: { size: 12, color: '#fff', weight: 'bold' } }, gridcolor: 'rgba(255,255,255,0.1)', tickfont: { size: 11, color: '#fff' } },
       paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
-      margin: { t: 50, b: 60, l: 60, r: 30 }, height: 450, showlegend: true,
-      legend: { font: { size: 8, color: '#fff' }, orientation: 'h', y: -0.2, x: 0.5, xanchor: 'center' }
+      margin: { t: 60, b: 80, l: 80, r: 40 }, height: 600, showlegend: true,
+      legend: { font: { size: 11, color: '#fff' }, orientation: 'h', y: -0.15, x: 0.5, xanchor: 'center' }
     };
 
     return { data: plotData, layout };
@@ -198,7 +195,7 @@ function DistorsaoContent() {
   if (loading) return <div className="min-h-screen bg-[#08101e] flex items-center justify-center text-amber-500 font-bold italic animate-pulse">CARREGANDO ANÁLISE...</div>;
 
   return (
-    <div className="min-h-screen bg-[#08101e] text-white p-4 font-sans print:bg-white print:text-black print:p-0">
+    <div className="min-h-screen bg-[#08101e] text-white p-6 font-sans print:bg-white print:text-black print:p-0">
       <style jsx global>{`
         @media print {
           @page { size: landscape; margin: 0.5cm; }
@@ -206,33 +203,34 @@ function DistorsaoContent() {
           body { background: white !important; color: black !important; }
           .print-container { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important; }
           .bg-slate-900, .bg-slate-900\/50 { background: white !important; border: 1px solid #eee !important; }
-          .text-amber-500 { color: #000 !important; }
+          .text-amber-500 { color: #b45309 !important; }
           .js-plotly-plot .main-svg { background: transparent !important; }
-          .xtick text, .ytick text, .gtitle, .xtitle, .ytitle, .legendtext, .textpoint text { fill: black !important; font-weight: bold !important; }
-          .chart-card { break-inside: avoid; page-break-inside: avoid; margin-bottom: 20px; padding: 20px !important; }
+          .xtick text, .ytick text, .gtitle, .xtitle, .ytitle, .legendtext, .textpoint text { fill: black !important; font-weight: bold !important; font-size: 11px !important; }
+          .chart-card { break-inside: avoid; page-break-after: always; padding: 1.5cm !important; height: 18cm !important; display: flex !important; flex-direction: column !important; justify-content: center !important; }
+          .chart-card:last-child { page-break-after: auto; }
         }
       `}</style>
 
       <div className="max-w-[1400px] mx-auto print-container">
-        <header className="flex justify-between items-center mb-6 border-b-2 border-amber-500 pb-4">
-          <div className="flex items-center gap-4">
-            <img src="/club/escudonovorizontino.png" alt="Shield" className="h-16 w-auto" />
+        <header className="flex justify-between items-center mb-8 border-b-2 border-amber-500 pb-4">
+          <div className="flex items-center gap-6">
+            <img src="/club/escudonovorizontino.png" alt="Shield" className="h-20 w-auto" />
             <div>
-              <h1 className="text-2xl font-black tracking-tighter text-amber-500 uppercase leading-none print:text-black">Grêmio Novorizontino</h1>
-              <p className="text-sm font-bold tracking-widest text-slate-400 uppercase">Análise de Correlação e Dispersão</p>
+              <h1 className="text-3xl font-black tracking-tighter text-amber-500 uppercase leading-none print:text-black">Grêmio Novorizontino</h1>
+              <p className="text-lg font-bold tracking-widest text-slate-400 uppercase">Análise de Correlação e Dispersão de Atletas</p>
             </div>
           </div>
-          <div className="flex gap-2 no-print">
-            <button onClick={() => window.print()} className="bg-amber-500 text-black px-4 py-2 font-black rounded-lg text-xs">PDF</button>
-            <button onClick={() => router.back()} className="bg-slate-800 text-white px-4 py-2 font-black rounded-lg text-xs">VOLTAR</button>
+          <div className="flex gap-3 no-print">
+            <button onClick={() => window.print()} className="bg-amber-500 hover:bg-amber-600 text-black px-6 py-3 font-black rounded-xl text-sm shadow-lg">PDF</button>
+            <button onClick={() => router.back()} className="bg-slate-800 hover:bg-slate-700 text-white px-6 py-3 font-black rounded-xl text-sm border border-slate-700">VOLTAR</button>
           </div>
         </header>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="flex flex-col gap-12">
           {GRAFICOS_CORRELACAO.map((config, idx) => {
             const { data, layout } = criarGraficoCorrelacao(config);
             return (
-              <div key={idx} className="chart-card bg-slate-900/50 border border-slate-700 rounded-2xl p-4 shadow-xl overflow-hidden">
+              <div key={idx} className="chart-card bg-slate-900/50 border border-slate-700 rounded-3xl p-8 shadow-2xl overflow-hidden backdrop-blur-sm">
                 <Plot data={data} layout={layout} config={{ displayModeBar: false, responsive: true }} style={{ width: '100%', height: '100%' }} />
               </div>
             );
