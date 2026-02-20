@@ -243,7 +243,14 @@ function ListaPreferencialContent() {
             <svg className="w-6 h-6 text-slate-500 group-hover:text-brand-yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
           </button>
           <h1 className="text-4xl md:text-6xl font-black italic uppercase tracking-tighter leading-none">Lista <span className="text-brand-yellow">Preferencial</span></h1>
-          <div className="flex-1 flex justify-end">
+          <div className="flex-1 flex justify-end gap-3">
+            <button 
+              onClick={() => router.push('/central-scouting/lista-preferencial/distorsao')}
+              className="px-6 py-3 bg-slate-800 text-white font-black uppercase text-[10px] rounded-xl hover:bg-slate-700 transition-all flex items-center gap-2 border border-slate-700"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M7 12a5 5 0 1110 0A5 5 0 017 12z" /></svg>
+              Gráficos Dispersão
+            </button>
             <button 
               onClick={() => router.push('/central-scouting/lista-preferencial/radar-comparativo')}
               className="px-6 py-3 bg-brand-yellow text-black font-black uppercase text-[10px] rounded-xl hover:bg-yellow-500 transition-all flex items-center gap-2"
