@@ -141,14 +141,13 @@ function PlayerProfileContent() {
       type: 'scatterpolar',
       r: playerValues,
       theta: METRICAS_RADAR.map(m => m.label),
-      text: playerRealValues.map(v => v.toFixed(2)),
-      textposition: 'outside',
-      hovertemplate: '<b>%{theta}</b><br>Valor: %{text}<extra></extra>',
+      customdata: playerRealValues,
+      hovertemplate: '<b>%{theta}</b><br>Valor: %{customdata:.2f}<extra></extra>',
       fill: 'toself',
       name: player.Jogador,
       line: { color: '#fbbf24', width: 3 },
       fillcolor: 'rgba(251, 191, 36, 0.3)',
-      mode: 'lines+markers+text'
+      mode: 'lines+markers'
     });
 
     if (type === 'media') {
@@ -165,14 +164,13 @@ function PlayerProfileContent() {
         type: 'scatterpolar',
         r: mediaListaValues,
         theta: METRICAS_RADAR.map(m => m.label),
-        text: mediaListaRealValues.map(v => v.toFixed(2)),
-        textposition: 'outside',
-        hovertemplate: '<b>%{theta}</b><br>Media: %{text}<extra></extra>',
+        customdata: mediaListaRealValues,
+        hovertemplate: '<b>%{theta}</b><br>Media: %{customdata:.2f}<extra></extra>',
         fill: 'toself',
         name: 'Media Lista Preferencial',
         line: { color: '#ef4444', dash: 'dot', width: 2 },
         fillcolor: 'rgba(239, 68, 68, 0.1)',
-        mode: 'lines+markers+text'
+        mode: 'lines+markers'
       });
     } else {
       const coresGremio = ['#3b82f6', '#10b981', '#8b5cf6'];
@@ -183,13 +181,12 @@ function PlayerProfileContent() {
           type: 'scatterpolar',
           r: gremioValues,
           theta: METRICAS_RADAR.map(m => m.label),
-          text: gremioRealValues.map(v => v.toFixed(2)),
-          textposition: 'outside',
-          hovertemplate: '<b>%{theta}</b><br>' + p.Jogador + ': %{text}<extra></extra>',
+          customdata: gremioRealValues,
+          hovertemplate: '<b>%{theta}</b><br>' + p.Jogador + ': %{customdata:.2f}<extra></extra>',
           fill: 'none',
           name: `GN: ${p.Jogador}`,
           line: { color: coresGremio[i], width: 2 },
-          mode: 'lines+markers+text'
+          mode: 'lines+markers'
         });
       });
     }
@@ -203,10 +200,10 @@ function PlayerProfileContent() {
       bgcolor: 'rgba(255, 255, 255, 0.5)'
     },
     showlegend: true,
-    legend: { orientation: 'v', x: 1.15, y: 0.5, font: { size: 7, color: '#1e293b' } },
+    legend: { orientation: 'v', x: -0.15, y: 1, font: { size: 7, color: '#ffffff' }, bgcolor: 'rgba(0,0,0,0)', bordercolor: 'rgba(0,0,0,0)' },
     paper_bgcolor: 'rgba(0,0,0,0)',
     plot_bgcolor: 'rgba(0,0,0,0)',
-    margin: { t: 20, b: 20, l: 50, r: 80 },
+    margin: { t: 20, b: 60, l: 50, r: 50 },
     height: 280
   };
 
@@ -338,12 +335,12 @@ function PlayerProfileContent() {
 
           {/* COLUNA DIREITA - MÉTRICAS */}
           <div className="w-1/5 bg-slate-900/40 border border-slate-800/50 rounded-2xl p-3 print:border-slate-100 print:bg-white overflow-y-auto">
-            <h3 className="text-[7px] font-black uppercase italic text-brand-yellow mb-2 print:text-slate-700 sticky top-0 bg-slate-900/40 print:bg-white py-1">Métricas p/90</h3>
+            <h3 className="text-[7px] font-black uppercase italic text-brand-yellow mb-2 print:text-slate-700 sticky top-0 bg-slate-900/40 print:bg-white py-1 z-10">Métricas p/90</h3>
             <div className="space-y-1">
               {METRICAS_RADAR.map(m => (
-                <div key={m.label} className="flex justify-between items-center border-b border-slate-800 pb-0.5 print:border-slate-100">
-                  <span className="text-[6px] font-bold text-slate-500 uppercase print:text-slate-600">{m.label}</span>
-                  <span className="text-[7px] font-black text-brand-yellow print:text-black">{getValorMetrica(player, m).toFixed(2)}</span>
+                <div key={m.label} className="flex justify-between items-center border-b border-slate-700 pb-0.5 print:border-slate-200">
+                  <span className="text-[6px] font-bold text-slate-300 uppercase print:text-slate-700">{m.label}</span>
+                  <span className="text-[7px] font-black text-white print:text-black">{getValorMetrica(player, m).toFixed(2)}</span>
                 </div>
               ))}
             </div>
