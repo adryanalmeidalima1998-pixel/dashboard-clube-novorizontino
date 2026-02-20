@@ -117,24 +117,65 @@ function PlayerProfileContent() {
     return safeParseFloat(jogador[metrica.key]);
   };
 
-  const statsGerais = useMemo(() => {
+  // Calcular escalas independentes para cada métrica
+  const escalasMetricas = useMemo(() => {
     const todos = [...listaPreferencial, ...gremioNovorizontino];
-    const stats = {};
+    const escalas = {};
+    
     METRICAS_RADAR.forEach(m => {
       const valores = todos.map(j => getValorMetrica(j, m)).filter(v => v > 0);
-      stats[m.label] = {
-        max: Math.max(...valores, 1),
-        avg: valores.reduce((a, b) => a + b, 0) / (valores.length || 1)
-      };
+      const max = Math.max(...valores, 1);
+      const min = 0;
+      
+      // Gerar ticks apropriados para cada métrica
+      let tickvals = [];
+      let ticktext = [];
+      
+      if (max <= 1) {
+        // Para valores pequenos (xG, xA, etc)
+        const step = max / 4;
+        for (let i = 0; i <= 4; i++) {
+          tickvals.push(i * step);
+          ticktext.push((i * step).toFixed(2));
+        }
+      } else if (max <= 10) {
+        // Para valores médios
+        const step = Math.ceil(max / 4);
+        for (let i = 0; i <= 4; i++) {
+          const val = i * step;
+          if (val <= max) {
+            tickvals.push(val);
+            ticktext.push(val.toFixed(1));
+          }
+        }
+      } else {
+        // Para valores altos (percentuais, etc)
+        const step = Math.ceil(max / 4);
+        for (let i = 0; i <= 4; i++) {
+          const val = i * step;
+          if (val <= max) {
+            tickvals.push(val);
+            ticktext.push(val.toFixed(0));
+          }
+        }
+      }
+      
+      escalas[m.label] = { max, min, tickvals, ticktext };
     });
-    return stats;
+    
+    return escalas;
   }, [listaPreferencial, gremioNovorizontino]);
 
   const getRadarData = (type) => {
     if (!player) return [];
     const data = [];
 
-    const playerValues = METRICAS_RADAR.map(m => (getValorMetrica(player, m) / statsGerais[m.label].max) * 100);
+    // Valores normalizados para 0-100 usando as escalas independentes
+    const playerValues = METRICAS_RADAR.map(m => {
+      const val = getValorMetrica(player, m);
+      const escala = escalasMetricas[m.label];
+      return (val / escala.max) * 100;
+    });
     const playerRealValues = METRICAS_RADAR.map(m => getValorMetrica(player, m));
 
     data.push({
@@ -155,7 +196,8 @@ function PlayerProfileContent() {
       const mediaListaValues = METRICAS_RADAR.map(m => {
         const valores = listaPreferencial.map(j => getValorMetrica(j, m));
         const avg = valores.reduce((a, b) => a + b, 0) / (valores.length || 1);
-        return (avg / statsGerais[m.label].max) * 100;
+        const escala = escalasMetricas[m.label];
+        return (avg / escala.max) * 100;
       });
       const mediaListaRealValues = METRICAS_RADAR.map(m => {
         const valores = listaPreferencial.map(j => getValorMetrica(j, m));
@@ -177,7 +219,11 @@ function PlayerProfileContent() {
     } else {
       const coresGremio = ['#3b82f6', '#10b981', '#8b5cf6'];
       gremioNovorizontino.slice(0, 3).forEach((p, i) => {
-        const gremioValues = METRICAS_RADAR.map(m => (getValorMetrica(p, m) / statsGerais[m.label].max) * 100);
+        const gremioValues = METRICAS_RADAR.map(m => {
+          const val = getValorMetrica(p, m);
+          const escala = escalasMetricas[m.label];
+          return (val / escala.max) * 100;
+        });
         const gremioRealValues = METRICAS_RADAR.map(m => getValorMetrica(p, m));
         data.push({
           type: 'scatterpolar',
@@ -196,6 +242,7 @@ function PlayerProfileContent() {
     return data;
   };
 
+  // Criar layout com anotações de escalas para cada eixo
   const radarLayout = {
     title: { text: '', font: { size: 0 } },
     polar: {
@@ -203,14 +250,14 @@ function PlayerProfileContent() {
         visible: true, 
         range: [0, 100], 
         gridcolor: 'rgba(255,255,255,0.2)',
-        tickfont: { size: 7, color: '#ffffff', family: 'Arial, sans-serif' },
+        tickfont: { size: 6, color: '#ffffff', family: 'Arial, sans-serif' },
         showticklabels: true,
         ticks: 'outside',
-        tickvals: [0, 20, 40, 60, 80, 100],
-        ticktext: ['0', '20', '40', '60', '80', '100']
+        tickvals: [0, 25, 50, 75, 100],
+        ticktext: ['0%', '25%', '50%', '75%', '100%']
       },
       angularaxis: { 
-        tickfont: { size: 8, color: '#ffffff', family: 'Arial, sans-serif', weight: 'bold' },
+        tickfont: { size: 8, color: '#ffffff', family: 'Arial, sans-serif' },
         gridcolor: 'rgba(255,255,255,0.25)',
         rotation: 90,
         direction: 'clockwise'
@@ -233,7 +280,28 @@ function PlayerProfileContent() {
     plot_bgcolor: 'rgba(0,0,0,0)',
     margin: { t: 20, b: 80, l: 60, r: 60 },
     height: 300,
-    font: { family: 'Arial, sans-serif', color: '#ffffff' }
+    font: { family: 'Arial, sans-serif', color: '#ffffff' },
+    // Adicionar anotações com as escalas reais de cada métrica
+    annotations: METRICAS_RADAR.map((m, idx) => {
+      const escala = escalasMetricas[m.label];
+      const maxVal = escala.max.toFixed(2);
+      const angle = (idx / METRICAS_RADAR.length) * 360;
+      const rad = (angle * Math.PI) / 180;
+      const x = Math.cos(rad) * 1.35;
+      const y = Math.sin(rad) * 1.35;
+      
+      return {
+        x: x,
+        y: y,
+        text: `<b>${maxVal}</b>`,
+        showarrow: false,
+        font: { size: 7, color: '#fbbf24' },
+        xref: 'paper',
+        yref: 'paper',
+        xanchor: 'center',
+        yanchor: 'middle'
+      };
+    })
   };
 
   const heatmapData = useMemo(() => {
