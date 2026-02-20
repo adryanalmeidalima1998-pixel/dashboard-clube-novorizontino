@@ -30,18 +30,36 @@ const GRAFICOS_CORRELACAO = [
   { 
     titulo: 'Progressão vs Perigo',
     xLabel: 'Passes Progressivos %',
-    yLabel: 'Entradas 1/3 Final %',
+    yLabel: 'Entradas 1/3 Final (C)/90',
     xKey: 'Passes progressivos precisos\n%',
-    yKey: 'Entradas no terço final carregando a bola\n% do total',
+    yKey: 'Entradas no terço final carregando a bola',
     xType: 'raw',
-    yType: 'raw'
+    yType: 'per90'
+  },
+  { 
+    titulo: 'Chances Criadas vs Assistências Esperadas',
+    xLabel: 'Chances com Sucesso/90',
+    yLabel: 'xA/90',
+    xKey: 'Chances com sucesso',
+    yKey: 'xA',
+    xType: 'per90',
+    yType: 'per90'
+  },
+  { 
+    titulo: 'Recuperações de Bola vs Desafios Vencidos',
+    xLabel: 'Recuperações Campo Adv/90',
+    yLabel: 'Desafios Ganhos/90',
+    xKey: 'Bolas recuperadas no campo do adversário',
+    yKey: 'Desafios vencidos',
+    xType: 'per90',
+    yType: 'per90'
   },
   { 
     titulo: 'Volume vs Eficiência de Dribles',
     xLabel: 'Dribles/90',
     yLabel: 'Dribles Certos/90',
-    xKey: 'Dribles bem sucedidos',
-    yKey: 'Dribles bem sucedidos', // Usando a mesma chave para volume e sucesso no exemplo, ajustar se houver coluna de tentativa
+    xKey: 'Dribles',
+    yKey: 'Dribles bem sucedidos',
     xType: 'per90',
     yType: 'per90'
   }
@@ -148,7 +166,7 @@ function DistorsaoContent() {
       type: 'scatter',
       name: 'Elenco GN',
       marker: {
-        size: 10,
+        size: 12,
         color: '#3b82f6',
         symbol: 'diamond',
         line: { color: '#fff', width: 1 }
@@ -158,15 +176,28 @@ function DistorsaoContent() {
     });
 
     const layout = {
-      title: { text: config.titulo, font: { size: 14, color: '#fbbf24', family: 'Arial Black' } },
-      xaxis: { title: { text: config.xLabel, font: { size: 10, color: '#fff' } }, gridcolor: 'rgba(255,255,255,0.1)', tickfont: { size: 8, color: '#fff' } },
-      yaxis: { title: { text: config.yLabel, font: { size: 10, color: '#fff' } }, gridcolor: 'rgba(255,255,255,0.1)', tickfont: { size: 8, color: '#fff' } },
+      title: { text: config.titulo, font: { size: 16, color: '#fbbf24', family: 'Arial Black' } },
+      xaxis: { 
+        title: { text: config.xLabel, font: { size: 11, color: '#fff', weight: 'bold' } }, 
+        gridcolor: 'rgba(255,255,255,0.1)', 
+        tickfont: { size: 9, color: '#fff' },
+        showline: true,
+        linecolor: 'rgba(255,255,255,0.2)'
+      },
+      yaxis: { 
+        title: { text: config.yLabel, font: { size: 11, color: '#fff', weight: 'bold' } }, 
+        gridcolor: 'rgba(255,255,255,0.1)', 
+        tickfont: { size: 9, color: '#fff' },
+        showline: true,
+        linecolor: 'rgba(255,255,255,0.2)'
+      },
       paper_bgcolor: 'rgba(0,0,0,0)',
       plot_bgcolor: 'rgba(0,0,0,0)',
-      margin: { t: 40, b: 40, l: 40, r: 20 },
-      height: 350,
+      margin: { t: 50, b: 60, l: 60, r: 40 },
+      height: 450,
       showlegend: true,
-      legend: { font: { size: 8, color: '#fff' }, orientation: 'h', y: -0.2 }
+      legend: { font: { size: 9, color: '#fff' }, orientation: 'h', y: -0.2, x: 0.5, xanchor: 'center' },
+      hovermode: 'closest'
     };
 
     return { data: plotData, layout };
@@ -182,38 +213,44 @@ function DistorsaoContent() {
           .no-print { display: none !important; }
           body { background: white !important; color: black !important; }
           .print-container { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important; }
-          .bg-slate-900, .bg-slate-900\/50 { background: #f8fafc !important; border: 1px solid #e2e8f0 !important; }
+          .bg-slate-900, .bg-slate-900\/50 { background: white !important; border: 1px solid #e2e8f0 !important; }
           .text-amber-500 { color: #b45309 !important; }
           .js-plotly-plot .main-svg { background: transparent !important; }
-          /* Forçar cores escuras nos textos dos gráficos para impressão */
-          .xtick text, .ytick text, .gtitle, .xtitle, .ytitle { fill: black !important; font-weight: bold !important; }
+          .xtick text, .ytick text, .gtitle, .xtitle, .ytitle, .legendtext { fill: black !important; font-weight: bold !important; }
+          .gridlayer path { stroke: rgba(0,0,0,0.1) !important; }
+          .zerolinelayer path { stroke: rgba(0,0,0,0.2) !important; }
+          /* Permitir que os gráficos quebrem de página se necessário */
+          .chart-card { break-inside: avoid; page-break-inside: avoid; margin-bottom: 2cm; }
         }
       `}</style>
 
       <div className="max-w-[1400px] mx-auto print-container">
-        <header className="flex justify-between items-center mb-6 border-b-2 border-amber-500 pb-2">
-          <div className="flex items-center gap-4">
-            <img src="/club/escudonovorizontino.png" alt="Shield" className="h-16 w-auto" />
+        <header className="flex justify-between items-center mb-8 border-b-2 border-amber-500 pb-4">
+          <div className="flex items-center gap-6">
+            <img src="/club/escudonovorizontino.png" alt="Shield" className="h-20 w-auto" />
             <div>
-              <h1 className="text-2xl font-black tracking-tighter text-amber-500 uppercase leading-none print:text-black">
+              <h1 className="text-3xl font-black tracking-tighter text-amber-500 uppercase leading-none print:text-black">
                 Grêmio Novorizontino
               </h1>
-              <p className="text-sm font-bold tracking-widest text-slate-400 uppercase">
-                Análise de Correlação e Dispersão
+              <p className="text-lg font-bold tracking-widest text-slate-400 uppercase">
+                Análise de Correlação e Dispersão de Atletas
               </p>
             </div>
           </div>
-          <div className="flex gap-2 no-print">
-            <button onClick={() => window.print()} className="bg-amber-500 text-black px-4 py-2 font-black rounded-lg text-xs">EXPORTAR PDF</button>
-            <button onClick={() => router.back()} className="bg-slate-800 text-white px-4 py-2 font-black rounded-lg text-xs">VOLTAR</button>
+          <div className="flex gap-3 no-print">
+            <button onClick={() => window.print()} className="bg-amber-500 hover:bg-amber-600 text-black px-6 py-3 font-black rounded-xl text-sm transition-all shadow-lg flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" clipRule="evenodd" /></svg>
+              EXPORTAR PDF
+            </button>
+            <button onClick={() => router.back()} className="bg-slate-800 hover:bg-slate-700 text-white px-6 py-3 font-black rounded-xl text-sm transition-all border border-slate-700">VOLTAR</button>
           </div>
         </header>
 
-        <div className="grid grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {GRAFICOS_CORRELACAO.map((config, idx) => {
             const { data, layout } = criarGraficoCorrelacao(config);
             return (
-              <div key={idx} className="bg-slate-900/50 border border-slate-700 rounded-2xl p-4 shadow-xl overflow-hidden">
+              <div key={idx} className="chart-card bg-slate-900/50 border border-slate-700 rounded-3xl p-6 shadow-2xl overflow-hidden backdrop-blur-sm">
                 <Plot
                   data={data}
                   layout={layout}
@@ -225,11 +262,16 @@ function DistorsaoContent() {
           })}
         </div>
 
-        <footer className="mt-8 border-t border-slate-800 pt-4 flex justify-between items-center print:border-slate-200">
-          <p className="text-[10px] text-slate-500 italic">
-            * Dados processados para identificar jogadores com desempenho acima da média em métricas chave.
-          </p>
-          <img src="/club/escudonovorizontino.png" alt="Logo" className="h-6 grayscale opacity-20" />
+        <footer className="mt-12 border-t border-slate-800 pt-6 flex justify-between items-center print:border-slate-200">
+          <div className="max-w-2xl">
+            <p className="text-xs text-slate-500 italic">
+              * Todas as métricas por 90 minutos são calculadas com base no tempo total de jogo registrado. Os gráficos de dispersão permitem identificar atletas que se destacam estatisticamente em relação ao elenco atual e ao universo da Lista Preferencial.
+            </p>
+          </div>
+          <div className="flex items-center gap-3 opacity-30 grayscale">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Scouting System</span>
+            <img src="/club/escudonovorizontino.png" alt="Logo" className="h-8" />
+          </div>
         </footer>
       </div>
     </div>
