@@ -16,6 +16,13 @@ function ListaPreferencialContent() {
   const [metricasSelecionadas, setMetricasSelecionadas] = useState([]);
   const [todasMetricas, setTodasMetricas] = useState([]);
 
+  // Colunas fixas que não são métricas
+  const colunasFixas = [
+    'ID_ATLETA', 'Jogador', 'Time', 'Idade', 'Altura', 'Peso', 
+    'Nacionalidade', 'Pé dominante', 'Index', 'Minutos jogados', 
+    'Posição', 'Falhas em gol', 'Erros graves'
+  ];
+
   // Função para calcular métrica por 90 minutos
   const calcularPor90 = (valor, minutosJogados) => {
     const val = safeParseFloat(valor);
@@ -27,6 +34,13 @@ function ListaPreferencialContent() {
 
   // Função para processar dados e calcular métricas por 90
   const processarDados = (dados, aba) => {
+    if (dados.length === 0) return [];
+
+    // Detectar métricas reais (colunas que não estão em colunasFixas)
+    const metricasReais = Object.keys(dados[0]).filter(
+      k => !colunasFixas.includes(k) && k.trim() !== ''
+    );
+
     return dados.map(jogador => {
       const minutosJogados = safeParseFloat(jogador['Minutos jogados']);
       
@@ -34,23 +48,13 @@ function ListaPreferencialContent() {
         ...jogador,
         aba: aba,
         minutosJogados: minutosJogados,
-        'Gols_por_90': calcularPor90(jogador['Gols'], minutosJogados),
-        'Assistências_por_90': calcularPor90(jogador['Assistências'], minutosJogados),
-        'Dribles_por_90': calcularPor90(jogador['Dribles com sucesso (%)'], minutosJogados),
-        'Cruzamentos_por_90': calcularPor90(jogador['Cruzamentos precisos (%)'], minutosJogados),
-        'Recuperações_por_90': calcularPor90(jogador['Recuperações de bola campo ataque'], minutosJogados),
-        'Desarmes_por_90': calcularPor90(jogador['Desarmes'], minutosJogados),
-        'Finalizações_por_90': calcularPor90(jogador['Finalizações'], minutosJogados),
-        'Finalizações_alvo_por_90': calcularPor90(jogador['Finalizações no alvo'], minutosJogados),
-        'Toques_area_por_90': calcularPor90(jogador['Toques na área adversária'], minutosJogados),
-        'Passes_decisivos_por_90': calcularPor90(jogador['Passes decisivos'], minutosJogados),
-        'Passes_area_por_90': calcularPor90(jogador['Passes para a área'], minutosJogados),
-        'Progressoes_por_90': calcularPor90(jogador['Progressões com bola'], minutosJogados),
-        'Perdas_por_90': calcularPor90(jogador['Perdas de posse'], minutosJogados),
-        'Interceptacoes_por_90': calcularPor90(jogador['Interceptações'], minutosJogados),
-        'Duelos_ofensivos_por_90': calcularPor90(jogador['Duelos ofensivos ganhos (%)'], minutosJogados),
-        'Aceleracoes_por_90': calcularPor90(jogador['Acelerações'], minutosJogados),
       };
+
+      // Calcular cada métrica por 90
+      metricasReais.forEach(metrica => {
+        const chaveCalc = `${metrica}_por_90`;
+        processado[chaveCalc] = calcularPor90(jogador[metrica], minutosJogados);
+      });
       
       return processado;
     });
@@ -107,14 +111,19 @@ function ListaPreferencialContent() {
             listaProcessada = processarDados(dadosLimpos, 'LISTA PREFERENCIAL');
             
             if (listaProcessada.length > 0) {
-              const colunasFixas = ['ID_ATLETA', 'Jogador', 'Time', 'Idade', 'Altura', 'Peso', 'Nacionalidade', 'Pé dominante', 'Index', 'Minutos jogados', 'Posição', 'Falhas em gol', 'Erro', 'aba', 'minutosJogados'];
+              // Detectar métricas reais
               todasMetricasDetectadas = Object.keys(listaProcessada[0]).filter(
-                k => !colunasFixas.includes(k) && k.endsWith('_por_90')
+                k => k.endsWith('_por_90')
               );
             }
             
             setListaPreferencial(listaProcessada);
             setTodasMetricas(todasMetricasDetectadas);
+
+            // Se não há template salvo, usar as 3 primeiras métricas como padrão
+            if (metricasSelecionadas.length === 0 && todasMetricasDetectadas.length > 0) {
+              setMetricasSelecionadas(todasMetricasDetectadas.slice(0, 3));
+            }
           }
         });
 
@@ -131,13 +140,6 @@ function ListaPreferencialContent() {
             setGremiBravo(gremioProcessada);
           }
         });
-
-        // Se não há template salvo, usar as 3 primeiras métricas como padrão
-        setTimeout(() => {
-          if (metricasSelecionadas.length === 0 && todasMetricasDetectadas.length > 0) {
-            setMetricasSelecionadas(todasMetricasDetectadas.slice(0, 3));
-          }
-        }, 500);
 
         setLoading(false);
       } catch (error) {
@@ -223,32 +225,34 @@ function ListaPreferencialContent() {
         </div>
 
         {/* SELETOR DE MÉTRICAS */}
-        <div className="bg-slate-900/40 border border-slate-800 rounded-[2rem] p-8 mb-8">
-          <div className="mb-6">
-            <h3 className="text-lg font-black uppercase italic text-brand-yellow mb-4">📊 Selecionar Métricas para Exibição</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mb-4 max-h-48 overflow-y-auto">
-              {todasMetricas.map(metrica => (
-                <label key={metrica} className="flex items-center gap-2 cursor-pointer p-2 hover:bg-slate-800 rounded-lg transition-all">
-                  <input
-                    type="checkbox"
-                    checked={metricasSelecionadas.includes(metrica)}
-                    onChange={() => toggleMetrica(metrica)}
-                    className="w-4 h-4 cursor-pointer"
-                  />
-                  <span className="text-[10px] font-black uppercase text-slate-300">
-                    {metrica.replace('_por_90', '').substring(0, 12)}
-                  </span>
-                </label>
-              ))}
+        {todasMetricas.length > 0 && (
+          <div className="bg-slate-900/40 border border-slate-800 rounded-[2rem] p-8 mb-8">
+            <div className="mb-6">
+              <h3 className="text-lg font-black uppercase italic text-brand-yellow mb-4">📊 Selecionar Métricas para Exibição</h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mb-4 max-h-48 overflow-y-auto">
+                {todasMetricas.map(metrica => (
+                  <label key={metrica} className="flex items-center gap-2 cursor-pointer p-2 hover:bg-slate-800 rounded-lg transition-all">
+                    <input
+                      type="checkbox"
+                      checked={metricasSelecionadas.includes(metrica)}
+                      onChange={() => toggleMetrica(metrica)}
+                      className="w-4 h-4 cursor-pointer"
+                    />
+                    <span className="text-[10px] font-black uppercase text-slate-300">
+                      {metrica.replace('_por_90', '')}
+                    </span>
+                  </label>
+                ))}
+              </div>
+              <button
+                onClick={salvarTemplate}
+                className="px-4 py-2 bg-brand-yellow text-black font-black uppercase text-[10px] rounded-lg hover:bg-yellow-500 transition-all"
+              >
+                💾 Salvar Template
+              </button>
             </div>
-            <button
-              onClick={salvarTemplate}
-              className="px-4 py-2 bg-brand-yellow text-black font-black uppercase text-[10px] rounded-lg hover:bg-yellow-500 transition-all"
-            >
-              💾 Salvar Template
-            </button>
           </div>
-        </div>
+        )}
 
         {/* FILTROS */}
         <div className="bg-slate-900/40 border border-slate-800 rounded-[2rem] p-8 mb-8">
@@ -319,7 +323,7 @@ function ListaPreferencialContent() {
                   <th className="p-4 text-[10px] font-black uppercase text-slate-500">Min Jogados</th>
                   {metricasSelecionadas.map(metrica => (
                     <th key={metrica} className="p-4 text-[10px] font-black uppercase text-slate-500 text-center">
-                      {metrica.replace('_por_90', '').substring(0, 12)}
+                      {metrica.replace('_por_90', '')}/90
                     </th>
                   ))}
                   <th className="p-4 text-[10px] font-black uppercase text-slate-500">Aba</th>
@@ -343,7 +347,7 @@ function ListaPreferencialContent() {
                     <td className="p-4 text-slate-400 text-[10px]">{jogador['minutosJogados']}</td>
                     {metricasSelecionadas.map(metrica => (
                       <td key={metrica} className="p-4 text-brand-yellow font-black text-center">
-                        {jogador[metrica]?.toFixed(2) || '-'}
+                        {typeof jogador[metrica] === 'number' ? jogador[metrica].toFixed(2) : '-'}
                       </td>
                     ))}
                     <td className="p-4">
