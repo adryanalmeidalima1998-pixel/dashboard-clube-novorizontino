@@ -165,12 +165,17 @@ function PlayerProfileContent() {
     if (!player) return [];
     const data = [];
 
-    // Usar valores reais (não normalizados) com suas escalas próprias
+    // Normalizar valores para escala 0-2
+    const playerNormalizedValues = METRICAS_RADAR.map(m => {
+      const val = getValorMetrica(player, m);
+      const escala = escalasMetricas[m.label];
+      return (val / escala.max) * 2; // Normalizar para 0-2
+    });
     const playerRealValues = METRICAS_RADAR.map(m => getValorMetrica(player, m));
 
     data.push({
       type: 'scatterpolar',
-      r: playerRealValues,
+      r: playerNormalizedValues,
       theta: METRICAS_RADAR.map(m => m.label),
       customdata: playerRealValues,
       hovertemplate: '<b>%{theta}</b><br>Valor: %{customdata:.2f}<extra></extra>',
@@ -183,13 +188,19 @@ function PlayerProfileContent() {
     });
 
     if (type === 'media') {
+      const mediaListaNormalizedValues = METRICAS_RADAR.map(m => {
+        const valores = listaPreferencial.map(j => getValorMetrica(j, m));
+        const avg = valores.reduce((a, b) => a + b, 0) / (valores.length || 1);
+        const escala = escalasMetricas[m.label];
+        return (avg / escala.max) * 2; // Normalizar para 0-2
+      });
       const mediaListaRealValues = METRICAS_RADAR.map(m => {
         const valores = listaPreferencial.map(j => getValorMetrica(j, m));
         return valores.reduce((a, b) => a + b, 0) / (valores.length || 1);
       });
       data.push({
         type: 'scatterpolar',
-        r: mediaListaRealValues,
+        r: mediaListaNormalizedValues,
         theta: METRICAS_RADAR.map(m => m.label),
         customdata: mediaListaRealValues,
         hovertemplate: '<b>%{theta}</b><br>Media: %{customdata:.2f}<extra></extra>',
@@ -203,10 +214,15 @@ function PlayerProfileContent() {
     } else {
       const coresGremio = ['#3b82f6', '#10b981', '#8b5cf6'];
       gremioNovorizontino.slice(0, 3).forEach((p, i) => {
+        const gremioNormalizedValues = METRICAS_RADAR.map(m => {
+          const val = getValorMetrica(p, m);
+          const escala = escalasMetricas[m.label];
+          return (val / escala.max) * 2; // Normalizar para 0-2
+        });
         const gremioRealValues = METRICAS_RADAR.map(m => getValorMetrica(p, m));
         data.push({
           type: 'scatterpolar',
-          r: gremioRealValues,
+          r: gremioNormalizedValues,
           theta: METRICAS_RADAR.map(m => m.label),
           customdata: gremioRealValues,
           hovertemplate: '<b>%{theta}</b><br>' + p.Jogador + ': %{customdata:.2f}<extra></extra>',
