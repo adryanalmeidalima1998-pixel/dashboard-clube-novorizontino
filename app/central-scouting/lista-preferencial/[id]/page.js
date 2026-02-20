@@ -141,17 +141,14 @@ function PlayerProfileContent() {
       type: 'scatterpolar',
       r: playerValues,
       theta: METRICAS_RADAR.map(m => m.label),
-      text: playerRealValues.map(v => v.toFixed(2)),
       customdata: playerRealValues,
-      textposition: 'outside',
-      textfont: { size: 9, color: '#fbbf24', family: 'Arial, sans-serif' },
       hovertemplate: '<b>%{theta}</b><br>Valor: %{customdata:.2f}<extra></extra>',
       fill: 'toself',
       name: player.Jogador,
       line: { color: '#fbbf24', width: 3 },
       fillcolor: 'rgba(251, 191, 36, 0.25)',
-      mode: 'lines+markers+text',
-      marker: { size: 5, color: '#fbbf24' }
+      mode: 'lines+markers',
+      marker: { size: 6, color: '#fbbf24', line: { color: '#ffffff', width: 1 } }
     });
 
     if (type === 'media') {
@@ -168,17 +165,14 @@ function PlayerProfileContent() {
         type: 'scatterpolar',
         r: mediaListaValues,
         theta: METRICAS_RADAR.map(m => m.label),
-        text: mediaListaRealValues.map(v => v.toFixed(2)),
         customdata: mediaListaRealValues,
-        textposition: 'outside',
-        textfont: { size: 8, color: '#ef4444', family: 'Arial, sans-serif' },
         hovertemplate: '<b>%{theta}</b><br>Media: %{customdata:.2f}<extra></extra>',
         fill: 'toself',
         name: 'Media Lista Preferencial',
         line: { color: '#ef4444', dash: 'dot', width: 2 },
         fillcolor: 'rgba(239, 68, 68, 0.08)',
-        mode: 'lines+markers+text',
-        marker: { size: 4, color: '#ef4444' }
+        mode: 'lines+markers',
+        marker: { size: 5, color: '#ef4444', line: { color: '#ffffff', width: 1 } }
       });
     } else {
       const coresGremio = ['#3b82f6', '#10b981', '#8b5cf6'];
@@ -189,16 +183,13 @@ function PlayerProfileContent() {
           type: 'scatterpolar',
           r: gremioValues,
           theta: METRICAS_RADAR.map(m => m.label),
-          text: gremioRealValues.map(v => v.toFixed(2)),
           customdata: gremioRealValues,
-          textposition: 'outside',
-          textfont: { size: 8, color: coresGremio[i], family: 'Arial, sans-serif' },
           hovertemplate: '<b>%{theta}</b><br>' + p.Jogador + ': %{customdata:.2f}<extra></extra>',
           fill: 'none',
           name: `GN: ${p.Jogador}`,
           line: { color: coresGremio[i], width: 2 },
-          mode: 'lines+markers+text',
-          marker: { size: 4, color: coresGremio[i] }
+          mode: 'lines+markers',
+          marker: { size: 5, color: coresGremio[i], line: { color: '#ffffff', width: 1 } }
         });
       });
     }
@@ -211,18 +202,20 @@ function PlayerProfileContent() {
       radialaxis: { 
         visible: true, 
         range: [0, 100], 
-        gridcolor: 'rgba(255,255,255,0.15)',
-        tickfont: { size: 0, color: 'rgba(0,0,0,0)' },
-        showticklabels: false,
-        ticks: 'outside'
+        gridcolor: 'rgba(255,255,255,0.2)',
+        tickfont: { size: 7, color: '#ffffff', family: 'Arial, sans-serif' },
+        showticklabels: true,
+        ticks: 'outside',
+        tickvals: [0, 20, 40, 60, 80, 100],
+        ticktext: ['0', '20', '40', '60', '80', '100']
       },
       angularaxis: { 
-        tickfont: { size: 8, color: '#ffffff', family: 'Arial, sans-serif' },
-        gridcolor: 'rgba(255,255,255,0.2)',
+        tickfont: { size: 8, color: '#ffffff', family: 'Arial, sans-serif', weight: 'bold' },
+        gridcolor: 'rgba(255,255,255,0.25)',
         rotation: 90,
         direction: 'clockwise'
       },
-      bgcolor: 'rgba(255, 255, 255, 0.02)'
+      bgcolor: 'rgba(255, 255, 255, 0.01)'
     },
     showlegend: true,
     legend: { 
