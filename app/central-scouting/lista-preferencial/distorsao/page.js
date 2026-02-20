@@ -31,7 +31,7 @@ const GRAFICOS_CORRELACAO = [
     titulo: 'Progressão vs Perigo',
     xLabel: 'Passes Progressivos %',
     yLabel: 'Entradas 1/3 Final (C)/90',
-    xKey: 'Passes progressivos precisos\n%',
+    xKey: 'Passes progressivos precisos,%',
     yKey: 'Entradas no terço final carregando a bola',
     xType: 'raw',
     yType: 'per90'
@@ -176,27 +176,27 @@ function DistorsaoContent() {
     });
 
     const layout = {
-      title: { text: config.titulo, font: { size: 16, color: '#fbbf24', family: 'Arial Black' } },
+      title: { text: config.titulo, font: { size: 18, color: '#fbbf24', family: 'Arial Black' } },
       xaxis: { 
-        title: { text: config.xLabel, font: { size: 11, color: '#fff', weight: 'bold' } }, 
+        title: { text: config.xLabel, font: { size: 12, color: '#fff', weight: 'bold' } }, 
         gridcolor: 'rgba(255,255,255,0.1)', 
-        tickfont: { size: 9, color: '#fff' },
+        tickfont: { size: 10, color: '#fff' },
         showline: true,
         linecolor: 'rgba(255,255,255,0.2)'
       },
       yaxis: { 
-        title: { text: config.yLabel, font: { size: 11, color: '#fff', weight: 'bold' } }, 
+        title: { text: config.yLabel, font: { size: 12, color: '#fff', weight: 'bold' } }, 
         gridcolor: 'rgba(255,255,255,0.1)', 
-        tickfont: { size: 9, color: '#fff' },
+        tickfont: { size: 10, color: '#fff' },
         showline: true,
         linecolor: 'rgba(255,255,255,0.2)'
       },
       paper_bgcolor: 'rgba(0,0,0,0)',
       plot_bgcolor: 'rgba(0,0,0,0)',
-      margin: { t: 50, b: 60, l: 60, r: 40 },
-      height: 450,
+      margin: { t: 60, b: 80, l: 80, r: 40 },
+      height: 500,
       showlegend: true,
-      legend: { font: { size: 9, color: '#fff' }, orientation: 'h', y: -0.2, x: 0.5, xanchor: 'center' },
+      legend: { font: { size: 10, color: '#fff' }, orientation: 'h', y: -0.2, x: 0.5, xanchor: 'center' },
       hovermode: 'closest'
     };
 
@@ -216,11 +216,10 @@ function DistorsaoContent() {
           .bg-slate-900, .bg-slate-900\/50 { background: white !important; border: 1px solid #e2e8f0 !important; }
           .text-amber-500 { color: #b45309 !important; }
           .js-plotly-plot .main-svg { background: transparent !important; }
-          .xtick text, .ytick text, .gtitle, .xtitle, .ytitle, .legendtext { fill: black !important; font-weight: bold !important; }
+          .xtick text, .ytick text, .gtitle, .xtitle, .ytitle, .legendtext { fill: black !important; font-weight: bold !important; font-size: 10px !important; }
           .gridlayer path { stroke: rgba(0,0,0,0.1) !important; }
           .zerolinelayer path { stroke: rgba(0,0,0,0.2) !important; }
-          /* Permitir que os gráficos quebrem de página se necessário */
-          .chart-card { break-inside: avoid; page-break-inside: avoid; margin-bottom: 2cm; }
+          .chart-card { break-inside: avoid; page-break-inside: avoid; margin-bottom: 1cm; padding: 1cm !important; border: 2px solid #eee !important; }
         }
       `}</style>
 
@@ -265,11 +264,10 @@ function DistorsaoContent() {
         <footer className="mt-12 border-t border-slate-800 pt-6 flex justify-between items-center print:border-slate-200">
           <div className="max-w-2xl">
             <p className="text-xs text-slate-500 italic">
-              * Todas as métricas por 90 minutos são calculadas com base no tempo total de jogo registrado. Os gráficos de dispersão permitem identificar atletas que se destacam estatisticamente em relação ao elenco atual e ao universo da Lista Preferencial.
+              * Dados extraídos para análise de desempenho comparativo. Gráficos de dispersão gerados automaticamente.
             </p>
           </div>
           <div className="flex items-center gap-3 opacity-30 grayscale">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Scouting System</span>
             <img src="/club/escudonovorizontino.png" alt="Logo" className="h-8" />
           </div>
         </footer>
