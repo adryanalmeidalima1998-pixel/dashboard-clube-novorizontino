@@ -21,9 +21,7 @@ const METRICAS_RADAR = [
   { label: 'Recuperações Campo Adv', key: 'Bolas recuperadas no campo do adversário', type: 'per90' },
   { label: 'xA', key: 'xA', type: 'per90' },
   { label: 'xG', key: 'Xg', type: 'per90' },
-  { label: 'Ações Área Adv Certas/90', key: 'acoes_area_adv_certas_90', type: 'custom' },
-  { label: 'Desafios Ganhos/90', key: 'desafios_ganhos_90', type: 'custom' },
-  { label: 'Disputas Ataque Ganhas/90', key: 'disputas_ataque_ganhas_90', type: 'custom' }
+  { label: 'Ações Área Adv Certas/90', key: 'acoes_area_adv_certas_90', type: 'custom' }
 ];
 
 function PlayerProfileContent() {
