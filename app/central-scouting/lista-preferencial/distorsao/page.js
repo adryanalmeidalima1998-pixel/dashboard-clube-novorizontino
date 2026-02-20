@@ -11,6 +11,13 @@ const Plot = dynamic(() => import('react-plotly.js'), {
   loading: () => <div className="h-64 flex items-center justify-center text-slate-500 font-bold">Carregando gráficos...</div> 
 });
 
+// Paleta de cores para cada jogador da Lista Preferencial
+const CORES_JOGADORES = [
+  '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8',
+  '#F7DC6F', '#BB8FCE', '#85C1E2', '#F8B88B', '#A9DFBF',
+  '#F5B7B1', '#D7BDE2', '#A3E4D7', '#F9E79F', '#ABEBC6'
+];
+
 // Pares de métricas para os 5 gráficos de correlação (X vs Y)
 const GRAFICOS_CORRELACAO = [
   { 
@@ -65,6 +72,7 @@ function DistorsaoContent() {
   const [listaPreferencial, setListaPreferencial] = useState([]);
   const [gremioNovorizontino, setGremioNovorizontino] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [mapaCores, setMapaCores] = useState({});
 
   const calcularMetricasCustomizadas = (jogador) => {
     const minutos = safeParseFloat(jogador['Minutos jogados']);
@@ -107,12 +115,22 @@ function DistorsaoContent() {
         const [res1, res2] = await Promise.all([fetch(urlAba1), fetch(urlAba2)]);
         const [csv1, csv2] = await Promise.all([res1.text(), res2.text()]);
 
+        let dadosLista = [];
+        let dadosGremio = [];
+
         Papa.parse(csv1, {
           header: true,
           skipEmptyLines: true,
           complete: (results) => {
-            const dados = processarDados(cleanData(results.data), 'LISTA PREFERENCIAL');
-            setListaPreferencial(dados);
+            dadosLista = processarDados(cleanData(results.data), 'LISTA PREFERENCIAL');
+            setListaPreferencial(dadosLista);
+            
+            // Criar mapa de cores para cada jogador da Lista Preferencial
+            const cores = {};
+            dadosLista.forEach((jogador, idx) => {
+              cores[jogador.Jogador] = CORES_JOGADORES[idx % CORES_JOGADORES.length];
+            });
+            setMapaCores(cores);
           }
         });
 
@@ -120,8 +138,8 @@ function DistorsaoContent() {
           header: true,
           skipEmptyLines: true,
           complete: (results) => {
-            const dados = processarDados(cleanData(results.data), 'GRÊMIO NOVORIZONTINO');
-            setGremioNovorizontino(dados);
+            dadosGremio = processarDados(cleanData(results.data), 'GRÊMIO NOVORIZONTINO');
+            setGremioNovorizontino(dadosGremio);
           }
         });
 
@@ -142,80 +160,95 @@ function DistorsaoContent() {
   };
 
   const criarGraficoCorrelacao = (config) => {
-    const todos = [...listaPreferencial, ...gremioNovorizontino];
-    
-    // Dados da Lista Preferencial
-    const listaX = listaPreferencial.map(j => getValorMetrica(j, config.xKey, config.xType));
-    const listaY = listaPreferencial.map(j => getValorMetrica(j, config.yKey, config.yType));
-    
-    // Dados do Grêmio Novorizontino
+    const plotData = [];
+
+    // Adicionar cada jogador da Lista Preferencial como um trace separado (cor exclusiva)
+    listaPreferencial.forEach(jogador => {
+      const xVal = getValorMetrica(jogador, config.xKey, config.xType);
+      const yVal = getValorMetrica(jogador, config.yKey, config.yType);
+      
+      plotData.push({
+        x: [xVal],
+        y: [yVal],
+        mode: 'markers',
+        type: 'scatter',
+        name: jogador.Jogador,
+        marker: {
+          size: 12,
+          color: mapaCores[jogador.Jogador] || '#fbbf24',
+          line: { color: '#ffffff', width: 2 },
+          opacity: 0.85
+        },
+        text: `<b>${jogador.Jogador}</b><br>${jogador.Time}<br>${jogador.Posição}`,
+        hovertemplate: '%{text}<br><b>${config.xLabel}:</b> %{x:.2f}<br><b>${config.yLabel}:</b> %{y:.2f}<extra></extra>',
+        showlegend: true
+      });
+    });
+
+    // Adicionar Grêmio Novorizontino como um grupo único (azul)
     const gremioX = gremioNovorizontino.map(j => getValorMetrica(j, config.xKey, config.xType));
     const gremioY = gremioNovorizontino.map(j => getValorMetrica(j, config.yKey, config.yType));
-
-    const plotData = [
-      {
-        x: listaX,
-        y: listaY,
-        mode: 'markers',
-        type: 'scatter',
-        name: 'Lista Preferencial',
-        marker: {
-          size: 10,
-          color: '#fbbf24',
-          line: { color: '#ffffff', width: 2 },
-          opacity: 0.8
-        },
-        text: listaPreferencial.map(j => `<b>${j.Jogador}</b><br>${j.Time}<br>${j.Posição}`),
-        hovertemplate: '%{text}<br>X: %{x:.2f}<br>Y: %{y:.2f}<extra></extra>'
+    
+    plotData.push({
+      x: gremioX,
+      y: gremioY,
+      mode: 'markers',
+      type: 'scatter',
+      name: 'Grêmio Novorizontino',
+      marker: {
+        size: 12,
+        color: '#3b82f6',
+        line: { color: '#ffffff', width: 2 },
+        opacity: 0.85
       },
-      {
-        x: gremioX,
-        y: gremioY,
-        mode: 'markers',
-        type: 'scatter',
-        name: 'Grêmio Novorizontino',
-        marker: {
-          size: 10,
-          color: '#3b82f6',
-          line: { color: '#ffffff', width: 2 },
-          opacity: 0.8
-        },
-        text: gremioNovorizontino.map(j => `<b>${j.Jogador}</b><br>${j.Time}<br>${j.Posição}`),
-        hovertemplate: '%{text}<br>X: %{x:.2f}<br>Y: %{y:.2f}<extra></extra>'
-      }
-    ];
+      text: gremioNovorizontino.map(j => `<b>${j.Jogador}</b><br>${j.Time}<br>${j.Posição}`),
+      hovertemplate: '%{text}<br><b>${config.xLabel}:</b> %{x:.2f}<br><b>${config.yLabel}:</b> %{y:.2f}<extra></extra>',
+      showlegend: true
+    });
 
     const layout = {
-      title: { text: config.titulo, font: { size: 14, color: '#ffffff', family: 'Arial, sans-serif', weight: 'bold' } },
+      title: { 
+        text: config.titulo, 
+        font: { size: 16, color: '#ffffff', family: 'Arial, sans-serif', weight: 'bold' } 
+      },
       xaxis: {
-        title: config.xLabel,
-        titlefont: { size: 11, color: '#ffffff' },
-        tickfont: { size: 9, color: '#ffffff' },
-        gridcolor: 'rgba(255,255,255,0.1)',
+        title: { text: config.xLabel, font: { size: 12, color: '#ffffff', weight: 'bold' } },
+        titlefont: { size: 12, color: '#ffffff' },
+        tickfont: { size: 10, color: '#ffffff' },
+        gridcolor: 'rgba(255,255,255,0.15)',
         showgrid: true,
-        zeroline: false
+        zeroline: false,
+        showline: true,
+        linewidth: 2,
+        linecolor: '#ffffff'
       },
       yaxis: {
-        title: config.yLabel,
-        titlefont: { size: 11, color: '#ffffff' },
-        tickfont: { size: 9, color: '#ffffff' },
-        gridcolor: 'rgba(255,255,255,0.1)',
+        title: { text: config.yLabel, font: { size: 12, color: '#ffffff', weight: 'bold' } },
+        titlefont: { size: 12, color: '#ffffff' },
+        tickfont: { size: 10, color: '#ffffff' },
+        gridcolor: 'rgba(255,255,255,0.15)',
         showgrid: true,
-        zeroline: false
+        zeroline: false,
+        showline: true,
+        linewidth: 2,
+        linecolor: '#ffffff'
       },
       paper_bgcolor: 'rgba(0,0,0,0)',
       plot_bgcolor: 'rgba(0,0,0,0)',
       font: { family: 'Arial, sans-serif', color: '#ffffff' },
-      margin: { t: 50, b: 60, l: 70, r: 20 },
-      height: 380,
+      margin: { t: 60, b: 80, l: 100, r: 250 },
+      height: 500,
       showlegend: true,
       legend: {
-        x: 0.02,
-        y: 0.98,
-        bgcolor: 'rgba(0,0,0,0.4)',
+        x: 1.02,
+        y: 1,
+        xanchor: 'left',
+        yanchor: 'top',
+        bgcolor: 'rgba(0,0,0,0.5)',
         bordercolor: 'rgba(255,255,255,0.3)',
         borderwidth: 1,
-        font: { size: 9, color: '#ffffff' }
+        font: { size: 9, color: '#ffffff' },
+        tracegroupgap: 5
       },
       hovermode: 'closest'
     };
@@ -231,9 +264,9 @@ function DistorsaoContent() {
 
   return (
     <div className="min-h-screen bg-[#0a0c10] text-white p-2 md:p-4 print:p-0 print:bg-white print:text-black font-sans">
-      <div className="max-w-[1400px] mx-auto">
+      <div className="max-w-[1600px] mx-auto">
         
-        <div className="flex items-center justify-between mb-6 print:mb-4">
+        <div className="flex items-center justify-between mb-6 print:mb-4 sticky top-0 z-10 bg-[#0a0c10] py-2">
           <div className="flex items-center gap-3">
             <img src="/club/escudonovorizontino.png" alt="Logo" className="w-12 h-12 object-contain" />
             <div>
@@ -252,55 +285,37 @@ function DistorsaoContent() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 print:gap-2">
+        <div className="space-y-6 print:space-y-8">
           {GRAFICOS_CORRELACAO.map((config, idx) => {
-            if (idx < 4) {
-              const { data, layout } = criarGraficoCorrelacao(config);
-              return (
-                <div key={idx} className="bg-slate-900/20 border border-slate-800/50 rounded-2xl p-3 print:border-slate-200 print:bg-white print:p-2 print:page-break-inside-avoid">
-                  <Plot 
-                    data={data} 
-                    layout={layout} 
-                    config={{ displayModeBar: false, responsive: true }} 
-                    style={{ width: '100%', height: '100%' }} 
-                  />
-                </div>
-              );
-            }
-            return null;
-          })}
-          
-          {/* 5º gráfico em tela cheia */}
-          <div key="fifth" className="lg:col-span-2 bg-slate-900/20 border border-slate-800/50 rounded-2xl p-3 print:border-slate-200 print:bg-white print:p-2 print:page-break-inside-avoid">
-            {(() => {
-              const config = GRAFICOS_CORRELACAO[4];
-              const { data, layout } = criarGraficoCorrelacao(config);
-              return (
+            const { data, layout } = criarGraficoCorrelacao(config);
+            return (
+              <div key={idx} className="bg-slate-900/20 border border-slate-800/50 rounded-2xl p-4 print:border-slate-300 print:bg-white print:p-4 print:page-break-inside-avoid">
                 <Plot 
                   data={data} 
                   layout={layout} 
                   config={{ displayModeBar: false, responsive: true }} 
                   style={{ width: '100%', height: '100%' }} 
                 />
-              );
-            })()}
-          </div>
+              </div>
+            );
+          })}
         </div>
 
-        <div className="mt-6 pt-4 border-t border-slate-800 flex justify-center print:border-slate-100 print:mt-4">
-          <p className="text-[8px] font-bold text-slate-600 uppercase tracking-[0.3em]">Confidencial • Grêmio Novorizontino Scouting • {new Date().toLocaleDateString('pt-BR')}</p>
+        <div className="mt-8 pt-4 border-t border-slate-800 flex justify-center print:border-slate-300 print:mt-6">
+          <p className="text-[8px] font-bold text-slate-600 uppercase tracking-[0.3em] print:text-slate-500">Confidencial • Grêmio Novorizontino Scouting • {new Date().toLocaleDateString('pt-BR')}</p>
         </div>
       </div>
 
       <style jsx global>{`
         @media print {
-          @page { size: A4 landscape; margin: 0; }
+          @page { size: A4 portrait; margin: 0.5cm; }
           body { background: white !important; -webkit-print-color-adjust: exact; }
           .print\:hidden { display: none !important; }
           canvas { max-width: 100% !important; height: auto !important; }
           text { fill: #000000 !important; }
           .plotly text { fill: #000000 !important; }
-          .lg\:col-span-2 { grid-column: 1 / -1; }
+          .plotly .xtitle, .plotly .ytitle { fill: #000000 !important; }
+          .plotly .gridlayer line { stroke: #cccccc !important; }
         }
       `}</style>
     </div>
