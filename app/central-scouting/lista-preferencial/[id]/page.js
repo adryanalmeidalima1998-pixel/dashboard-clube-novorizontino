@@ -177,23 +177,23 @@ function PlayerProfileContent() {
 
   const radarLayout = {
     polar: {
-      radialaxis: { visible: true, range: [0, 100], gridcolor: 'rgba(0,0,0,0.1)', tickfont: { size: 7, color: '#64748b' } },
-      angularaxis: { tickfont: { size: 8, color: '#1e293b', weight: 'bold' }, gridcolor: 'rgba(0,0,0,0.1)' },
+      radialaxis: { visible: true, range: [0, 100], gridcolor: 'rgba(0,0,0,0.1)', tickfont: { size: 6, color: '#64748b' } },
+      angularaxis: { tickfont: { size: 7, color: '#1e293b', weight: 'bold' }, gridcolor: 'rgba(0,0,0,0.1)' },
       bgcolor: 'rgba(255, 255, 255, 0.5)'
     },
     showlegend: true,
-    legend: { orientation: 'h', y: -0.15, font: { size: 9, color: '#1e293b' } },
+    legend: { orientation: 'v', x: 1.05, y: 0.5, font: { size: 8, color: '#1e293b' } },
     paper_bgcolor: 'rgba(0,0,0,0)',
     plot_bgcolor: 'rgba(0,0,0,0)',
-    margin: { t: 20, b: 20, l: 40, r: 40 },
-    height: 320
+    margin: { t: 15, b: 15, l: 35, r: 35 },
+    height: 280
   };
 
   const heatmapData = useMemo(() => {
     if (!player) return [];
     const points = [];
     const isAtaque = player.Posição?.toLowerCase().includes('ataque') || player.Posição?.toLowerCase().includes('ponta');
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 80; i++) {
       points.push({
         x: isAtaque ? 70 + Math.random() * 30 : 30 + Math.random() * 50,
         y: 20 + Math.random() * 60,
@@ -219,124 +219,125 @@ function PlayerProfileContent() {
   );
 
   return (
-    <div className="min-h-screen bg-[#0a0c10] text-white p-4 md:p-8 print:p-0 print:bg-white print:text-black font-sans">
-      {/* CONTAINER A4 */}
-      <div className="max-w-[1000px] mx-auto bg-slate-900/20 border border-slate-800/50 rounded-[2rem] p-6 md:p-10 shadow-2xl print:border-0 print:shadow-none print:rounded-none print:p-8 print:w-[210mm] print:h-[297mm] print:mx-0 print:bg-white overflow-hidden relative">
+    <div className="min-h-screen bg-[#0a0c10] text-white p-2 md:p-4 print:p-0 print:bg-white print:text-black font-sans">
+      {/* CONTAINER A4 PAISAGEM */}
+      <div className="max-w-[1350px] mx-auto bg-slate-900/20 border border-slate-800/50 rounded-2xl p-4 md:p-6 shadow-2xl print:border-0 print:shadow-none print:rounded-none print:p-6 print:w-[297mm] print:h-[210mm] print:mx-0 print:bg-white overflow-hidden relative flex flex-col">
         
         {/* BOTÕES DE AÇÃO (HIDDEN ON PRINT) */}
-        <div className="absolute top-6 right-6 flex gap-3 print:hidden z-50">
-          <button onClick={() => window.print()} className="p-3 bg-brand-yellow text-black rounded-xl hover:bg-yellow-500 transition-all shadow-lg flex items-center gap-2 font-black uppercase text-[10px]">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4" /></svg>
-            Gerar PDF
+        <div className="absolute top-4 right-4 flex gap-2 print:hidden z-50">
+          <button onClick={() => window.print()} className="p-2 bg-brand-yellow text-black rounded-lg hover:bg-yellow-500 transition-all shadow-lg flex items-center gap-1 font-black uppercase text-[9px]">
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4" /></svg>
+            PDF
           </button>
-          <button onClick={() => router.back()} className="p-3 bg-slate-800 text-white rounded-xl hover:bg-slate-700 transition-all">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg>
+          <button onClick={() => router.back()} className="p-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition-all">
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
 
-        {/* CABEÇALHO INSTITUCIONAL (MOVED TO TOP) */}
-        <div className="flex items-center justify-between mb-8 border-b-2 border-brand-yellow/30 pb-6 print:border-slate-200">
-          <div className="flex items-center gap-5">
-            <img src="/club/escudonovorizontino.png" alt="Logo" className="w-16 h-16 object-contain" />
+        {/* CABEÇALHO COMPACTO */}
+        <div className="flex items-center justify-between mb-4 border-b border-brand-yellow/30 pb-3 print:border-slate-200">
+          <div className="flex items-center gap-3">
+            <img src="/club/escudonovorizontino.png" alt="Logo" className="w-12 h-12 object-contain" />
             <div>
-              <h2 className="text-xl font-black uppercase tracking-[0.1em] leading-tight print:text-black">G R Ê M I O &nbsp; N O V O R I Z O N T I N O</h2>
-              <p className="text-[10px] font-black text-brand-yellow uppercase tracking-[0.3em] print:text-slate-500">DEPARTAMENTO DE SCOUTING</p>
+              <h2 className="text-sm font-black uppercase tracking-[0.08em] leading-tight print:text-black">G R Ê M I O &nbsp; N O V O R I Z O N T I N O</h2>
+              <p className="text-[8px] font-black text-brand-yellow uppercase tracking-[0.2em] print:text-slate-500">SCOUTING</p>
             </div>
           </div>
           <div className="text-right">
-            <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Data do Relatório</p>
-            <p className="text-xs font-black print:text-black">{new Date().toLocaleDateString('pt-BR')}</p>
+            <p className="text-[7px] font-black text-slate-500 uppercase tracking-widest">Data</p>
+            <p className="text-[9px] font-black print:text-black">{new Date().toLocaleDateString('pt-BR')}</p>
           </div>
         </div>
         
-        {/* BIO DO ATLETA */}
-        <div className="flex gap-8 mb-8 items-center bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50 print:bg-slate-50 print:border-slate-100">
-          <div className="w-32 h-32 rounded-2xl bg-slate-800 border-2 border-brand-yellow overflow-hidden flex-shrink-0 shadow-xl print:border-slate-300">
-            <img 
-              src={`/images/players/${player.Jogador.replace(/ /g, '_')}.png`} 
-              alt={player.Jogador}
-              className="w-full h-full object-cover"
-              onError={(e) => { 
-                // Fallback para nomes que podem estar em maiúsculo ou sem underscore
-                const alternateSrc = `/images/players/${player.Jogador.toUpperCase().replace(/ /g, '_')}.png`;
-                if (e.target.src !== alternateSrc) {
-                  e.target.src = alternateSrc;
-                } else {
-                  e.target.src = `https://ui-avatars.com/api/?name=${player.Jogador}&background=1e293b&color=fbbf24&size=256&bold=true`;
-                }
-              }}
-            />
-          </div>
-          
-          <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-y-4 gap-x-6">
-            <div className="col-span-2">
-              <h1 className="text-3xl font-black uppercase italic tracking-tighter leading-none mb-1 print:text-black">{player.Jogador}</h1>
-              <p className="text-brand-yellow font-black uppercase tracking-widest text-[9px] print:text-slate-600">{player.Time} • {player.Posição}</p>
-            </div>
-            {[
-              { label: 'Idade', val: player.Idade },
-              { label: 'Altura', val: player.Altura },
-              { label: 'Peso', val: player.Peso },
-              { label: 'Nacionalidade', val: player.Nacionalidade },
-              { label: 'Pé', val: player['Pé dominante'] },
-              { label: 'Index', val: player.Index },
-            ].map(item => (
-              <div key={item.label}>
-                <p className="text-[7px] font-black text-slate-500 uppercase tracking-widest mb-0.5">{item.label}</p>
-                <p className="text-xs font-black print:text-black">{item.val || '-'}</p>
+        {/* CONTEÚDO PRINCIPAL - FLEX HORIZONTAL */}
+        <div className="flex-1 flex gap-4 overflow-hidden">
+          {/* COLUNA ESQUERDA - BIO E HEATMAP */}
+          <div className="flex flex-col gap-3 w-1/4">
+            {/* BIO COMPACTA */}
+            <div className="bg-slate-900/40 p-3 rounded-2xl border border-slate-800/50 print:bg-slate-50 print:border-slate-100">
+              <div className="w-24 h-24 rounded-xl bg-slate-800 border border-brand-yellow overflow-hidden flex-shrink-0 shadow-lg mb-2 print:border-slate-300">
+                <img 
+                  src={`/images/players/${player.Jogador.replace(/ /g, '_')}.png`} 
+                  alt={player.Jogador}
+                  className="w-full h-full object-cover"
+                  onError={(e) => { 
+                    const alternateSrc = `/images/players/${player.Jogador.toUpperCase().replace(/ /g, '_')}.png`;
+                    if (e.target.src !== alternateSrc) {
+                      e.target.src = alternateSrc;
+                    } else {
+                      e.target.src = `https://ui-avatars.com/api/?name=${player.Jogador}&background=1e293b&color=fbbf24&size=256&bold=true`;
+                    }
+                  }}
+                />
               </div>
-            ))}
-          </div>
-        </div>
+              <h1 className="text-lg font-black uppercase italic leading-none mb-1 print:text-black">{player.Jogador}</h1>
+              <p className="text-brand-yellow font-black uppercase tracking-widest text-[7px] print:text-slate-600 mb-2">{player.Time} • {player.Posição}</p>
+              
+              <div className="grid grid-cols-2 gap-1 text-[7px]">
+                {[
+                  { label: 'Idade', val: player.Idade },
+                  { label: 'Altura', val: player.Altura },
+                  { label: 'Peso', val: player.Peso },
+                  { label: 'Nac.', val: player.Nacionalidade },
+                  { label: 'Pé', val: player['Pé dominante'] },
+                  { label: 'Index', val: player.Index },
+                ].map(item => (
+                  <div key={item.label}>
+                    <p className="font-black text-slate-500 uppercase tracking-widest mb-0.5">{item.label}</p>
+                    <p className="font-black print:text-black">{item.val || '-'}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
 
-        {/* GRÁFICOS DE RADAR (REDUCED SIZE FOR A4) */}
-        <div className="grid grid-cols-2 gap-6 mb-8">
-          <div className="bg-slate-900/40 border border-slate-800/50 rounded-3xl p-4 print:border-slate-100 print:bg-white">
-            <h3 className="text-[9px] font-black uppercase italic text-brand-yellow mb-2 text-center print:text-slate-700">vs Média Lista Preferencial</h3>
-            <Plot data={getRadarData('media')} layout={radarLayout} config={{ displayModeBar: false, responsive: true }} style={{ width: '100%' }} />
-          </div>
-          <div className="bg-slate-900/40 border border-slate-800/50 rounded-3xl p-4 print:border-slate-100 print:bg-white">
-            <h3 className="text-[9px] font-black uppercase italic text-brand-yellow mb-2 text-center print:text-slate-700">vs Grêmio Novorizontino</h3>
-            <Plot data={getRadarData('gremio')} layout={radarLayout} config={{ displayModeBar: false, responsive: true }} style={{ width: '100%' }} />
-          </div>
-        </div>
-
-        {/* HEATMAP E MÉTRICAS */}
-        <div className="grid grid-cols-3 gap-6">
-          <div className="col-span-2 bg-slate-900/40 border border-slate-800/50 rounded-3xl p-5 print:border-slate-100 print:bg-white">
-            <h3 className="text-[9px] font-black uppercase italic text-brand-yellow mb-3 print:text-slate-700">Mapa de Calor (Estimado)</h3>
-            <div className="relative aspect-[105/68] bg-green-900/10 border border-slate-700 rounded-xl overflow-hidden print:border-slate-200">
-              <div className="absolute inset-0 border border-white/10 pointer-events-none"></div>
-              <div className="absolute inset-y-0 left-1/2 border-l border-white/10 pointer-events-none"></div>
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 border border-white/10 rounded-full pointer-events-none"></div>
-              {heatmapData.map((p, i) => (
-                <div key={i} className="absolute w-6 h-6 rounded-full blur-lg" style={{ left: `${p.x}%`, top: `${p.y}%`, backgroundColor: `rgba(251, 191, 36, ${p.z * 0.4})` }} />
-              ))}
+            {/* HEATMAP */}
+            <div className="bg-slate-900/40 border border-slate-800/50 rounded-2xl p-2 flex-1 print:border-slate-100 print:bg-white">
+              <h3 className="text-[7px] font-black uppercase italic text-brand-yellow mb-1 print:text-slate-700">Heatmap</h3>
+              <div className="relative aspect-[105/68] bg-green-900/10 border border-slate-700 rounded-lg overflow-hidden print:border-slate-200">
+                <div className="absolute inset-0 border border-white/10 pointer-events-none"></div>
+                <div className="absolute inset-y-0 left-1/2 border-l border-white/10 pointer-events-none"></div>
+                {heatmapData.map((p, i) => (
+                  <div key={i} className="absolute w-4 h-4 rounded-full blur-md" style={{ left: `${p.x}%`, top: `${p.y}%`, backgroundColor: `rgba(251, 191, 36, ${p.z * 0.3})` }} />
+                ))}
+              </div>
             </div>
           </div>
 
-          <div className="bg-slate-900/40 border border-slate-800/50 rounded-3xl p-5 print:border-slate-100 print:bg-white">
-            <h3 className="text-[9px] font-black uppercase italic text-brand-yellow mb-3 print:text-slate-700">Métricas p/90</h3>
-            <div className="space-y-2.5">
-              {METRICAS_RADAR.slice(0, 8).map(m => (
-                <div key={m.label} className="flex justify-between items-center border-b border-slate-800 pb-1 print:border-slate-50">
-                  <span className="text-[8px] font-bold text-slate-500 uppercase print:text-slate-500">{m.label}</span>
-                  <span className="text-[10px] font-black text-brand-yellow print:text-black">{getValorMetrica(player, m).toFixed(2)}</span>
+          {/* COLUNA CENTRAL - RADARES */}
+          <div className="flex-1 flex flex-col gap-3">
+            <div className="bg-slate-900/40 border border-slate-800/50 rounded-2xl p-2 print:border-slate-100 print:bg-white h-1/2">
+              <h3 className="text-[7px] font-black uppercase italic text-brand-yellow mb-1 print:text-slate-700">vs Média Lista Preferencial</h3>
+              <Plot data={getRadarData('media')} layout={radarLayout} config={{ displayModeBar: false, responsive: true }} style={{ width: '100%', height: '100%' }} />
+            </div>
+            <div className="bg-slate-900/40 border border-slate-800/50 rounded-2xl p-2 print:border-slate-100 print:bg-white h-1/2">
+              <h3 className="text-[7px] font-black uppercase italic text-brand-yellow mb-1 print:text-slate-700">vs Grêmio Novorizontino</h3>
+              <Plot data={getRadarData('gremio')} layout={radarLayout} config={{ displayModeBar: false, responsive: true }} style={{ width: '100%', height: '100%' }} />
+            </div>
+          </div>
+
+          {/* COLUNA DIREITA - MÉTRICAS */}
+          <div className="w-1/5 bg-slate-900/40 border border-slate-800/50 rounded-2xl p-3 print:border-slate-100 print:bg-white overflow-y-auto">
+            <h3 className="text-[7px] font-black uppercase italic text-brand-yellow mb-2 print:text-slate-700 sticky top-0 bg-slate-900/40 print:bg-white py-1">Métricas p/90</h3>
+            <div className="space-y-1">
+              {METRICAS_RADAR.map(m => (
+                <div key={m.label} className="flex justify-between items-center border-b border-slate-800 pb-0.5 print:border-slate-100">
+                  <span className="text-[6px] font-bold text-slate-500 uppercase print:text-slate-600">{m.label}</span>
+                  <span className="text-[7px] font-black text-brand-yellow print:text-black">{getValorMetrica(player, m).toFixed(2)}</span>
                 </div>
               ))}
             </div>
           </div>
         </div>
 
-        {/* FOOTER DISCRETO */}
-        <div className="mt-8 pt-4 border-t border-slate-800 flex justify-center print:border-slate-100">
-          <p className="text-[7px] font-bold text-slate-600 uppercase tracking-[0.5em]">Confidencial • Grêmio Novorizontino Scouting System</p>
+        {/* FOOTER */}
+        <div className="mt-2 pt-2 border-t border-slate-800 flex justify-center print:border-slate-100">
+          <p className="text-[6px] font-bold text-slate-600 uppercase tracking-[0.3em]">Confidencial • Grêmio Novorizontino Scouting</p>
         </div>
       </div>
 
       <style jsx global>{`
         @media print {
-          @page { size: A4; margin: 0; }
+          @page { size: A4 landscape; margin: 0; }
           body { background: white !important; -webkit-print-color-adjust: exact; }
           .print\:hidden { display: none !important; }
           canvas { max-width: 100% !important; height: auto !important; }
