@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Papa from 'papaparse';
 import { cleanData, safeParseFloat } from '@/app/utils/dataCleaner';
 import dynamic from 'next/dynamic';
+import HeatmapComponent from '@/app/components/HeatmapComponent';
 
 const Plot = dynamic(() => import('react-plotly.js'), { 
   ssr: false, 
@@ -113,7 +114,6 @@ function PlayerProfileContent() {
     return safeParseFloat(jogador[metrica.key]);
   };
 
-  // Calcular escalas independentes para cada métrica
   const escalasMetricas = useMemo(() => {
     const todos = [...listaPreferencial, ...gremioNovorizontino];
     const escalas = {};
@@ -122,19 +122,16 @@ function PlayerProfileContent() {
       const valores = todos.map(j => getValorMetrica(j, m)).filter(v => v >= 0);
       const max = Math.max(...valores, 1);
       
-      // Gerar ticks apropriados para cada métrica
       let tickvals = [];
       let ticktext = [];
       
       if (max <= 1) {
-        // Para valores pequenos (xG, xA, etc) - 5 ticks
         for (let i = 0; i <= 4; i++) {
           const val = (i / 4) * max;
           tickvals.push(val);
           ticktext.push(val.toFixed(2));
         }
       } else if (max <= 10) {
-        // Para valores médios - 5 ticks
         const step = max / 4;
         for (let i = 0; i <= 4; i++) {
           const val = i * step;
@@ -142,7 +139,6 @@ function PlayerProfileContent() {
           ticktext.push(val.toFixed(1));
         }
       } else {
-        // Para valores altos (percentuais, etc) - 5 ticks
         const step = max / 4;
         for (let i = 0; i <= 4; i++) {
           const val = i * step;
@@ -161,11 +157,10 @@ function PlayerProfileContent() {
     if (!player) return [];
     const data = [];
 
-    // Normalizar valores para escala 0-2
     const playerNormalizedValues = METRICAS_RADAR.map(m => {
       const val = getValorMetrica(player, m);
       const escala = escalasMetricas[m.label];
-      return (val / escala.max) * 2; // Normalizar para 0-2
+      return (val / escala.max) * 2;
     });
     const playerRealValues = METRICAS_RADAR.map(m => getValorMetrica(player, m));
 
@@ -188,7 +183,7 @@ function PlayerProfileContent() {
         const valores = listaPreferencial.map(j => getValorMetrica(j, m));
         const avg = valores.reduce((a, b) => a + b, 0) / (valores.length || 1);
         const escala = escalasMetricas[m.label];
-        return (avg / escala.max) * 2; // Normalizar para 0-2
+        return (avg / escala.max) * 2;
       });
       const mediaListaRealValues = METRICAS_RADAR.map(m => {
         const valores = listaPreferencial.map(j => getValorMetrica(j, m));
@@ -213,7 +208,7 @@ function PlayerProfileContent() {
         const gremioNormalizedValues = METRICAS_RADAR.map(m => {
           const val = getValorMetrica(p, m);
           const escala = escalasMetricas[m.label];
-          return (val / escala.max) * 2; // Normalizar para 0-2
+          return (val / escala.max) * 2;
         });
         const gremioRealValues = METRICAS_RADAR.map(m => getValorMetrica(p, m));
         data.push({
@@ -233,21 +228,22 @@ function PlayerProfileContent() {
     return data;
   };
 
-  // Criar layout com escalas independentes para cada eixo
   const radarLayout = {
-    title: { text: '', font: { size: 0 } },
     polar: {
       radialaxis: { 
         visible: true,
         gridcolor: 'rgba(255,255,255,0.2)',
-        tickfont: { size: 6, color: '#ffffff', family: 'Arial, sans-serif' },
+        tickfont: { size: 6, color: '#ffffff' },
         showticklabels: true,
         ticks: 'outside',
         linecolor: '#ffffff',
-        linewidth: 1
+        linewidth: 1,
+        range: [0, 2],
+        tickvals: [0, 0.5, 1, 1.5, 2],
+        ticktext: ['0', '0.5', '1', '1.5', '2']
       },
       angularaxis: { 
-        tickfont: { size: 8, color: '#ffffff', family: 'Arial, sans-serif' },
+        tickfont: { size: 8, color: '#ffffff' },
         gridcolor: 'rgba(255,255,255,0.25)',
         rotation: 90,
         direction: 'clockwise',
@@ -260,212 +256,220 @@ function PlayerProfileContent() {
     legend: { 
       orientation: 'h', 
       x: 0.5, 
-      y: -0.25, 
-      font: { size: 7, color: '#ffffff', family: 'Arial, sans-serif' },
-      bgcolor: 'rgba(0,0,0,0)',
-      bordercolor: 'rgba(0,0,0,0)',
-      borderwidth: 0,
+      y: -0.2, 
+      font: { size: 8, color: '#ffffff' },
       xanchor: 'center',
       yanchor: 'top'
     },
+    margin: { l: 40, r: 40, t: 20, b: 40 },
     paper_bgcolor: 'rgba(0,0,0,0)',
     plot_bgcolor: 'rgba(0,0,0,0)',
-    '@media print': {
-      paper_bgcolor: '#ffffff',
-      plot_bgcolor: '#ffffff'
-    },
-    margin: { t: 20, b: 80, l: 60, r: 60 },
-    height: 300,
-    font: { family: 'Arial, sans-serif', color: '#ffffff' }
+    autosize: true
   };
-
-  // Configurar range e ticks dinâmicos para o eixo radial
-  const getRadarLayoutWithDynamicRange = (type) => {
-    const layout = { ...radarLayout };
-    
-    // Escala fixa de 0 a 2 com saltos de 0.5
-    layout.polar.radialaxis.range = [0, 2];
-    layout.polar.radialaxis.tickvals = [0, 0.5, 1, 1.5, 2];
-    layout.polar.radialaxis.ticktext = ['0', '0.5', '1', '1.5', '2'];
-
-    // Adicionar anotações com as escalas reais de cada eixo
-    layout.annotations = METRICAS_RADAR.map((m, idx) => {
-      const escala = escalasMetricas[m.label];
-      const angle = (idx / METRICAS_RADAR.length) * 360 - 90;
-      const rad = (angle * Math.PI) / 180;
-      const distance = 1.15;
-      const x = Math.cos(rad) * distance;
-      const y = Math.sin(rad) * distance;
-      
-      return {
-        x: x,
-        y: y,
-        text: `<b>${escala.max.toFixed(2)}</b>`,
-        showarrow: false,
-        font: { size: 6, color: '#fbbf24' },
-        xref: 'paper',
-        yref: 'paper',
-        xanchor: 'center',
-        yanchor: 'middle'
-      };
-    });
-
-    return layout;
-  };
-
-  const heatmapData = useMemo(() => {
-    if (!player) return [];
-    const points = [];
-    const isAtaque = player.Posição?.toLowerCase().includes('ataque') || player.Posição?.toLowerCase().includes('ponta');
-    for (let i = 0; i < 80; i++) {
-      points.push({
-        x: isAtaque ? 70 + Math.random() * 30 : 30 + Math.random() * 50,
-        y: 20 + Math.random() * 60,
-        z: Math.random()
-      });
-    }
-    return points;
-  }, [player]);
 
   if (loading) return (
-    <div className="min-h-screen bg-[#0a0c10] flex items-center justify-center">
-      <div className="w-12 h-12 border-4 border-brand-yellow/20 border-t-brand-yellow rounded-full animate-spin"></div>
+    <div className="min-h-screen bg-[#08101e] flex items-center justify-center">
+      <div className="text-amber-500 text-2xl font-bold animate-pulse">CARREGANDO SCOUT...</div>
     </div>
   );
 
   if (!player) return (
-    <div className="min-h-screen bg-[#0a0c10] flex items-center justify-center">
-      <div className="text-center">
-        <h2 className="text-2xl font-black uppercase text-brand-yellow mb-4">Atleta não encontrado</h2>
-        <button onClick={() => router.back()} className="px-6 py-2 bg-slate-800 rounded-lg font-black uppercase text-xs">Voltar</button>
-      </div>
+    <div className="min-h-screen bg-[#08101e] flex items-center justify-center">
+      <div className="text-white text-xl">Atleta não encontrado.</div>
     </div>
   );
 
-  return (
-    <div className="min-h-screen bg-[#0a0c10] text-white p-2 md:p-4 print:p-0 print:bg-white print:text-black font-sans">
-      <div className="max-w-[1350px] mx-auto bg-slate-900/20 border border-slate-800/50 rounded-2xl p-4 md:p-6 shadow-2xl print:border-0 print:shadow-none print:rounded-none print:p-6 print:w-[297mm] print:h-[210mm] print:mx-0 print:bg-white overflow-hidden relative flex flex-col">
-        
-        <div className="absolute top-4 right-4 flex gap-2 print:hidden z-50">
-          <button onClick={() => window.print()} className="p-2 bg-brand-yellow text-black rounded-lg hover:bg-yellow-500 transition-all shadow-lg flex items-center gap-1 font-black uppercase text-[9px]">
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4" /></svg>
-            PDF
-          </button>
-          <button onClick={() => router.back()} className="p-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition-all">
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg>
-          </button>
-        </div>
+  const getPlayerPhoto = (name) => {
+    if (!name) return '/images/players/default.png';
+    const formattedName = name.trim().replace(/\s+/g, '_');
+    return `/images/players/${formattedName}.png`;
+  };
 
-        <div className="flex items-center justify-between mb-4 border-b border-brand-yellow/30 pb-3 print:border-slate-200">
-          <div className="flex items-center gap-3">
-            <img src="/club/escudonovorizontino.png" alt="Logo" className="w-12 h-12 object-contain" />
+  return (
+    <div className="min-h-screen bg-[#08101e] text-white p-4 font-sans print:bg-white print:text-black print:p-0">
+      <style jsx global>{`
+        @media print {
+          @page { size: landscape; margin: 0.5cm; }
+          .no-print { display: none !important; }
+          body { background: white !important; color: black !important; }
+          .print-container { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important; }
+          .radar-chart svg { filter: invert(1) hue-rotate(180deg) !important; }
+          .metric-card { border: 1px solid #ccc !important; color: black !important; }
+          .text-amber-500, .text-amber-400 { color: #b45309 !important; }
+          .bg-slate-800 { background: #f8fafc !important; }
+          .border-slate-700 { border-color: #e2e8f0 !important; }
+          .legend-container { margin-top: 10px !important; }
+          .bg-slate-900 { background: white !important; border: 1px solid #ddd !important; }
+          .bg-slate-900\/50 { background: white !important; border: 1px solid #ddd !important; }
+        }
+      `}</style>
+
+      <div className="max-w-[1400px] mx-auto print-container">
+        {/* HEADER */}
+        <header className="flex justify-between items-center mb-6 border-b-2 border-amber-500 pb-4">
+          <div className="flex items-center gap-6">
+            <img src="/club/escudonovorizontino.png" alt="Shield" className="h-20 w-auto" />
             <div>
-              <h2 className="text-sm font-black uppercase tracking-[0.08em] leading-tight print:text-black">G R Ê M I O &nbsp; N O V O R I Z O N T I N O</h2>
-              <p className="text-[8px] font-black text-brand-yellow uppercase tracking-[0.2em] print:text-slate-500">SCOUTING</p>
+              <h1 className="text-3xl font-black tracking-tighter text-amber-500 uppercase leading-none print:text-black">
+                Grêmio Novorizontino
+              </h1>
+              <p className="text-lg font-bold tracking-widest text-slate-400 uppercase">
+                Departamento de Scouting
+              </p>
             </div>
           </div>
           <div className="text-right">
-            <p className="text-[7px] font-black text-slate-500 uppercase tracking-widest">Data</p>
-            <p className="text-[9px] font-black print:text-black">{new Date().toLocaleDateString('pt-BR')}</p>
+            <div className="bg-amber-500 text-black px-4 py-1 font-black text-xl mb-1 uppercase italic">
+              Relatório de Prospecção
+            </div>
+            <div className="text-slate-400 font-mono text-sm">
+              DATA: {new Date().toLocaleDateString('pt-BR')} | ID: {player.ID_ATLETA}
+            </div>
           </div>
-        </div>
-        
-        <div className="flex-1 flex gap-4 overflow-hidden">
-          <div className="flex flex-col gap-3 w-1/4">
-            <div className="bg-slate-900/40 p-3 rounded-2xl border border-slate-800/50 print:bg-slate-50 print:border-slate-100">
-              <div className="w-24 h-24 rounded-xl bg-slate-800 border border-brand-yellow overflow-hidden flex-shrink-0 shadow-lg mb-2 print:border-slate-300">
+        </header>
+
+        {/* MAIN CONTENT GRID */}
+        <div className="grid grid-cols-12 gap-6">
+          
+          {/* COL 1: PLAYER INFO & HEATMAP */}
+          <div className="col-span-4 flex flex-col gap-6">
+            {/* Player Bio Card */}
+            <div className="bg-slate-900 border border-slate-700 rounded-xl overflow-hidden shadow-2xl">
+              <div className="relative h-64 bg-gradient-to-b from-amber-500/20 to-slate-900">
                 <img 
-                  src={`/images/players/${player.Jogador.replace(/ /g, '_')}.png`} 
+                  src={getPlayerPhoto(player.Jogador)} 
                   alt={player.Jogador}
-                  className="w-full h-full object-cover"
+                  className="absolute bottom-0 left-1/2 -translate-x-1/2 h-full object-contain"
                   onError={(e) => { 
-                    const alternateSrc = `/images/players/${player.Jogador.toUpperCase().replace(/ /g, '_')}.png`;
+                    const alternateSrc = getPlayerPhoto(player.Jogador.toUpperCase());
                     if (e.target.src !== alternateSrc) {
                       e.target.src = alternateSrc;
                     } else {
-                      e.target.src = `https://ui-avatars.com/api/?name=${player.Jogador}&background=1e293b&color=fbbf24&size=256&bold=true`;
+                      e.target.src = '/images/players/default.png';
                     }
                   }}
                 />
               </div>
-              <h1 className="text-lg font-black uppercase italic leading-none mb-1 print:text-black">{player.Jogador}</h1>
-              <p className="text-brand-yellow font-black uppercase tracking-widest text-[7px] print:text-slate-600 mb-2">{player.Time} • {player.Posição}</p>
-              
-              <div className="grid grid-cols-2 gap-1 text-[7px]">
-                {[
-                  { label: 'Idade', val: player.Idade },
-                  { label: 'Altura', val: player.Altura },
-                  { label: 'Peso', val: player.Peso },
-                  { label: 'Nac.', val: player.Nacionalidade },
-                  { label: 'Pé', val: player['Pé dominante'] },
-                  { label: 'Index', val: player.Index },
-                ].map(item => (
-                  <div key={item.label}>
-                    <p className="font-black text-slate-500 uppercase tracking-widest mb-0.5">{item.label}</p>
-                    <p className="font-black print:text-black">{item.val || '-'}</p>
+              <div className="p-6">
+                <h2 className="text-3xl font-black text-amber-500 uppercase mb-2 leading-none print:text-black">{player.Jogador}</h2>
+                <div className="grid grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Equipe Atual</p>
+                    <p className="text-sm font-bold truncate print:text-black">{player.Equipa}</p>
                   </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="bg-slate-900/40 border border-slate-800/50 rounded-2xl p-2 flex-1 print:border-slate-100 print:bg-white">
-              <h3 className="text-[7px] font-black uppercase italic text-brand-yellow mb-1 print:text-slate-700">Heatmap</h3>
-              <div className="relative aspect-[105/68] bg-green-900/10 border border-slate-700 rounded-lg overflow-hidden print:border-slate-200">
-                <div className="absolute inset-0 border border-white/10 pointer-events-none"></div>
-                <div className="absolute inset-y-0 left-1/2 border-l border-white/10 pointer-events-none"></div>
-                {heatmapData.map((p, i) => (
-                  <div key={i} className="absolute w-4 h-4 rounded-full blur-md" style={{ left: `${p.x}%`, top: `${p.y}%`, backgroundColor: `rgba(251, 191, 36, ${p.z * 0.3})` }} />
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex-1 flex flex-col gap-3">
-            <div className="bg-slate-900/40 border border-slate-800/50 rounded-2xl p-2 print:border-slate-100 print:bg-white h-1/2">
-              <h3 className="text-[7px] font-black uppercase italic text-brand-yellow mb-1 print:text-slate-700">vs Média Lista Preferencial</h3>
-              <Plot data={getRadarData('media')} layout={{...getRadarLayoutWithDynamicRange('media'), paper_bgcolor: '#ffffff', plot_bgcolor: '#ffffff', font: { family: 'Arial, sans-serif', color: '#000000' }, polar: { ...getRadarLayoutWithDynamicRange('media').polar, radialaxis: { ...getRadarLayoutWithDynamicRange('media').polar.radialaxis, tickfont: { size: 6, color: '#000000', family: 'Arial, sans-serif' }, linecolor: '#000000', gridcolor: 'rgba(0,0,0,0.2)' }, angularaxis: { ...getRadarLayoutWithDynamicRange('media').polar.angularaxis, tickfont: { size: 8, color: '#000000', family: 'Arial, sans-serif' }, linecolor: '#000000', gridcolor: 'rgba(0,0,0,0.2)' } }}} config={{ displayModeBar: false, responsive: true, toImageButtonOptions: { format: 'png', width: 800, height: 600 } }} style={{ width: '100%', height: '100%' }} />
-            </div>
-            <div className="bg-slate-900/40 border border-slate-800/50 rounded-2xl p-2 print:border-slate-100 print:bg-white h-1/2">
-              <h3 className="text-[7px] font-black uppercase italic text-brand-yellow mb-1 print:text-slate-700">vs Grêmio Novorizontino</h3>
-              <Plot data={getRadarData('gremio')} layout={{...getRadarLayoutWithDynamicRange('gremio'), paper_bgcolor: '#ffffff', plot_bgcolor: '#ffffff', font: { family: 'Arial, sans-serif', color: '#000000' }, polar: { ...getRadarLayoutWithDynamicRange('gremio').polar, radialaxis: { ...getRadarLayoutWithDynamicRange('gremio').polar.radialaxis, tickfont: { size: 6, color: '#000000', family: 'Arial, sans-serif' }, linecolor: '#000000', gridcolor: 'rgba(0,0,0,0.2)' }, angularaxis: { ...getRadarLayoutWithDynamicRange('gremio').polar.angularaxis, tickfont: { size: 8, color: '#000000', family: 'Arial, sans-serif' }, linecolor: '#000000', gridcolor: 'rgba(0,0,0,0.2)' } }}} config={{ displayModeBar: false, responsive: true, toImageButtonOptions: { format: 'png', width: 800, height: 600 } }} style={{ width: '100%', height: '100%' }} />
-            </div>
-          </div>
-
-          <div className="w-1/5 bg-slate-900/40 border border-slate-800/50 rounded-2xl p-3 print:border-slate-100 print:bg-white overflow-y-auto">
-            <h3 className="text-[7px] font-black uppercase italic text-brand-yellow mb-2 print:text-slate-700 sticky top-0 bg-slate-900/40 print:bg-white py-1 z-10">Métricas p/90</h3>
-            <div className="space-y-1">
-              {METRICAS_RADAR.map(m => (
-                <div key={m.label} className="flex justify-between items-center border-b border-slate-700 pb-0.5 print:border-slate-200">
-                  <span className="text-[6px] font-bold text-slate-300 uppercase print:text-slate-700">{m.label}</span>
-                  <span className="text-[7px] font-black text-white print:text-black">{getValorMetrica(player, m).toFixed(2)}</span>
+                  <div>
+                    <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Pé Preferencial</p>
+                    <p className="text-sm font-bold print:text-black">{player.Pé === 'R' ? 'Direito' : 'Esquerdo'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Idade</p>
+                    <p className="text-sm font-bold print:text-black">{player.Idade} anos</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Minutos</p>
+                    <p className="text-sm font-bold print:text-black">{player['Minutos jogados']}'</p>
+                  </div>
                 </div>
-              ))}
+              </div>
+            </div>
+
+            {/* Heatmap Section */}
+            <HeatmapComponent player={player} />
+          </div>
+
+          {/* COL 2: RADAR CHARTS */}
+          <div className="col-span-5 grid grid-rows-2 gap-6">
+            <div className="bg-slate-900/50 border border-slate-700 rounded-xl p-4 flex flex-col items-center shadow-xl">
+              <h3 className="text-amber-500 font-black text-sm uppercase tracking-widest mb-2 print:text-black">Vs Média Lista Preferencial</h3>
+              <div className="w-full h-full radar-chart">
+                <Plot
+                  data={getRadarData('media')}
+                  layout={radarLayout}
+                  config={{ displayModeBar: false, responsive: true }}
+                  style={{ width: '100%', height: '100%' }}
+                />
+              </div>
+            </div>
+            <div className="bg-slate-900/50 border border-slate-700 rounded-xl p-4 flex flex-col items-center shadow-xl">
+              <h3 className="text-amber-500 font-black text-sm uppercase tracking-widest mb-2 print:text-black">Vs Elenco Novorizontino</h3>
+              <div className="w-full h-full radar-chart">
+                <Plot
+                  data={getRadarData('gremio')}
+                  layout={radarLayout}
+                  config={{ displayModeBar: false, responsive: true }}
+                  style={{ width: '100%', height: '100%' }}
+                />
+              </div>
             </div>
           </div>
+
+          {/* COL 3: METRICS TABLE */}
+          <div className="col-span-3">
+            <div className="bg-slate-900 border border-slate-700 rounded-xl overflow-hidden shadow-xl h-full flex flex-col">
+              <div className="bg-amber-500 text-black font-black text-center py-2 text-sm uppercase tracking-widest">
+                Métricas por 90 Minutos
+              </div>
+              <div className="flex-1 overflow-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-800 text-slate-400 uppercase print:bg-slate-100 print:text-slate-700">
+                    <tr>
+                      <th className="px-3 py-2 font-bold">Indicador</th>
+                      <th className="px-3 py-2 font-bold text-right">Valor</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800 print:divide-slate-200">
+                    {METRICAS_RADAR.map((m, idx) => (
+                      <tr key={idx} className="hover:bg-slate-800/50">
+                        <td className="px-3 py-2 text-slate-300 font-medium print:text-slate-800">{m.label}</td>
+                        <td className="px-3 py-2 text-right font-bold text-amber-400 print:text-black">
+                          {getValorMetrica(player, m).toFixed(2)}
+                          {m.key.includes('%') ? '%' : ''}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="p-4 bg-slate-800/50 mt-auto border-t border-slate-700 no-print">
+                <button 
+                  onClick={() => window.print()}
+                  className="w-full bg-amber-500 hover:bg-amber-600 text-black font-black py-3 rounded-lg transition-all flex items-center justify-center gap-2 shadow-lg"
+                >
+                  <span>EXPORTAR PDF</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" clipRule="evenodd" />
+                  </svg>
+                </button>
+                <button 
+                  onClick={() => router.back()}
+                  className="w-full mt-2 text-slate-400 hover:text-white text-xs font-bold py-2 uppercase tracking-widest"
+                >
+                  VOLTAR PARA LISTA
+                </button>
+              </div>
+            </div>
+          </div>
+
         </div>
 
-        <div className="mt-2 pt-2 border-t border-slate-800 flex justify-center print:border-slate-100">
-          <p className="text-[6px] font-bold text-slate-600 uppercase tracking-[0.3em]">Confidencial • Grêmio Novorizontino Scouting</p>
-        </div>
+        {/* FOOTER / NOTES */}
+        <footer className="mt-6 flex justify-between items-end border-t border-slate-800 pt-4 print:border-slate-200">
+          <div className="text-[10px] text-slate-500 max-w-2xl italic">
+            * Todas as métricas são normalizadas para 90 minutos de jogo. Os dados do radar são comparativos dentro do universo da Lista Preferencial e do elenco atual do Grêmio Novorizontino. Mapa de calor gerado por algoritmo de densidade posicional baseado em ações técnicas do atleta.
+          </div>
+          <div className="flex items-center gap-2 opacity-50">
+            <span className="text-[10px] font-bold text-slate-400">SCOUTING SYSTEM</span>
+            <img src="/club/escudonovorizontino.png" alt="Logo" className="h-6 grayscale" />
+          </div>
+        </footer>
       </div>
-
-      <style jsx global>{`
-        @media print {
-          @page { size: A4 landscape; margin: 0; }
-          body { background: white !important; -webkit-print-color-adjust: exact; }
-          .print\:hidden { display: none !important; }
-          canvas { max-width: 100% !important; height: auto !important; }
-          text { fill: #000000 !important; }
-          .plotly text { fill: #000000 !important; }
-        }
-      `}</style>
     </div>
   );
 }
 
 export default function PlayerProfile() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#0a0c10] flex items-center justify-center"><div className="w-12 h-12 border-4 border-brand-yellow/20 border-t-brand-yellow rounded-full animate-spin"></div></div>}>
+    <Suspense fallback={<div>Carregando...</div>}>
       <PlayerProfileContent />
     </Suspense>
   );
