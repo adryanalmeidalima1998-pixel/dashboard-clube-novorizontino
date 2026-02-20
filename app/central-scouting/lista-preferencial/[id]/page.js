@@ -277,50 +277,17 @@ function PlayerProfileContent() {
   const getRadarLayoutWithDynamicRange = (type) => {
     const layout = { ...radarLayout };
     
-    // Encontrar o valor máximo entre todas as métricas
-    let maxValue = 0;
-    METRICAS_RADAR.forEach(m => {
-      const escala = escalasMetricas[m.label];
-      if (escala.max > maxValue) maxValue = escala.max;
-    });
+    // Escala fixa de 0 a 2 com saltos de 0.5
+    layout.polar.radialaxis.range = [0, 2];
+    layout.polar.radialaxis.tickvals = [0, 0.5, 1, 1.5, 2];
+    layout.polar.radialaxis.ticktext = ['0', '0.5', '1', '1.5', '2'];
 
-    // Configurar range e ticks
-    layout.polar.radialaxis.range = [0, maxValue];
-    
-    // Gerar ticks para a escala máxima
-    let tickvals = [];
-    let ticktext = [];
-    if (maxValue <= 1) {
-      for (let i = 0; i <= 4; i++) {
-        const val = (i / 4) * maxValue;
-        tickvals.push(val);
-        ticktext.push(val.toFixed(2));
-      }
-    } else if (maxValue <= 10) {
-      const step = maxValue / 4;
-      for (let i = 0; i <= 4; i++) {
-        const val = i * step;
-        tickvals.push(val);
-        ticktext.push(val.toFixed(1));
-      }
-    } else {
-      const step = maxValue / 4;
-      for (let i = 0; i <= 4; i++) {
-        const val = i * step;
-        tickvals.push(val);
-        ticktext.push(val.toFixed(0));
-      }
-    }
-    
-    layout.polar.radialaxis.tickvals = tickvals;
-    layout.polar.radialaxis.ticktext = ticktext;
-
-    // Adicionar anotações com as escalas de cada eixo
+    // Adicionar anotações com as escalas reais de cada eixo
     layout.annotations = METRICAS_RADAR.map((m, idx) => {
       const escala = escalasMetricas[m.label];
       const angle = (idx / METRICAS_RADAR.length) * 360 - 90;
       const rad = (angle * Math.PI) / 180;
-      const distance = 1.25;
+      const distance = 1.15;
       const x = Math.cos(rad) * distance;
       const y = Math.sin(rad) * distance;
       
