@@ -143,6 +143,7 @@ function DistorsaoContent() {
   const criarGraficoCorrelacao = (config) => {
     const plotData = [];
 
+    // Jogadores da Lista Preferencial com primeiro nome
     listaPreferencial.forEach(jogador => {
       const primeiroNome = jogador.Jogador.split(' ')[0];
       plotData.push({
@@ -159,15 +160,32 @@ function DistorsaoContent() {
       });
     });
 
-    const gremioX = gremioNovorizontino.map(j => getValorMetrica(j, config.xKey, config.xType));
-    const gremioY = gremioNovorizontino.map(j => getValorMetrica(j, config.yKey, config.yType));
-    plotData.push({
-      x: gremioX, y: gremioY, mode: 'markers', type: 'scatter', name: 'Elenco GN',
-      marker: { size: 12, color: '#3b82f6', symbol: 'diamond', line: { color: '#fff', width: 1 } },
-      text: gremioNovorizontino.map(j => j.Jogador),
-      hovertemplate: `<b>%{text}</b><br>${config.xLabel}: %{x:.2f}<br>${config.yLabel}: %{y:.2f}<extra></extra>`
+    // Elenco GN com nomes simplificados (primeiro nome)
+    gremioNovorizontino.forEach(jogador => {
+      const primeiroNome = jogador.Jogador.split(' ')[0];
+      plotData.push({
+        x: [getValorMetrica(jogador, config.xKey, config.xType)],
+        y: [getValorMetrica(jogador, config.yKey, config.yType)],
+        mode: 'markers+text',
+        type: 'scatter',
+        name: `GN: ${jogador.Jogador}`,
+        text: [primeiroNome],
+        textposition: 'bottom center',
+        textfont: { size: 9, color: '#3b82f6', weight: 'bold' },
+        marker: { size: 12, color: '#3b82f6', symbol: 'diamond', line: { color: '#fff', width: 1 } },
+        hovertemplate: `<b>${jogador.Jogador} (Elenco GN)</b><br>${config.xLabel}: %{x:.2f}<br>${config.yLabel}: %{y:.2f}<extra></extra>`,
+        showlegend: false // Ocultar cada jogador individual da legenda do GN para não poluir
+      });
     });
 
+    // Trace dummy para a legenda do Elenco GN (diamante azul)
+    plotData.push({
+      x: [null], y: [null], mode: 'markers', type: 'scatter', name: 'Elenco GN',
+      marker: { size: 12, color: '#3b82f6', symbol: 'diamond', line: { color: '#fff', width: 1 } },
+      showlegend: true
+    });
+
+    // Média Série B
     const serieBX = serieB.map(j => safeParseFloat(j[config.xKey]));
     const serieBY = serieB.map(j => safeParseFloat(j[config.yKey]));
     const avgX = serieBX.reduce((a, b) => a + b, 0) / (serieBX.length || 1);
@@ -186,7 +204,8 @@ function DistorsaoContent() {
       yaxis: { title: { text: config.yLabel, font: { size: 12, color: '#fff', weight: 'bold' } }, gridcolor: 'rgba(255,255,255,0.1)', tickfont: { size: 11, color: '#fff' } },
       paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
       margin: { t: 60, b: 80, l: 80, r: 40 }, height: 600, showlegend: true,
-      legend: { font: { size: 11, color: '#fff' }, orientation: 'h', y: -0.15, x: 0.5, xanchor: 'center' }
+      legend: { font: { size: 11, color: '#fff' }, orientation: 'h', y: -0.15, x: 0.5, xanchor: 'center' },
+      hovermode: 'closest'
     };
 
     return { data: plotData, layout };
