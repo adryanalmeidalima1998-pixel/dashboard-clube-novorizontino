@@ -143,7 +143,6 @@ function DistorsaoContent() {
   const criarGraficoCorrelacao = (config) => {
     const plotData = [];
 
-    // Jogadores da Lista Preferencial com primeiro nome
     listaPreferencial.forEach(jogador => {
       const primeiroNome = jogador.Jogador.split(' ')[0];
       plotData.push({
@@ -160,7 +159,6 @@ function DistorsaoContent() {
       });
     });
 
-    // Elenco GN com nomes simplificados (primeiro nome)
     gremioNovorizontino.forEach(jogador => {
       const primeiroNome = jogador.Jogador.split(' ')[0];
       plotData.push({
@@ -174,18 +172,16 @@ function DistorsaoContent() {
         textfont: { size: 9, color: '#3b82f6', weight: 'bold' },
         marker: { size: 12, color: '#3b82f6', symbol: 'diamond', line: { color: '#fff', width: 1 } },
         hovertemplate: `<b>${jogador.Jogador} (Elenco GN)</b><br>${config.xLabel}: %{x:.2f}<br>${config.yLabel}: %{y:.2f}<extra></extra>`,
-        showlegend: false // Ocultar cada jogador individual da legenda do GN para não poluir
+        showlegend: false
       });
     });
 
-    // Trace dummy para a legenda do Elenco GN (diamante azul)
     plotData.push({
       x: [null], y: [null], mode: 'markers', type: 'scatter', name: 'Elenco GN',
       marker: { size: 12, color: '#3b82f6', symbol: 'diamond', line: { color: '#fff', width: 1 } },
       showlegend: true
     });
 
-    // Média Série B
     const serieBX = serieB.map(j => safeParseFloat(j[config.xKey]));
     const serieBY = serieB.map(j => safeParseFloat(j[config.yKey]));
     const avgX = serieBX.reduce((a, b) => a + b, 0) / (serieBX.length || 1);
@@ -203,7 +199,7 @@ function DistorsaoContent() {
       xaxis: { title: { text: config.xLabel, font: { size: 12, color: '#fff', weight: 'bold' } }, gridcolor: 'rgba(255,255,255,0.1)', tickfont: { size: 11, color: '#fff' } },
       yaxis: { title: { text: config.yLabel, font: { size: 12, color: '#fff', weight: 'bold' } }, gridcolor: 'rgba(255,255,255,0.1)', tickfont: { size: 11, color: '#fff' } },
       paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
-      margin: { t: 60, b: 80, l: 80, r: 40 }, height: 600, showlegend: true,
+      margin: { t: 60, b: 80, l: 80, r: 40 }, height: 650, showlegend: true,
       legend: { font: { size: 11, color: '#fff' }, orientation: 'h', y: -0.15, x: 0.5, xanchor: 'center' },
       hovermode: 'closest'
     };
@@ -225,7 +221,8 @@ function DistorsaoContent() {
           .text-amber-500 { color: #b45309 !important; }
           .js-plotly-plot .main-svg { background: transparent !important; }
           .xtick text, .ytick text, .gtitle, .xtitle, .ytitle, .legendtext, .textpoint text { fill: black !important; font-weight: bold !important; font-size: 11px !important; }
-          .chart-card { break-inside: avoid; page-break-after: always; padding: 1.5cm !important; height: 18cm !important; display: flex !important; flex-direction: column !important; justify-content: center !important; }
+          .gridlayer path, .zerolinelayer path { stroke: rgba(0,0,0,0.2) !important; }
+          .chart-card { break-inside: avoid; page-break-after: always; padding: 1.5cm !important; height: 18cm !important; display: flex !important; flex-direction: column !important; justify-content: center !important; border: none !important; box-shadow: none !important; }
           .chart-card:last-child { page-break-after: auto; }
         }
       `}</style>

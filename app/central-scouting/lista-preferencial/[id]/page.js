@@ -156,10 +156,10 @@ function PlayerProfileContent() {
   const getPlayerPhoto = (name) => {
     if (!name) return '/images/players/default.png';
     const cleanName = name.trim();
-    // Fallback for specific names reported by user
-    if (cleanName === 'Kayke') return '/images/players/Kayke.png';
-    if (cleanName === 'Rodrigo Farofa') return '/images/players/Rodrigo_Farofa.png';
-    if (cleanName === 'Allison Patrick') return '/images/players/Allison_Patrick.png';
+    // EXACT FILENAMES AS REQUESTED
+    if (cleanName === 'Kayke') return '/images/players/Kayke_Ferrari.png';
+    if (cleanName === 'Rodrigo Farofa') return '/images/players/rodrigo_farofa.png';
+    if (cleanName === 'Allison Patrick') return '/images/players/Allison.png';
     
     return `/images/players/${cleanName.replace(/\s+/g, '_')}.png`;
   };
@@ -168,21 +168,25 @@ function PlayerProfileContent() {
     <div className="min-h-screen bg-[#08101e] text-white p-4 font-sans print:bg-white print:text-black print:p-0">
       <style jsx global>{`
         @media print {
-          @page { size: landscape; margin: 0.2cm; }
+          @page { size: landscape; margin: 0.1cm; }
           .no-print { display: none !important; }
           body { background: white !important; color: black !important; }
-          .print-container { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important; transform: scale(0.98); transform-origin: top left; }
+          .print-container { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0.2cm !important; transform: scale(0.96); transform-origin: top left; }
           .bg-slate-900, .bg-slate-900\/50 { background: #f8fafc !important; border: 1px solid #e2e8f0 !important; }
-          .text-white, .text-amber-500 { color: black !important; }
+          .text-white, .text-amber-500, .text-slate-300 { color: black !important; }
+          .text-amber-400 { color: #b45309 !important; font-weight: 900 !important; }
           .js-plotly-plot .main-svg { background: transparent !important; }
-          .angularaxis text { fill: black !important; font-weight: bold !important; font-size: 8px !important; }
+          .angularaxis text, .legendtext { fill: black !important; font-weight: bold !important; font-size: 8px !important; }
+          .gridlayer path, .zerolinelayer path { stroke: rgba(0,0,0,0.2) !important; }
+          /* Forçar cores de preenchimento sólidas na impressão */
+          .js-plotly-plot .scatterpolar .fill { fill-opacity: 0.3 !important; }
         }
       `}</style>
 
-      <div className="max-w-[1550px] mx-auto print-container flex flex-col gap-4">
-        <header className="flex justify-between items-center border-b-2 border-amber-500 pb-2">
+      <div className="max-w-[1550px] mx-auto print-container flex flex-col gap-3">
+        <header className="flex justify-between items-center border-b-2 border-amber-500 pb-1">
           <div className="flex items-center gap-4">
-            <img src="/club/escudonovorizontino.png" alt="Shield" className="h-14 w-auto" />
+            <img src="/club/escudonovorizontino.png" alt="Shield" className="h-12 w-auto" />
             <div>
               <h1 className="text-2xl font-black tracking-tighter text-amber-500 uppercase leading-none print:text-black">Grêmio Novorizontino</h1>
               <p className="text-xs font-bold tracking-widest text-slate-400 uppercase">Departamento de Scouting</p>
@@ -194,21 +198,15 @@ function PlayerProfileContent() {
           </div>
         </header>
 
-        <div className="grid grid-cols-12 gap-4">
-          {/* PLAYER INFO & HEATMAP */}
-          <div className="col-span-3 flex flex-col gap-4">
+        <div className="grid grid-cols-12 gap-3">
+          <div className="col-span-3 flex flex-col gap-3">
             <div className="bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden shadow-lg">
-              <div className="relative h-52 bg-gradient-to-b from-amber-500/20 to-slate-900">
-                <img src={getPlayerPhoto(player.Jogador)} alt={player.Jogador} className="absolute bottom-0 left-1/2 -translate-x-1/2 h-full object-contain" onError={(e) => { 
-                  if (e.target.src.includes('Kayke')) e.target.src = '/images/players/Kayke.png';
-                  else if (e.target.src.includes('Rodrigo_Farofa')) e.target.src = '/images/players/Rodrigo_Farofa.png';
-                  else if (e.target.src.includes('Allison')) e.target.src = '/images/players/Allison_Patrick.png';
-                  else e.target.src = '/images/players/default.png'; 
-                }} />
+              <div className="relative h-48 bg-gradient-to-b from-amber-500/20 to-slate-900">
+                <img src={getPlayerPhoto(player.Jogador)} alt={player.Jogador} className="absolute bottom-0 left-1/2 -translate-x-1/2 h-full object-contain" onError={(e) => { e.target.src = '/images/players/default.png'; }} />
               </div>
               <div className="p-4">
                 <h2 className="text-2xl font-black text-amber-500 uppercase mb-1 leading-none print:text-black">{player.Jogador}</h2>
-                <div className="grid grid-cols-2 gap-3 mt-3">
+                <div className="grid grid-cols-2 gap-2 mt-2">
                   <div><p className="text-[9px] text-slate-500 uppercase font-bold tracking-widest">Equipe</p><p className="text-xs font-bold truncate print:text-black">{player.TIME || player.Equipa}</p></div>
                   <div><p className="text-[9px] text-slate-500 uppercase font-bold tracking-widest">Pé</p><p className="text-xs font-bold print:text-black">{player.Pé === 'R' ? 'Direito' : 'Esquerdo'}</p></div>
                   <div><p className="text-[9px] text-slate-500 uppercase font-bold tracking-widest">Idade</p><p className="text-xs font-bold print:text-black">{player.Idade} anos</p></div>
@@ -219,43 +217,41 @@ function PlayerProfileContent() {
             <HeatmapComponent player={player} />
           </div>
 
-          {/* RADAR CHARTS - NOW WIDER */}
-          <div className="col-span-9 grid grid-cols-3 gap-4">
-            <div className="bg-slate-900/50 border border-slate-700 rounded-2xl p-4 flex flex-col items-center shadow-md">
-              <h3 className="text-amber-500 font-black text-[11px] uppercase tracking-widest mb-2 print:text-black">Vs Média Lista</h3>
-              <div className="w-full h-[360px] radar-chart"><Plot data={getRadarData('media')} layout={radarLayout} config={{ displayModeBar: false, responsive: true }} style={{ width: '100%', height: '100%' }} /></div>
+          <div className="col-span-9 grid grid-cols-3 gap-3">
+            <div className="bg-slate-900/50 border border-slate-700 rounded-2xl p-3 flex flex-col items-center shadow-md">
+              <h3 className="text-amber-500 font-black text-[10px] uppercase tracking-widest mb-1 print:text-black">Vs Média Lista</h3>
+              <div className="w-full h-[320px] radar-chart"><Plot data={getRadarData('media')} layout={radarLayout} config={{ displayModeBar: false, responsive: true }} style={{ width: '100%', height: '100%' }} /></div>
             </div>
-            <div className="bg-slate-900/50 border border-slate-700 rounded-2xl p-4 flex flex-col items-center shadow-md">
-              <h3 className="text-amber-500 font-black text-[11px] uppercase tracking-widest mb-2 print:text-black">Vs Elenco GN</h3>
-              <div className="w-full h-[360px] radar-chart"><Plot data={getRadarData('gremio')} layout={radarLayout} config={{ displayModeBar: false, responsive: true }} style={{ width: '100%', height: '100%' }} /></div>
+            <div className="bg-slate-900/50 border border-slate-700 rounded-2xl p-3 flex flex-col items-center shadow-md">
+              <h3 className="text-amber-500 font-black text-[10px] uppercase tracking-widest mb-1 print:text-black">Vs Elenco GN</h3>
+              <div className="w-full h-[320px] radar-chart"><Plot data={getRadarData('gremio')} layout={radarLayout} config={{ displayModeBar: false, responsive: true }} style={{ width: '100%', height: '100%' }} /></div>
             </div>
-            <div className="bg-slate-900/50 border border-slate-700 rounded-2xl p-4 flex flex-col items-center shadow-md">
-              <h3 className="text-amber-500 font-black text-[11px] uppercase tracking-widest mb-2 print:text-black">Vs Série B</h3>
-              <div className="w-full h-[360px] radar-chart"><Plot data={getRadarData('serieb')} layout={radarLayout} config={{ displayModeBar: false, responsive: true }} style={{ width: '100%', height: '100%' }} /></div>
+            <div className="bg-slate-900/50 border border-slate-700 rounded-2xl p-3 flex flex-col items-center shadow-md">
+              <h3 className="text-amber-500 font-black text-[10px] uppercase tracking-widest mb-1 print:text-black">Vs Série B</h3>
+              <div className="w-full h-[320px] radar-chart"><Plot data={getRadarData('serieb')} layout={radarLayout} config={{ displayModeBar: false, responsive: true }} style={{ width: '100%', height: '100%' }} /></div>
             </div>
           </div>
         </div>
 
-        {/* METRICS TABLE - NOW AT THE BOTTOM AND SPLIT INTO TWO COLUMNS */}
         <div className="bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden shadow-md">
-          <div className="bg-amber-500 text-black font-black text-center py-2 text-xs uppercase tracking-widest">Métricas por 90'</div>
+          <div className="bg-amber-500 text-black font-black text-center py-1.5 text-[10px] uppercase tracking-widest">Métricas por 90'</div>
           <div className="grid grid-cols-2 divide-x divide-slate-700 print:divide-slate-200">
-            <table className="w-full text-left text-[11px]">
+            <table className="w-full text-left text-[10px]">
               <tbody className="divide-y divide-slate-800 print:divide-slate-200">
                 {METRICAS_RADAR.slice(0, 5).map((m, idx) => (
                   <tr key={idx} className="hover:bg-slate-800/50">
-                    <td className="px-4 py-2 text-slate-300 font-medium print:text-slate-800">{m.label}</td>
-                    <td className="px-4 py-2 text-right font-bold text-amber-400 print:text-black">{getValorMetrica(player, m).toFixed(2)}{m.label.includes('%') ? '%' : ''}</td>
+                    <td className="px-4 py-1.5 text-slate-300 font-medium print:text-slate-800">{m.label}</td>
+                    <td className="px-4 py-1.5 text-right font-bold text-amber-400 print:text-black">{getValorMetrica(player, m).toFixed(2)}{m.label.includes('%') ? '%' : ''}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            <table className="w-full text-left text-[11px]">
+            <table className="w-full text-left text-[10px]">
               <tbody className="divide-y divide-slate-800 print:divide-slate-200">
                 {METRICAS_RADAR.slice(5).map((m, idx) => (
                   <tr key={idx} className="hover:bg-slate-800/50">
-                    <td className="px-4 py-2 text-slate-300 font-medium print:text-slate-800">{m.label}</td>
-                    <td className="px-4 py-2 text-right font-bold text-amber-400 print:text-black">{getValorMetrica(player, m).toFixed(2)}{m.label.includes('%') ? '%' : ''}</td>
+                    <td className="px-4 py-1.5 text-slate-300 font-medium print:text-slate-800">{m.label}</td>
+                    <td className="px-4 py-1.5 text-right font-bold text-amber-400 print:text-black">{getValorMetrica(player, m).toFixed(2)}{m.label.includes('%') ? '%' : ''}</td>
                   </tr>
                 ))}
               </tbody>
@@ -263,10 +259,10 @@ function PlayerProfileContent() {
           </div>
         </div>
 
-        <footer className="flex justify-between items-end border-t border-slate-800 pt-2 print:border-slate-200 no-print">
+        <footer className="flex justify-between items-end border-t border-slate-800 pt-1 print:border-slate-200 no-print">
           <div className="flex gap-4">
-            <button onClick={() => window.print()} className="bg-amber-500 hover:bg-amber-600 text-black font-black px-6 py-2 rounded-xl text-xs shadow-lg flex items-center gap-2">PDF</button>
-            <button onClick={() => router.back()} className="text-slate-400 hover:text-white text-xs font-bold uppercase py-2">Voltar</button>
+            <button onClick={() => window.print()} className="bg-amber-500 hover:bg-amber-600 text-black font-black px-6 py-1.5 rounded-xl text-xs shadow-lg flex items-center gap-2">PDF</button>
+            <button onClick={() => router.back()} className="text-slate-400 hover:text-white text-xs font-bold uppercase py-1.5">Voltar</button>
           </div>
           <p className="text-[10px] text-slate-500 italic">Scouting System GN - Dados automatizados.</p>
         </footer>
