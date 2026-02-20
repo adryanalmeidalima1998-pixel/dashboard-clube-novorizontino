@@ -357,9 +357,10 @@ function ListaPreferencialContent() {
                 {jogadoresFiltrados.map((j, idx) => (
                   <tr key={idx} className="hover:bg-brand-yellow/[0.02] transition-colors">
                     <td className="p-6">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-500 border border-slate-700">{j.Jogador?.substring(0,2).toUpperCase()}</div>
-                        <span className="text-sm font-black uppercase italic tracking-tighter">{j.Jogador}</span>
+                      <div className="flex items-center gap-3 cursor-pointer group" onClick={() => router.push(`/central-scouting/lista-preferencial/${j.ID_ATLETA || j.Jogador}`)}>
+                        <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-500 border border-slate-700 group-hover:border-brand-yellow transition-all">{j.Jogador?.substring(0,2).toUpperCase()}</div>
+                        <span className="text-sm font-black uppercase italic tracking-tighter group-hover:text-brand-yellow transition-all">{j.Jogador}</span>
+                        <svg className="w-3 h-3 text-slate-600 opacity-0 group-hover:opacity-100 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
                       </div>
                     </td>
                     <td className="p-6"><span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{j.Time}</span></td>
