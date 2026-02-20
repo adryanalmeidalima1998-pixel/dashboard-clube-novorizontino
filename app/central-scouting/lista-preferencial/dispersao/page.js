@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Papa from 'papaparse';
 import { EXTREMOS_PLAYERS } from '@/app/utils/extremosData';
@@ -8,9 +8,9 @@ import { cleanData, safeParseFloat } from '@/app/utils/dataCleaner';
 import { ALL_AVAILABLE_METRICS } from '@/app/utils/metricsTemplates';
 import dynamic from 'next/dynamic';
 
-const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
+const Plot = dynamic(() => import('react-plotly.js'), { ssr: false, loading: () => <div className="h-96 flex items-center justify-center">Carregando gráfico...</div> });
 
-export default function DispersaoPage() {
+function DispersaoContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const playersParam = searchParams.get('players');
@@ -195,5 +195,17 @@ export default function DispersaoPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function DispersaoPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#0a0c10] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-yellow"></div>
+      </div>
+    }>
+      <DispersaoContent />
+    </Suspense>
   );
 }
