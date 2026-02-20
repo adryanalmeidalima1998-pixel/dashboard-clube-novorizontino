@@ -30,6 +30,7 @@ export default function PlayerProfile() {
   const router = useRouter();
   const [player, setPlayer] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [selectedComparison, setSelectedComparison] = useState(null);
 
   useEffect(() => {
     const fetchPlayerData = async () => {
@@ -89,19 +90,22 @@ export default function PlayerProfile() {
           backgroundColor: 'rgba(251, 191, 36, 0.15)',
           borderColor: '#fbbf24',
           borderWidth: 3,
-          pointBackgroundColor: radarMetrics.map(m => m.color),
+          pointBackgroundColor: '#fbbf24',
           pointBorderColor: '#fff',
           pointHoverBackgroundColor: '#fff',
-          pointHoverBorderColor: radarMetrics.map(m => m.color),
-          pointRadius: 6,
-          pointHoverRadius: 8,
-          fill: true
+          pointHoverBorderColor: '#fbbf24',
+          pointRadius: 5,
+          pointHoverRadius: 7,
+          fill: true,
+          tension: 0.1
         },
       ],
     };
   }, [player]);
 
   const radarOptions = {
+    responsive: true,
+    maintainAspectRatio: true,
     indexAxis: 'r',
     scales: {
       r: {
@@ -128,11 +132,8 @@ export default function PlayerProfile() {
         },
         pointLabels: {
           color: '#e2e8f0',
-          font: { size: 11, weight: 'bold' },
-          padding: 12,
-          callback: function(label, index) {
-            return label;
-          }
+          font: { size: 10, weight: 'bold' },
+          padding: 10
         }
       }
     },
@@ -142,8 +143,8 @@ export default function PlayerProfile() {
         position: 'bottom',
         labels: {
           color: '#94a3b8',
-          font: { size: 12, weight: 'bold' },
-          padding: 20,
+          font: { size: 11, weight: 'bold' },
+          padding: 15,
           usePointStyle: true,
           pointStyle: 'circle'
         }
@@ -168,9 +169,47 @@ export default function PlayerProfile() {
       filler: {
         propagate: true
       }
-    },
-    maintainAspectRatio: true,
-    responsive: true
+    }
+  };
+
+  const handleExportPDF = async () => {
+    try {
+      const { jsPDF } = await import('jspdf');
+      const doc = new jsPDF();
+      
+      // Título
+      doc.setFontSize(18);
+      doc.setTextColor(251, 191, 36);
+      doc.text('PERFIL DO ATLETA', 20, 20);
+      
+      // Dados básicos
+      doc.setFontSize(12);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Nome: ${player.name}`, 20, 35);
+      doc.text(`Time: ${player.Time || 'N/A'}`, 20, 45);
+      doc.text(`Posição: ${player.Posição || 'N/A'}`, 20, 55);
+      doc.text(`Idade: ${player.Idade || 'N/A'}`, 20, 65);
+      
+      // Métricas
+      doc.setFontSize(14);
+      doc.setTextColor(251, 191, 36);
+      doc.text('MÉTRICAS DE DESEMPENHO', 20, 85);
+      
+      doc.setFontSize(10);
+      doc.setTextColor(50, 50, 50);
+      let yPos = 100;
+      
+      radarMetrics.forEach(metric => {
+        const value = safeParseFloat(player[metric.key]);
+        doc.text(`${metric.label}: ${value.toFixed(2)}`, 20, yPos);
+        yPos += 8;
+      });
+      
+      doc.save(`${player.name.replace(/\s+/g, '_')}_perfil.pdf`);
+    } catch (error) {
+      console.error('Erro ao exportar PDF:', error);
+      alert('Erro ao exportar PDF');
+    }
   };
 
   if (loading) return (
@@ -183,12 +222,24 @@ export default function PlayerProfile() {
     <div className="min-h-screen bg-[#0a0c10] text-white p-4 md:p-8 font-sans">
       <div className="max-w-[1400px] mx-auto">
         {/* HEADER / VOLTAR */}
-        <button onClick={() => router.back()} className="mb-8 flex items-center gap-2 text-slate-500 hover:text-brand-yellow transition-colors font-black uppercase text-[10px] tracking-widest">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" />
-          </svg>
-          Voltar
-        </button>
+        <div className="flex items-center justify-between mb-8">
+          <button onClick={() => router.back()} className="flex items-center gap-2 text-slate-500 hover:text-brand-yellow transition-colors font-black uppercase text-[10px] tracking-widest">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" />
+            </svg>
+            Voltar
+          </button>
+          
+          <button 
+            onClick={handleExportPDF}
+            className="flex items-center gap-2 px-6 py-3 bg-brand-yellow text-black font-black uppercase text-[10px] tracking-widest rounded-xl hover:bg-brand-yellow/80 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+            </svg>
+            Exportar PDF
+          </button>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* COLUNA ESQUERDA: PERFIL */}
@@ -219,6 +270,17 @@ export default function PlayerProfile() {
                 </div>
               </div>
             </div>
+
+            {/* BOTÃO DE COMPARAÇÃO */}
+            <button
+              onClick={() => router.push(`/central-scouting/lista-preferencial/comparacao?player1=${id}`)}
+              className="w-full py-4 bg-gradient-to-r from-brand-yellow/20 to-brand-yellow/10 border border-brand-yellow/50 rounded-2xl text-brand-yellow font-black uppercase text-[10px] tracking-widest hover:from-brand-yellow/30 hover:to-brand-yellow/20 transition-all"
+            >
+              <svg className="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              Comparar com Outro
+            </button>
 
             {/* LEGENDA DO RADAR */}
             <div className="bg-slate-900/40 border border-slate-800 rounded-[2rem] p-6">
@@ -277,7 +339,7 @@ export default function PlayerProfile() {
                   <rect x="84" y="12" width="16" height="36" fill="none" stroke="#10b981" strokeWidth="0.5" opacity="0.3" />
                 </svg>
 
-                {/* Heatmap Dinâmico - Simula atividade baseada em posição */}
+                {/* Heatmap Dinâmico */}
                 <div className="absolute inset-0">
                   <div className="absolute top-1/4 right-10 w-32 h-32 bg-brand-yellow/30 blur-[40px] rounded-full animate-pulse"></div>
                   <div className="absolute bottom-1/4 right-20 w-24 h-24 bg-brand-yellow/20 blur-[30px] rounded-full"></div>
