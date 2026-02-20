@@ -11,12 +11,53 @@ const Plot = dynamic(() => import('react-plotly.js'), {
   loading: () => <div className="h-64 flex items-center justify-center text-slate-500 font-bold">Carregando gráficos...</div> 
 });
 
-const METRICAS_DISPERSAO = [
-  { label: 'Passes Chave', key: 'Passes chave', type: 'per90' },
-  { label: 'Passes Progressivos %', key: 'Passes progressivos precisos', type: 'raw' },
-  { label: 'xG', key: 'Xg', type: 'per90' },
-  { label: 'Entradas 1/3 Final (C)', key: 'Entradas no terço final carregando a bola', type: 'raw' },
-  { label: 'Dribles Certos/90', key: 'dribles_certos_90', type: 'custom' }
+// Pares de métricas para os 5 gráficos de correlação (X vs Y)
+const GRAFICOS_CORRELACAO = [
+  { 
+    titulo: 'Criação vs Finalização',
+    xLabel: 'Passes Chave/90',
+    yLabel: 'xG/90',
+    xKey: 'Passes chave',
+    yKey: 'Xg',
+    xType: 'per90',
+    yType: 'per90'
+  },
+  { 
+    titulo: 'Progressão vs Perigo',
+    xLabel: 'Passes Progressivos %',
+    yLabel: 'Entradas 1/3 Final %',
+    xKey: 'Passes progressivos precisos',
+    yKey: 'Entradas no terço final carregando a bola',
+    xType: 'raw',
+    yType: 'raw'
+  },
+  { 
+    titulo: 'Volume vs Eficiência de Dribles',
+    xLabel: 'Dribles/90',
+    yLabel: 'Dribles Certos/90',
+    xKey: 'Dribles',
+    yKey: 'dribles_certos_90',
+    xType: 'per90',
+    yType: 'custom'
+  },
+  { 
+    titulo: 'Passes na Área vs Assistências Esperadas',
+    xLabel: 'Passes na Área %',
+    yLabel: 'xA/90',
+    xKey: 'Passes dentro da área / precisos',
+    yKey: 'xA',
+    xType: 'raw',
+    yType: 'per90'
+  },
+  { 
+    titulo: 'Ações na Área vs Expectativa de Gol',
+    xLabel: 'Ações Área Adv/90',
+    yLabel: 'xG/90',
+    xKey: 'Ações na caixa adversária bem-sucedidas',
+    yKey: 'Xg',
+    xType: 'per90',
+    yType: 'per90'
+  }
 ];
 
 function DistorsaoContent() {
@@ -40,12 +81,19 @@ function DistorsaoContent() {
     return dados.map(jogador => {
       const minutos = safeParseFloat(jogador['Minutos jogados']);
       const processado = { ...jogador, aba };
-      METRICAS_DISPERSAO.forEach(m => {
-        if (m.type === 'per90') {
-          const val = safeParseFloat(jogador[m.key]);
-          processado[`${m.key}_per90`] = minutos > 0 ? (val / minutos) * 90 : 0;
+      
+      // Calcular per90 para todas as métricas que precisam
+      GRAFICOS_CORRELACAO.forEach(g => {
+        if (g.xType === 'per90') {
+          const val = safeParseFloat(jogador[g.xKey]);
+          processado[`${g.xKey}_per90`] = minutos > 0 ? (val / minutos) * 90 : 0;
+        }
+        if (g.yType === 'per90') {
+          const val = safeParseFloat(jogador[g.yKey]);
+          processado[`${g.yKey}_per90`] = minutos > 0 ? (val / minutos) * 90 : 0;
         }
       });
+      
       return calcularMetricasCustomizadas(processado);
     });
   };
@@ -86,106 +134,90 @@ function DistorsaoContent() {
     loadData();
   }, []);
 
-  const getValorMetrica = (jogador, metrica) => {
+  const getValorMetrica = (jogador, key, type) => {
     if (!jogador) return 0;
-    if (metrica.type === 'per90') return safeParseFloat(jogador[`${metrica.key}_per90`]);
-    if (metrica.type === 'custom') return safeParseFloat(jogador[metrica.key]);
-    return safeParseFloat(jogador[metrica.key]);
+    if (type === 'per90') return safeParseFloat(jogador[`${key}_per90`]);
+    if (type === 'custom') return safeParseFloat(jogador[key]);
+    return safeParseFloat(jogador[key]);
   };
 
-  const getScatterData = useMemo(() => {
+  const criarGraficoCorrelacao = (config) => {
     const todos = [...listaPreferencial, ...gremioNovorizontino];
     
-    return METRICAS_DISPERSAO.map(metrica => {
-      // Dados da Lista Preferencial
-      const listaData = listaPreferencial.map(j => ({
-        x: j.Jogador,
-        y: getValorMetrica(j, metrica),
-        time: j.Time,
-        posicao: j.Posição,
-        type: 'Lista Preferencial'
-      }));
+    // Dados da Lista Preferencial
+    const listaX = listaPreferencial.map(j => getValorMetrica(j, config.xKey, config.xType));
+    const listaY = listaPreferencial.map(j => getValorMetrica(j, config.yKey, config.yType));
+    
+    // Dados do Grêmio Novorizontino
+    const gremioX = gremioNovorizontino.map(j => getValorMetrica(j, config.xKey, config.xType));
+    const gremioY = gremioNovorizontino.map(j => getValorMetrica(j, config.yKey, config.yType));
 
-      // Dados do Grêmio Novorizontino
-      const gremioData = gremioNovorizontino.map(j => ({
-        x: j.Jogador,
-        y: getValorMetrica(j, metrica),
-        time: j.Time,
-        posicao: j.Posição,
-        type: 'Grêmio Novorizontino'
-      }));
-
-      return {
-        metrica: metrica.label,
-        listaData,
-        gremioData,
-        allData: [...listaData, ...gremioData]
-      };
-    });
-  }, [listaPreferencial, gremioNovorizontino]);
-
-  const createScatterPlot = (data) => {
     const plotData = [
       {
-        x: data.listaData.map(d => d.x),
-        y: data.listaData.map(d => d.y),
+        x: listaX,
+        y: listaY,
         mode: 'markers',
         type: 'scatter',
         name: 'Lista Preferencial',
         marker: {
-          size: 8,
+          size: 10,
           color: '#fbbf24',
-          line: { color: '#ffffff', width: 1 },
+          line: { color: '#ffffff', width: 2 },
           opacity: 0.8
         },
-        text: data.listaData.map(d => `${d.x}<br>${d.time}<br>${d.posicao}`),
-        hovertemplate: '<b>%{text}</b><br>Valor: %{y:.2f}<extra></extra>'
+        text: listaPreferencial.map(j => `<b>${j.Jogador}</b><br>${j.Time}<br>${j.Posição}`),
+        hovertemplate: '%{text}<br>X: %{x:.2f}<br>Y: %{y:.2f}<extra></extra>'
       },
       {
-        x: data.gremioData.map(d => d.x),
-        y: data.gremioData.map(d => d.y),
+        x: gremioX,
+        y: gremioY,
         mode: 'markers',
         type: 'scatter',
         name: 'Grêmio Novorizontino',
         marker: {
-          size: 8,
+          size: 10,
           color: '#3b82f6',
-          line: { color: '#ffffff', width: 1 },
+          line: { color: '#ffffff', width: 2 },
           opacity: 0.8
         },
-        text: data.gremioData.map(d => `${d.x}<br>${d.time}<br>${d.posicao}`),
-        hovertemplate: '<b>%{text}</b><br>Valor: %{y:.2f}<extra></extra>'
+        text: gremioNovorizontino.map(j => `<b>${j.Jogador}</b><br>${j.Time}<br>${j.Posição}`),
+        hovertemplate: '%{text}<br>X: %{x:.2f}<br>Y: %{y:.2f}<extra></extra>'
       }
     ];
 
     const layout = {
-      title: { text: data.metrica, font: { size: 14, color: '#ffffff', family: 'Arial, sans-serif' } },
+      title: { text: config.titulo, font: { size: 14, color: '#ffffff', family: 'Arial, sans-serif', weight: 'bold' } },
       xaxis: {
-        title: 'Jogador',
-        tickfont: { size: 8, color: '#ffffff' },
+        title: config.xLabel,
+        titlefont: { size: 11, color: '#ffffff' },
+        tickfont: { size: 9, color: '#ffffff' },
         gridcolor: 'rgba(255,255,255,0.1)',
-        showgrid: true
+        showgrid: true,
+        zeroline: false
       },
       yaxis: {
-        title: data.metrica,
-        tickfont: { size: 8, color: '#ffffff' },
+        title: config.yLabel,
+        titlefont: { size: 11, color: '#ffffff' },
+        tickfont: { size: 9, color: '#ffffff' },
         gridcolor: 'rgba(255,255,255,0.1)',
-        showgrid: true
+        showgrid: true,
+        zeroline: false
       },
       paper_bgcolor: 'rgba(0,0,0,0)',
       plot_bgcolor: 'rgba(0,0,0,0)',
       font: { family: 'Arial, sans-serif', color: '#ffffff' },
-      margin: { t: 40, b: 80, l: 60, r: 20 },
-      height: 350,
+      margin: { t: 50, b: 60, l: 70, r: 20 },
+      height: 380,
       showlegend: true,
       legend: {
         x: 0.02,
         y: 0.98,
-        bgcolor: 'rgba(0,0,0,0.3)',
-        bordercolor: 'rgba(255,255,255,0.2)',
+        bgcolor: 'rgba(0,0,0,0.4)',
+        bordercolor: 'rgba(255,255,255,0.3)',
         borderwidth: 1,
-        font: { size: 8, color: '#ffffff' }
-      }
+        font: { size: 9, color: '#ffffff' }
+      },
+      hovermode: 'closest'
     };
 
     return { data: plotData, layout };
@@ -206,7 +238,7 @@ function DistorsaoContent() {
             <img src="/club/escudonovorizontino.png" alt="Logo" className="w-12 h-12 object-contain" />
             <div>
               <h1 className="text-2xl font-black uppercase tracking-[0.08em] leading-tight print:text-black">G R Ê M I O &nbsp; N O V O R I Z O N T I N O</h1>
-              <p className="text-[10px] font-black text-brand-yellow uppercase tracking-[0.2em] print:text-slate-500">GRÁFICOS DE DISPERSÃO - SCOUTING</p>
+              <p className="text-[10px] font-black text-brand-yellow uppercase tracking-[0.2em] print:text-slate-500">ANÁLISE DE CORRELAÇÕES - SCOUTING</p>
             </div>
           </div>
           <div className="flex gap-2 print:hidden">
@@ -221,14 +253,13 @@ function DistorsaoContent() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 print:gap-2">
-          {getScatterData.map((data, idx) => {
-            // Renderizar os primeiros 4 gráficos em grid 2x2
+          {GRAFICOS_CORRELACAO.map((config, idx) => {
             if (idx < 4) {
-              const { data: plotData, layout } = createScatterPlot(data);
+              const { data, layout } = criarGraficoCorrelacao(config);
               return (
                 <div key={idx} className="bg-slate-900/20 border border-slate-800/50 rounded-2xl p-3 print:border-slate-200 print:bg-white print:p-2 print:page-break-inside-avoid">
                   <Plot 
-                    data={plotData} 
+                    data={data} 
                     layout={layout} 
                     config={{ displayModeBar: false, responsive: true }} 
                     style={{ width: '100%', height: '100%' }} 
@@ -240,22 +271,20 @@ function DistorsaoContent() {
           })}
           
           {/* 5º gráfico em tela cheia */}
-          {getScatterData.length === 5 && (
-            <div key="fifth" className="lg:col-span-2 bg-slate-900/20 border border-slate-800/50 rounded-2xl p-3 print:border-slate-200 print:bg-white print:p-2 print:page-break-inside-avoid">
-              {(() => {
-                const data = getScatterData[4];
-                const { data: plotData, layout } = createScatterPlot(data);
-                return (
-                  <Plot 
-                    data={plotData} 
-                    layout={layout} 
-                    config={{ displayModeBar: false, responsive: true }} 
-                    style={{ width: '100%', height: '100%' }} 
-                  />
-                );
-              })()}
-            </div>
-          )}
+          <div key="fifth" className="lg:col-span-2 bg-slate-900/20 border border-slate-800/50 rounded-2xl p-3 print:border-slate-200 print:bg-white print:p-2 print:page-break-inside-avoid">
+            {(() => {
+              const config = GRAFICOS_CORRELACAO[4];
+              const { data, layout } = criarGraficoCorrelacao(config);
+              return (
+                <Plot 
+                  data={data} 
+                  layout={layout} 
+                  config={{ displayModeBar: false, responsive: true }} 
+                  style={{ width: '100%', height: '100%' }} 
+                />
+              );
+            })()}
+          </div>
         </div>
 
         <div className="mt-6 pt-4 border-t border-slate-800 flex justify-center print:border-slate-100 print:mt-4">
