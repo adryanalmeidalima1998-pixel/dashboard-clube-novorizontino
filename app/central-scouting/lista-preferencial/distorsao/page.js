@@ -33,8 +33,8 @@ const GRAFICOS_CORRELACAO = [
     titulo: 'Progressão vs Perigo',
     xLabel: 'Passes Progressivos %',
     yLabel: 'Entradas 1/3 Final %',
-    xKey: 'Passes progressivos precisos',
-    yKey: 'Entradas no terço final carregando a bola',
+    xKey: 'Passes progressivos precisos\n%',
+    yKey: 'Entradas no terço final carregando a bola\n% do total',
     xType: 'raw',
     yType: 'raw'
   },
@@ -60,7 +60,7 @@ const GRAFICOS_CORRELACAO = [
     titulo: 'Volume vs Eficiência de Dribles',
     xLabel: 'Dribles/90',
     yLabel: 'Dribles Certos/90',
-    xKey: 'Dribles',
+    xKey: 'Dribles bem sucedidos',
     yKey: 'dribles_certos_90',
     xType: 'per90',
     yType: 'custom'
@@ -79,9 +79,8 @@ function DistorsaoContent() {
     if (minutos <= 0) return jogador;
 
     // Dribles Certos/90
-    const dribles = safeParseFloat(jogador['Dribles']);
-    const driblesSucessoPct = safeParseFloat(jogador['% de dribles com sucesso']) / 100;
-    jogador.dribles_certos_90 = (dribles * driblesSucessoPct / minutos) * 90;
+    const dribles = safeParseFloat(jogador['Dribles bem sucedidos']);
+    jogador.dribles_certos_90 = (dribles / minutos) * 90;
 
     // Chances com Sucesso/90
     const chancesComSucesso = safeParseFloat(jogador['Chances com sucesso']);

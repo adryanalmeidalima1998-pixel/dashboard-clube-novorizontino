@@ -13,11 +13,11 @@ const Plot = dynamic(() => import('react-plotly.js'), {
 
 const METRICAS_RADAR = [
   { label: 'Passes Chave', key: 'Passes chave', type: 'per90' },
-  { label: 'Passes Progressivos %', key: 'Passes progressivos precisos', type: 'raw' },
-  { label: 'Passes na Área %', key: 'Passes dentro da área / precisos', type: 'raw' },
+  { label: 'Passes Progressivos %', key: 'Passes progressivos precisos\n%', type: 'raw' },
+  { label: 'Passes na Área %', key: 'Passes dentro da área / precisos\n%', type: 'raw' },
   { label: 'Dribles Certos/90', key: 'dribles_certos_90', type: 'custom' },
   { label: 'Dribles 1/3 Final Certos/90', key: 'dribles_13_certos_90', type: 'custom' },
-  { label: 'Entradas 1/3 Final (C)', key: 'Entradas no terço final carregando a bola', type: 'raw' },
+  { label: 'Entradas 1/3 Final (C)', key: 'Entradas no terço final carregando a bola\n% do total', type: 'raw' },
   { label: 'Recuperações Campo Adv', key: 'Bolas recuperadas no campo do adversário', type: 'per90' },
   { label: 'xA', key: 'xA', type: 'per90' },
   { label: 'xG', key: 'Xg', type: 'per90' },
@@ -36,13 +36,11 @@ function PlayerProfileContent() {
     const minutos = safeParseFloat(jogador['Minutos jogados']);
     if (minutos <= 0) return jogador;
 
-    const dribles = safeParseFloat(jogador['Dribles']);
-    const driblesSucessoPct = safeParseFloat(jogador['% de dribles com sucesso']) / 100;
-    jogador.dribles_certos_90 = (dribles * driblesSucessoPct / minutos) * 90;
+    const dribles = safeParseFloat(jogador['Dribles bem sucedidos']);
+    jogador.dribles_certos_90 = (dribles / minutos) * 90;
 
-    const dribles13 = safeParseFloat(jogador['Dribles no último terço do campo']);
-    const dribles13SucessoPct = safeParseFloat(jogador['Dribles no último terço do campo com sucesso']) / 100;
-    jogador.dribles_13_certos_90 = (dribles13 * dribles13SucessoPct / minutos) * 90;
+    const dribles13 = safeParseFloat(jogador['Dribles no último terço do campo com sucesso']);
+    jogador.dribles_13_certos_90 = (dribles13 / minutos) * 90;
 
     const acoesCertasAbs = safeParseFloat(jogador['Ações na área adversária bem-sucedidas']);
     jogador.acoes_area_adv_certas_90 = (acoesCertasAbs / minutos) * 90;
