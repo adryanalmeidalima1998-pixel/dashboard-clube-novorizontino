@@ -244,13 +244,17 @@ function PlayerProfileContent() {
         gridcolor: 'rgba(255,255,255,0.2)',
         tickfont: { size: 6, color: '#ffffff', family: 'Arial, sans-serif' },
         showticklabels: true,
-        ticks: 'outside'
+        ticks: 'outside',
+        linecolor: '#ffffff',
+        linewidth: 1
       },
       angularaxis: { 
         tickfont: { size: 8, color: '#ffffff', family: 'Arial, sans-serif' },
         gridcolor: 'rgba(255,255,255,0.25)',
         rotation: 90,
-        direction: 'clockwise'
+        direction: 'clockwise',
+        linecolor: '#ffffff',
+        linewidth: 1
       },
       bgcolor: 'rgba(255, 255, 255, 0.01)'
     },
@@ -417,11 +421,11 @@ function PlayerProfileContent() {
           <div className="flex-1 flex flex-col gap-3">
             <div className="bg-slate-900/40 border border-slate-800/50 rounded-2xl p-2 print:border-slate-100 print:bg-white h-1/2">
               <h3 className="text-[7px] font-black uppercase italic text-brand-yellow mb-1 print:text-slate-700">vs Média Lista Preferencial</h3>
-              <Plot data={getRadarData('media')} layout={getRadarLayoutWithDynamicRange('media')} config={{ displayModeBar: false, responsive: true }} style={{ width: '100%', height: '100%' }} />
+              <Plot data={getRadarData('media')} layout={getRadarLayoutWithDynamicRange('media')} config={{ displayModeBar: false, responsive: true, toImageButtonOptions: { format: 'png', width: 800, height: 600 } }} style={{ width: '100%', height: '100%' }} />
             </div>
             <div className="bg-slate-900/40 border border-slate-800/50 rounded-2xl p-2 print:border-slate-100 print:bg-white h-1/2">
               <h3 className="text-[7px] font-black uppercase italic text-brand-yellow mb-1 print:text-slate-700">vs Grêmio Novorizontino</h3>
-              <Plot data={getRadarData('gremio')} layout={getRadarLayoutWithDynamicRange('gremio')} config={{ displayModeBar: false, responsive: true }} style={{ width: '100%', height: '100%' }} />
+              <Plot data={getRadarData('gremio')} layout={getRadarLayoutWithDynamicRange('gremio')} config={{ displayModeBar: false, responsive: true, toImageButtonOptions: { format: 'png', width: 800, height: 600 } }} style={{ width: '100%', height: '100%' }} />
             </div>
           </div>
 

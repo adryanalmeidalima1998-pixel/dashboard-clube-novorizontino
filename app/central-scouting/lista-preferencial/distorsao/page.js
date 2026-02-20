@@ -259,7 +259,8 @@ function DistorsaoContent() {
         font: { size: 9, color: '#ffffff' },
         tracegroupgap: 5
       },
-      hovermode: 'closest'
+      hovermode: 'closest',
+      autosize: true
     };
 
     return { data: plotData, layout };
@@ -302,7 +303,7 @@ function DistorsaoContent() {
                 <Plot 
                   data={data} 
                   layout={layout} 
-                  config={{ displayModeBar: false, responsive: true }} 
+                  config={{ displayModeBar: false, responsive: true, toImageButtonOptions: { format: 'png', width: 1200, height: 600 } }} 
                   style={{ width: '100%', height: '100%' }} 
                 />
               </div>
