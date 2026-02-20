@@ -39,6 +39,24 @@ const GRAFICOS_CORRELACAO = [
     yType: 'raw'
   },
   { 
+    titulo: 'Chances Criadas vs Assistências Esperadas',
+    xLabel: 'Chances com Sucesso/90',
+    yLabel: 'xA/90',
+    xKey: 'chances_sucesso_90',
+    yKey: 'xA',
+    xType: 'custom',
+    yType: 'per90'
+  },
+  { 
+    titulo: 'Recuperações de Bola vs Desafios Vencidos',
+    xLabel: 'Recuperações Campo Adv/90',
+    yLabel: 'Desafios Ganhos/90',
+    xKey: 'Bolas recuperadas no campo do adversário',
+    yKey: 'desafios_ganhos_90',
+    xType: 'per90',
+    yType: 'custom'
+  },
+  { 
     titulo: 'Volume vs Eficiência de Dribles',
     xLabel: 'Dribles/90',
     yLabel: 'Dribles Certos/90',
@@ -46,24 +64,6 @@ const GRAFICOS_CORRELACAO = [
     yKey: 'dribles_certos_90',
     xType: 'per90',
     yType: 'custom'
-  },
-  { 
-    titulo: 'Passes na Área vs Assistências Esperadas',
-    xLabel: 'Passes na Área %',
-    yLabel: 'xA/90',
-    xKey: 'Passes dentro da área / precisos',
-    yKey: 'xA',
-    xType: 'raw',
-    yType: 'per90'
-  },
-  { 
-    titulo: 'Ações na Área vs Expectativa de Gol',
-    xLabel: 'Ações Área Adv/90',
-    yLabel: 'xG/90',
-    xKey: 'Ações na caixa adversária bem-sucedidas',
-    yKey: 'Xg',
-    xType: 'per90',
-    yType: 'per90'
   }
 ];
 
@@ -78,9 +78,18 @@ function DistorsaoContent() {
     const minutos = safeParseFloat(jogador['Minutos jogados']);
     if (minutos <= 0) return jogador;
 
+    // Dribles Certos/90
     const dribles = safeParseFloat(jogador['Dribles']);
     const driblesSucessoPct = safeParseFloat(jogador['% de dribles com sucesso']) / 100;
     jogador.dribles_certos_90 = (dribles * driblesSucessoPct / minutos) * 90;
+
+    // Chances com Sucesso/90
+    const chancesComSucesso = safeParseFloat(jogador['Chances com sucesso']);
+    jogador.chances_sucesso_90 = (chancesComSucesso / minutos) * 90;
+
+    // Desafios Ganhos/90
+    const desafiosVencidos = safeParseFloat(jogador['Desafios vencidos']);
+    jogador.desafios_ganhos_90 = (desafiosVencidos / minutos) * 90;
 
     return jogador;
   };
@@ -180,7 +189,7 @@ function DistorsaoContent() {
           opacity: 0.85
         },
         text: `<b>${jogador.Jogador}</b><br>${jogador.Time}<br>${jogador.Posição}`,
-        hovertemplate: '%{text}<br><b>${config.xLabel}:</b> %{x:.2f}<br><b>${config.yLabel}:</b> %{y:.2f}<extra></extra>',
+        hovertemplate: '%{text}<br><b>' + config.xLabel + ':</b> %{x:.2f}<br><b>' + config.yLabel + ':</b> %{y:.2f}<extra></extra>',
         showlegend: true
       });
     });
@@ -202,7 +211,7 @@ function DistorsaoContent() {
         opacity: 0.85
       },
       text: gremioNovorizontino.map(j => `<b>${j.Jogador}</b><br>${j.Time}<br>${j.Posição}`),
-      hovertemplate: '%{text}<br><b>${config.xLabel}:</b> %{x:.2f}<br><b>${config.yLabel}:</b> %{y:.2f}<extra></extra>',
+      hovertemplate: '%{text}<br><b>' + config.xLabel + ':</b> %{x:.2f}<br><b>' + config.yLabel + ':</b> %{y:.2f}<extra></extra>',
       showlegend: true
     });
 
