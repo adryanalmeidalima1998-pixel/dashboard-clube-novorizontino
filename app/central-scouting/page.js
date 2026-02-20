@@ -7,6 +7,17 @@ export default function CentralScouting() {
 
   const ferramentas = [
     {
+      id: 'lista-preferencial',
+      titulo: 'Lista Preferencial',
+      descricao: 'Análise de extremos do mercado. Compare alvos com nossos atletas usando radar, dispersão e mapas de calor.',
+      rota: '/central-scouting/lista-preferencial',
+      icon: (
+        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+      )
+    },
+    {
       id: 'ranking',
       titulo: 'Ranking de Perfil',
       descricao: 'Quem se destaca em cada papel? Ordenação por notas de perfil (Construtor, Ofensivo, Defensivo, Equilibrado).',
@@ -62,7 +73,7 @@ export default function CentralScouting() {
         </div>
 
         {/* GRID DE FERRAMENTAS */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {ferramentas.map((item) => (
             <button
               key={item.id}
@@ -102,11 +113,8 @@ export default function CentralScouting() {
             <div className="w-2 h-2 bg-brand-yellow rounded-full animate-pulse"></div>
             <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Motor de Percentis Ativo (Laterais v1.0)</span>
           </div>
-          <div className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">
-            Clube Novorizontino • Departamento de Inteligência
-          </div>
+          <div className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Última atualização: 19 de fevereiro</div>
         </div>
-
       </div>
     </div>
   )
