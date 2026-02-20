@@ -13,6 +13,8 @@ function ListaPreferencialContent() {
   const [filterTeam, setFilterTeam] = useState('');
   const [filterType, setFilterType] = useState('todos');
   const [selectedPlayers, setSelectedPlayers] = useState(new Set());
+  const [metricasSelecionadas, setMetricasSelecionadas] = useState([]);
+  const [todasMetricas, setTodasMetricas] = useState([]);
 
   // Função para calcular métrica por 90 minutos
   const calcularPor90 = (valor, minutosJogados) => {
@@ -28,7 +30,6 @@ function ListaPreferencialContent() {
     return dados.map(jogador => {
       const minutosJogados = safeParseFloat(jogador['Minutos jogados']);
       
-      // Criar objeto com dados originais e métricas por 90
       const processado = {
         ...jogador,
         aba: aba,
@@ -55,42 +56,90 @@ function ListaPreferencialContent() {
     });
   };
 
+  // Carregar preferências de métricas do LocalStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('metricasTemplate');
+    if (saved) {
+      try {
+        setMetricasSelecionadas(JSON.parse(saved));
+      } catch (e) {
+        console.error('Erro ao carregar template:', e);
+      }
+    }
+  }, []);
+
+  // Salvar preferências de métricas no LocalStorage
+  const salvarTemplate = () => {
+    localStorage.setItem('metricasTemplate', JSON.stringify(metricasSelecionadas));
+    alert('✅ Template de métricas salvo com sucesso!');
+  };
+
+  const toggleMetrica = (metrica) => {
+    setMetricasSelecionadas(prev => {
+      if (prev.includes(metrica)) {
+        return prev.filter(m => m !== metrica);
+      } else {
+        return [...prev, metrica];
+      }
+    });
+  };
+
   useEffect(() => {
     const loadData = async () => {
       try {
-        // URL do CSV com duas abas
-        const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQKQDSwtQvkSq1v9P2TzUDnFsV_i1gRCNXyQ0aT5TewfwNMnouAoICwQKRAmtCUDLHcJXO4DYS0fL_R/pub?output=csv&t=' + Date.now();
+        // URLs das duas abas do Google Sheets
+        const urlAba1 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQKQDSwtQvkSq1v9P2TzUDnFsV_i1gRCNXyQ0aT5TewfwNMnouAoICwQKRAmtCUDLHcJXO4DYS0fL_R/pub?output=csv&gid=0&t=' + Date.now();
+        const urlAba2 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQKQDSwtQvkSq1v9P2TzUDnFsV_i1gRCNXyQ0aT5TewfwNMnouAoICwQKRAmtCUDLHcJXO4DYS0fL_R/pub?output=csv&gid=1236859817&t=' + Date.now();
         
-        const response = await fetch(csvUrl);
-        const csvText = await response.text();
+        let listaProcessada = [];
+        let gremioProcessada = [];
+        let todasMetricasDetectadas = [];
 
-        // Fazer parsing do CSV
-        Papa.parse(csvText, {
+        // Carregar Aba 1 (LISTA PREFERENCIAL)
+        const response1 = await fetch(urlAba1);
+        const csvText1 = await response1.text();
+        
+        Papa.parse(csvText1, {
           header: true,
           skipEmptyLines: true,
           complete: (results) => {
             const dadosLimpos = cleanData(results.data);
+            listaProcessada = processarDados(dadosLimpos, 'LISTA PREFERENCIAL');
             
-            // Separar dados por aba (usando coluna 'Aba' ou detectar automaticamente)
-            const lista = dadosLimpos.filter(d => 
-              d['Aba'] === 'LISTA PREFERENCIAL' || 
-              (d['Time'] && !d['Time'].toLowerCase().includes('novorizontino'))
-            );
+            if (listaProcessada.length > 0) {
+              const colunasFixas = ['ID_ATLETA', 'Jogador', 'Time', 'Idade', 'Altura', 'Peso', 'Nacionalidade', 'Pé dominante', 'Index', 'Minutos jogados', 'Posição', 'Falhas em gol', 'Erro', 'aba', 'minutosJogados'];
+              todasMetricasDetectadas = Object.keys(listaProcessada[0]).filter(
+                k => !colunasFixas.includes(k) && k.endsWith('_por_90')
+              );
+            }
             
-            const gremio = dadosLimpos.filter(d => 
-              d['Aba'] === 'GRÊMIO NOVORIZONTINO' || 
-              (d['Time'] && d['Time'].toLowerCase().includes('novorizontino'))
-            );
-
-            // Processar dados e calcular métricas por 90
-            const listaProcessada = processarDados(lista, 'LISTA PREFERENCIAL');
-            const gremioProcessada = processarDados(gremio, 'GRÊMIO NOVORIZONTINO');
-
             setListaPreferencial(listaProcessada);
-            setGremiBravo(gremioProcessada);
-            setLoading(false);
+            setTodasMetricas(todasMetricasDetectadas);
           }
         });
+
+        // Carregar Aba 2 (GRÊMIO NOVORIZONTINO)
+        const response2 = await fetch(urlAba2);
+        const csvText2 = await response2.text();
+        
+        Papa.parse(csvText2, {
+          header: true,
+          skipEmptyLines: true,
+          complete: (results) => {
+            const dadosLimpos = cleanData(results.data);
+            gremioProcessada = processarDados(dadosLimpos, 'GRÊMIO NOVORIZONTINO');
+            setGremiBravo(gremioProcessada);
+          }
+        });
+
+        // Se não há template salvo, usar as 3 primeiras métricas como padrão
+        setTimeout(() => {
+          if (metricasSelecionadas.length === 0 && todasMetricasDetectadas.length > 0) {
+            setMetricasSelecionadas(todasMetricasDetectadas.slice(0, 3));
+          }
+        }, 500);
+
+        setLoading(false);
       } catch (error) {
         console.error('Erro ao carregar dados:', error);
         setLoading(false);
@@ -173,6 +222,34 @@ function ListaPreferencialContent() {
           </div>
         </div>
 
+        {/* SELETOR DE MÉTRICAS */}
+        <div className="bg-slate-900/40 border border-slate-800 rounded-[2rem] p-8 mb-8">
+          <div className="mb-6">
+            <h3 className="text-lg font-black uppercase italic text-brand-yellow mb-4">📊 Selecionar Métricas para Exibição</h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mb-4 max-h-48 overflow-y-auto">
+              {todasMetricas.map(metrica => (
+                <label key={metrica} className="flex items-center gap-2 cursor-pointer p-2 hover:bg-slate-800 rounded-lg transition-all">
+                  <input
+                    type="checkbox"
+                    checked={metricasSelecionadas.includes(metrica)}
+                    onChange={() => toggleMetrica(metrica)}
+                    className="w-4 h-4 cursor-pointer"
+                  />
+                  <span className="text-[10px] font-black uppercase text-slate-300">
+                    {metrica.replace('_por_90', '').substring(0, 12)}
+                  </span>
+                </label>
+              ))}
+            </div>
+            <button
+              onClick={salvarTemplate}
+              className="px-4 py-2 bg-brand-yellow text-black font-black uppercase text-[10px] rounded-lg hover:bg-yellow-500 transition-all"
+            >
+              💾 Salvar Template
+            </button>
+          </div>
+        </div>
+
         {/* FILTROS */}
         <div className="bg-slate-900/40 border border-slate-800 rounded-[2rem] p-8 mb-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
@@ -240,9 +317,11 @@ function ListaPreferencialContent() {
                   <th className="p-4 text-[10px] font-black uppercase text-slate-500">Posição</th>
                   <th className="p-4 text-[10px] font-black uppercase text-slate-500">Idade</th>
                   <th className="p-4 text-[10px] font-black uppercase text-slate-500">Min Jogados</th>
-                  <th className="p-4 text-[10px] font-black uppercase text-slate-500">Gols/90</th>
-                  <th className="p-4 text-[10px] font-black uppercase text-slate-500">Assist/90</th>
-                  <th className="p-4 text-[10px] font-black uppercase text-slate-500">Finalizações/90</th>
+                  {metricasSelecionadas.map(metrica => (
+                    <th key={metrica} className="p-4 text-[10px] font-black uppercase text-slate-500 text-center">
+                      {metrica.replace('_por_90', '').substring(0, 12)}
+                    </th>
+                  ))}
                   <th className="p-4 text-[10px] font-black uppercase text-slate-500">Aba</th>
                 </tr>
               </thead>
@@ -262,9 +341,11 @@ function ListaPreferencialContent() {
                     <td className="p-4 text-slate-400 text-[10px]">{jogador['Posição']}</td>
                     <td className="p-4 text-slate-400 text-[10px]">{jogador['Idade']}</td>
                     <td className="p-4 text-slate-400 text-[10px]">{jogador['minutosJogados']}</td>
-                    <td className="p-4 text-brand-yellow font-black">{jogador['Gols_por_90']?.toFixed(2) || '-'}</td>
-                    <td className="p-4 text-brand-yellow font-black">{jogador['Assistências_por_90']?.toFixed(2) || '-'}</td>
-                    <td className="p-4 text-brand-yellow font-black">{jogador['Finalizações_por_90']?.toFixed(2) || '-'}</td>
+                    {metricasSelecionadas.map(metrica => (
+                      <td key={metrica} className="p-4 text-brand-yellow font-black text-center">
+                        {jogador[metrica]?.toFixed(2) || '-'}
+                      </td>
+                    ))}
                     <td className="p-4">
                       <span className={`px-2 py-1 rounded text-[10px] font-black ${
                         jogador['aba'] === 'GRÊMIO NOVORIZONTINO' 
@@ -280,6 +361,12 @@ function ListaPreferencialContent() {
             </table>
           </div>
         </div>
+
+        {jogadoresFiltrados.length === 0 && (
+          <div className="bg-slate-900/40 border border-slate-800 rounded-lg p-8 text-center">
+            <p className="text-slate-400 font-bold">Nenhum atleta encontrado com os filtros selecionados.</p>
+          </div>
+        )}
 
         {/* INFORMAÇÃO SOBRE MÉTRICAS */}
         <div className="bg-slate-900/40 border border-slate-800 rounded-lg p-4">
