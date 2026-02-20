@@ -253,10 +253,18 @@ function PlayerProfileContent() {
         <div className="flex gap-8 mb-8 items-center bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50 print:bg-slate-50 print:border-slate-100">
           <div className="w-32 h-32 rounded-2xl bg-slate-800 border-2 border-brand-yellow overflow-hidden flex-shrink-0 shadow-xl print:border-slate-300">
             <img 
-              src={`/images/players/${player.Jogador}.png`} 
+              src={`/images/players/${player.Jogador.replace(/ /g, '_')}.png`} 
               alt={player.Jogador}
               className="w-full h-full object-cover"
-              onError={(e) => { e.target.src = `https://ui-avatars.com/api/?name=${player.Jogador}&background=1e293b&color=fbbf24&size=256&bold=true`; }}
+              onError={(e) => { 
+                // Fallback para nomes que podem estar em maiúsculo ou sem underscore
+                const alternateSrc = `/images/players/${player.Jogador.toUpperCase().replace(/ /g, '_')}.png`;
+                if (e.target.src !== alternateSrc) {
+                  e.target.src = alternateSrc;
+                } else {
+                  e.target.src = `https://ui-avatars.com/api/?name=${player.Jogador}&background=1e293b&color=fbbf24&size=256&bold=true`;
+                }
+              }}
             />
           </div>
           
