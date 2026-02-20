@@ -5,56 +5,81 @@ import { useRouter } from 'next/navigation';
 import Papa from 'papaparse';
 import { cleanData, safeParseFloat } from '@/app/utils/dataCleaner';
 
-// Categorização de métricas
+// Colunas fixas que NUNCA são métricas
+const COLUNAS_FIXAS = [
+  'ID_ATLETA', 'Jogador', 'Time', 'Idade', 'Altura', 'Peso', 
+  'Nacionalidade', 'Pé dominante', 'Index', 'Minutos jogados', 
+  'Posição', 'Falhas em gol', 'Erros graves'
+];
+
+// Categorização dinâmica - palavras-chave expandidas
 const CATEGORIAS_METRICAS = {
   'ATAQUE': {
     icon: '⚽',
     color: 'from-red-900/30 to-red-900/10',
     borderColor: 'border-red-900/50',
-    keywords: ['gol', 'finalização', 'toque na área', 'chances', 'xg', 'shot']
+    keywords: ['gol', 'finalização', 'toque', 'área', 'chance', 'xg', 'shot', 'remate', 'chute', 'tentativa']
   },
   'DEFESA': {
     icon: '🛡️',
     color: 'from-blue-900/30 to-blue-900/10',
     borderColor: 'border-blue-900/50',
-    keywords: ['desarme', 'interceptação', 'recuperação', 'bloqueio', 'falta', 'cartão']
+    keywords: ['desarme', 'interceptação', 'recuperação', 'bloqueio', 'falta', 'cartão', 'defesa', 'roubo', 'corte']
   },
   'PASSES & CRIAÇÃO': {
     icon: '🪄',
     color: 'from-purple-900/30 to-purple-900/10',
     borderColor: 'border-purple-900/50',
-    keywords: ['assistência', 'passe', 'cruzamento', 'decisivo', 'progressão', 'criação']
+    keywords: ['assistência', 'passe', 'cruzamento', 'decisivo', 'progressão', 'criação', 'através', 'bola']
   },
   'POSSE & CONTROLE': {
     icon: '🎯',
     color: 'from-cyan-900/30 to-cyan-900/10',
     borderColor: 'border-cyan-900/50',
-    keywords: ['posse', 'controle', 'toque', 'drible', 'condução']
+    keywords: ['posse', 'controle', 'toque', 'drible', 'condução', 'domínio', 'bola']
   },
   'FÍSICO & DUELOS': {
     icon: '💪',
     color: 'from-yellow-900/30 to-yellow-900/10',
     borderColor: 'border-yellow-900/50',
-    keywords: ['duelo', 'aceleração', 'velocidade', 'físico', 'corrida', 'distância']
+    keywords: ['duelo', 'aceleração', 'velocidade', 'físico', 'corrida', 'distância', 'sprint', 'ganho']
   },
   'GERAL': {
     icon: '📊',
     color: 'from-slate-900/30 to-slate-900/10',
     borderColor: 'border-slate-900/50',
-    keywords: ['minuto', 'index', 'rating', 'nota']
+    keywords: []
   }
 };
 
+// Função de categorização inteligente e robusta
 function categorizarMetrica(metrica) {
-  const metricaLower = metrica.toLowerCase();
+  const metricaLower = metrica.toLowerCase().trim();
   
+  // Se for uma coluna fixa, não é métrica
+  if (COLUNAS_FIXAS.some(col => col.toLowerCase() === metricaLower)) {
+    return null;
+  }
+  
+  // Procurar por palavras-chave em cada categoria
   for (const [categoria, config] of Object.entries(CATEGORIAS_METRICAS)) {
+    if (categoria === 'GERAL') continue; // Deixar GERAL por último
+    
     if (config.keywords.some(keyword => metricaLower.includes(keyword))) {
       return categoria;
     }
   }
   
+  // Se não encontrou em nenhuma categoria, é GERAL
   return 'GERAL';
+}
+
+// Função para verificar se uma coluna é numérica
+function ehNumerico(valor) {
+  if (valor === null || valor === undefined || valor === '') return false;
+  if (valor === '-') return false;
+  const num = parseFloat(String(valor).replace(',', '.'));
+  return !isNaN(num);
 }
 
 function ListaPreferencialContent() {
@@ -69,12 +94,7 @@ function ListaPreferencialContent() {
   const [todasMetricas, setTodasMetricas] = useState([]);
   const [expandedCategories, setExpandedCategories] = useState({});
 
-  const colunasFixas = [
-    'ID_ATLETA', 'Jogador', 'Time', 'Idade', 'Altura', 'Peso', 
-    'Nacionalidade', 'Pé dominante', 'Index', 'Minutos jogados', 
-    'Posição', 'Falhas em gol', 'Erros graves'
-  ];
-
+  // Função para calcular métrica por 90 minutos
   const calcularPor90 = (valor, minutosJogados) => {
     const val = safeParseFloat(valor);
     const minutos = safeParseFloat(minutosJogados);
@@ -83,12 +103,23 @@ function ListaPreferencialContent() {
     return (val / minutos) * 90;
   };
 
+  // Função para processar dados - TOTALMENTE DINÂMICA
   const processarDados = (dados, aba) => {
     if (dados.length === 0) return [];
 
-    const metricasReais = Object.keys(dados[0]).filter(
-      k => !colunasFixas.includes(k) && k.trim() !== ''
-    );
+    // Detectar TODAS as colunas que são métricas (dinâmico)
+    const primeiraLinha = dados[0];
+    const metricasReais = Object.keys(primeiraLinha).filter(coluna => {
+      // Não é métrica se estiver em COLUNAS_FIXAS
+      if (COLUNAS_FIXAS.includes(coluna)) return false;
+      
+      // Não é métrica se a coluna estiver vazia
+      if (!coluna || coluna.trim() === '') return false;
+      
+      // É métrica se tiver valores numéricos
+      const temNumerico = dados.some(d => ehNumerico(d[coluna]));
+      return temNumerico;
+    });
 
     return dados.map(jogador => {
       const minutosJogados = safeParseFloat(jogador['Minutos jogados']);
@@ -99,6 +130,7 @@ function ListaPreferencialContent() {
         minutosJogados: minutosJogados,
       };
 
+      // Calcular TODAS as métricas por 90
       metricasReais.forEach(metrica => {
         const chaveCalc = `${metrica}_por_90`;
         processado[chaveCalc] = calcularPor90(jogador[metrica], minutosJogados);
@@ -108,6 +140,7 @@ function ListaPreferencialContent() {
     });
   };
 
+  // Carregar preferências de métricas do LocalStorage
   useEffect(() => {
     const saved = localStorage.getItem('metricasTemplate');
     if (saved) {
@@ -148,6 +181,7 @@ function ListaPreferencialContent() {
     }
   };
 
+  // Carregar dados - TOTALMENTE AUTOMÁTICO
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -158,6 +192,7 @@ function ListaPreferencialContent() {
         let gremioProcessada = [];
         let todasMetricasDetectadas = [];
 
+        // Carregar Aba 1
         const response1 = await fetch(urlAba1);
         const csvText1 = await response1.text();
         
@@ -169,16 +204,30 @@ function ListaPreferencialContent() {
             listaProcessada = processarDados(dadosLimpos, 'LISTA PREFERENCIAL');
             
             if (listaProcessada.length > 0) {
-              todasMetricasDetectadas = Object.keys(listaProcessada[0]).filter(
-                k => k.endsWith('_por_90')
-              );
+              // Detectar TODAS as métricas dinamicamente
+              todasMetricasDetectadas = Object.keys(listaProcessada[0])
+                .filter(k => k.endsWith('_por_90'))
+                .sort(); // Ordenar alfabeticamente
             }
             
             setListaPreferencial(listaProcessada);
             setTodasMetricas(todasMetricasDetectadas);
 
-            if (metricasSelecionadas.length === 0 && todasMetricasDetectadas.length > 0) {
-              setMetricasSelecionadas(todasMetricasDetectadas.slice(0, 3));
+            // Carregar template salvo ou usar padrão
+            const saved = localStorage.getItem('metricasTemplate');
+            if (saved) {
+              try {
+                const metricas = JSON.parse(saved);
+                setMetricasSelecionadas(metricas);
+              } catch (e) {
+                // Se template inválido, usar padrão
+                if (todasMetricasDetectadas.length > 0) {
+                  setMetricasSelecionadas(todasMetricasDetectadas.slice(0, 5));
+                }
+              }
+            } else if (todasMetricasDetectadas.length > 0) {
+              // Padrão: primeiras 5 métricas
+              setMetricasSelecionadas(todasMetricasDetectadas.slice(0, 5));
             }
 
             // Inicializar categorias expandidas
@@ -190,6 +239,7 @@ function ListaPreferencialContent() {
           }
         });
 
+        // Carregar Aba 2
         const response2 = await fetch(urlAba2);
         const csvText2 = await response2.text();
         
@@ -213,6 +263,7 @@ function ListaPreferencialContent() {
     loadData();
   }, []);
 
+  // Agrupar métricas por categoria
   const metricasPorCategoria = useMemo(() => {
     const grouped = {};
     Object.keys(CATEGORIAS_METRICAS).forEach(cat => {
@@ -221,7 +272,14 @@ function ListaPreferencialContent() {
     
     todasMetricas.forEach(metrica => {
       const categoria = categorizarMetrica(metrica);
-      grouped[categoria].push(metrica);
+      if (categoria) {
+        grouped[categoria].push(metrica);
+      }
+    });
+    
+    // Ordenar métricas dentro de cada categoria
+    Object.keys(grouped).forEach(cat => {
+      grouped[cat].sort();
     });
     
     return grouped;
@@ -308,7 +366,10 @@ function ListaPreferencialContent() {
         {todasMetricas.length > 0 && (
           <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-8 mb-8">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-black uppercase italic text-brand-yellow">📊 Selecionar Métricas</h3>
+              <div>
+                <h3 className="text-lg font-black uppercase italic text-brand-yellow">📊 Selecionar Métricas</h3>
+                <p className="text-[11px] text-slate-400 mt-1">{todasMetricas.length} métricas detectadas automaticamente</p>
+              </div>
               <button
                 onClick={salvarTemplate}
                 className="px-4 py-2 bg-brand-yellow text-black font-black uppercase text-[10px] rounded-lg hover:bg-yellow-500 transition-all"
@@ -363,7 +424,7 @@ function ListaPreferencialContent() {
                               onChange={() => toggleMetrica(metrica)}
                               className="w-4 h-4 cursor-pointer"
                             />
-                            <span className="text-[11px] font-bold uppercase text-slate-200">
+                            <span className="text-[11px] font-bold uppercase text-slate-200 break-words">
                               {metrica.replace('_por_90', '')}
                             </span>
                           </label>
@@ -499,7 +560,7 @@ function ListaPreferencialContent() {
         {/* FOOTER INFO */}
         <div className="bg-slate-900/40 border border-slate-800 rounded-lg p-4">
           <p className="text-[10px] text-slate-400 font-bold">
-            ℹ️ Todas as métricas são exibidas em <strong>valores por 90 minutos</strong> para permitir comparação justa entre atletas com diferentes tempos de jogo.
+            ℹ️ <strong>Sistema 100% Automático:</strong> Todas as métricas são detectadas dinamicamente do CSV. Adicione novos jogadores ou colunas no Google Sheets e eles aparecerão automaticamente aqui!
           </p>
         </div>
       </div>
