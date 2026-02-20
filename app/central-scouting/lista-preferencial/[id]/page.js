@@ -141,13 +141,17 @@ function PlayerProfileContent() {
       type: 'scatterpolar',
       r: playerValues,
       theta: METRICAS_RADAR.map(m => m.label),
+      text: playerRealValues.map(v => v.toFixed(2)),
       customdata: playerRealValues,
+      textposition: 'outside',
+      textfont: { size: 9, color: '#fbbf24', family: 'Arial, sans-serif' },
       hovertemplate: '<b>%{theta}</b><br>Valor: %{customdata:.2f}<extra></extra>',
       fill: 'toself',
       name: player.Jogador,
       line: { color: '#fbbf24', width: 3 },
-      fillcolor: 'rgba(251, 191, 36, 0.3)',
-      mode: 'lines+markers'
+      fillcolor: 'rgba(251, 191, 36, 0.25)',
+      mode: 'lines+markers+text',
+      marker: { size: 5, color: '#fbbf24' }
     });
 
     if (type === 'media') {
@@ -164,13 +168,17 @@ function PlayerProfileContent() {
         type: 'scatterpolar',
         r: mediaListaValues,
         theta: METRICAS_RADAR.map(m => m.label),
+        text: mediaListaRealValues.map(v => v.toFixed(2)),
         customdata: mediaListaRealValues,
+        textposition: 'outside',
+        textfont: { size: 8, color: '#ef4444', family: 'Arial, sans-serif' },
         hovertemplate: '<b>%{theta}</b><br>Media: %{customdata:.2f}<extra></extra>',
         fill: 'toself',
         name: 'Media Lista Preferencial',
         line: { color: '#ef4444', dash: 'dot', width: 2 },
-        fillcolor: 'rgba(239, 68, 68, 0.1)',
-        mode: 'lines+markers'
+        fillcolor: 'rgba(239, 68, 68, 0.08)',
+        mode: 'lines+markers+text',
+        marker: { size: 4, color: '#ef4444' }
       });
     } else {
       const coresGremio = ['#3b82f6', '#10b981', '#8b5cf6'];
@@ -181,12 +189,16 @@ function PlayerProfileContent() {
           type: 'scatterpolar',
           r: gremioValues,
           theta: METRICAS_RADAR.map(m => m.label),
+          text: gremioRealValues.map(v => v.toFixed(2)),
           customdata: gremioRealValues,
+          textposition: 'outside',
+          textfont: { size: 8, color: coresGremio[i], family: 'Arial, sans-serif' },
           hovertemplate: '<b>%{theta}</b><br>' + p.Jogador + ': %{customdata:.2f}<extra></extra>',
           fill: 'none',
           name: `GN: ${p.Jogador}`,
           line: { color: coresGremio[i], width: 2 },
-          mode: 'lines+markers'
+          mode: 'lines+markers+text',
+          marker: { size: 4, color: coresGremio[i] }
         });
       });
     }
@@ -194,17 +206,41 @@ function PlayerProfileContent() {
   };
 
   const radarLayout = {
+    title: { text: '', font: { size: 0 } },
     polar: {
-      radialaxis: { visible: true, range: [0, 100], gridcolor: 'rgba(0,0,0,0.1)', tickfont: { size: 6, color: '#64748b' } },
-      angularaxis: { tickfont: { size: 7, color: '#1e293b', weight: 'bold' }, gridcolor: 'rgba(0,0,0,0.1)' },
-      bgcolor: 'rgba(255, 255, 255, 0.5)'
+      radialaxis: { 
+        visible: true, 
+        range: [0, 100], 
+        gridcolor: 'rgba(255,255,255,0.15)',
+        tickfont: { size: 0, color: 'rgba(0,0,0,0)' },
+        showticklabels: false,
+        ticks: 'outside'
+      },
+      angularaxis: { 
+        tickfont: { size: 8, color: '#ffffff', family: 'Arial, sans-serif' },
+        gridcolor: 'rgba(255,255,255,0.2)',
+        rotation: 90,
+        direction: 'clockwise'
+      },
+      bgcolor: 'rgba(255, 255, 255, 0.02)'
     },
     showlegend: true,
-    legend: { orientation: 'v', x: -0.15, y: 1, font: { size: 7, color: '#ffffff' }, bgcolor: 'rgba(0,0,0,0)', bordercolor: 'rgba(0,0,0,0)' },
+    legend: { 
+      orientation: 'v', 
+      x: 1.02, 
+      y: 1, 
+      font: { size: 8, color: '#ffffff', family: 'Arial, sans-serif' },
+      bgcolor: 'rgba(0,0,0,0.3)',
+      bordercolor: 'rgba(255,255,255,0.2)',
+      borderwidth: 1,
+      xanchor: 'left',
+      yanchor: 'top'
+    },
     paper_bgcolor: 'rgba(0,0,0,0)',
     plot_bgcolor: 'rgba(0,0,0,0)',
-    margin: { t: 20, b: 60, l: 50, r: 50 },
-    height: 280
+    margin: { t: 30, b: 30, l: 80, r: 150 },
+    height: 300,
+    font: { family: 'Arial, sans-serif', color: '#ffffff' }
   };
 
   const heatmapData = useMemo(() => {
@@ -238,10 +274,8 @@ function PlayerProfileContent() {
 
   return (
     <div className="min-h-screen bg-[#0a0c10] text-white p-2 md:p-4 print:p-0 print:bg-white print:text-black font-sans">
-      {/* CONTAINER A4 PAISAGEM */}
       <div className="max-w-[1350px] mx-auto bg-slate-900/20 border border-slate-800/50 rounded-2xl p-4 md:p-6 shadow-2xl print:border-0 print:shadow-none print:rounded-none print:p-6 print:w-[297mm] print:h-[210mm] print:mx-0 print:bg-white overflow-hidden relative flex flex-col">
         
-        {/* BOTÕES DE AÇÃO (HIDDEN ON PRINT) */}
         <div className="absolute top-4 right-4 flex gap-2 print:hidden z-50">
           <button onClick={() => window.print()} className="p-2 bg-brand-yellow text-black rounded-lg hover:bg-yellow-500 transition-all shadow-lg flex items-center gap-1 font-black uppercase text-[9px]">
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4" /></svg>
@@ -252,7 +286,6 @@ function PlayerProfileContent() {
           </button>
         </div>
 
-        {/* CABEÇALHO COMPACTO */}
         <div className="flex items-center justify-between mb-4 border-b border-brand-yellow/30 pb-3 print:border-slate-200">
           <div className="flex items-center gap-3">
             <img src="/club/escudonovorizontino.png" alt="Logo" className="w-12 h-12 object-contain" />
@@ -267,11 +300,8 @@ function PlayerProfileContent() {
           </div>
         </div>
         
-        {/* CONTEÚDO PRINCIPAL - FLEX HORIZONTAL */}
         <div className="flex-1 flex gap-4 overflow-hidden">
-          {/* COLUNA ESQUERDA - BIO E HEATMAP */}
           <div className="flex flex-col gap-3 w-1/4">
-            {/* BIO COMPACTA */}
             <div className="bg-slate-900/40 p-3 rounded-2xl border border-slate-800/50 print:bg-slate-50 print:border-slate-100">
               <div className="w-24 h-24 rounded-xl bg-slate-800 border border-brand-yellow overflow-hidden flex-shrink-0 shadow-lg mb-2 print:border-slate-300">
                 <img 
@@ -308,7 +338,6 @@ function PlayerProfileContent() {
               </div>
             </div>
 
-            {/* HEATMAP */}
             <div className="bg-slate-900/40 border border-slate-800/50 rounded-2xl p-2 flex-1 print:border-slate-100 print:bg-white">
               <h3 className="text-[7px] font-black uppercase italic text-brand-yellow mb-1 print:text-slate-700">Heatmap</h3>
               <div className="relative aspect-[105/68] bg-green-900/10 border border-slate-700 rounded-lg overflow-hidden print:border-slate-200">
@@ -321,7 +350,6 @@ function PlayerProfileContent() {
             </div>
           </div>
 
-          {/* COLUNA CENTRAL - RADARES */}
           <div className="flex-1 flex flex-col gap-3">
             <div className="bg-slate-900/40 border border-slate-800/50 rounded-2xl p-2 print:border-slate-100 print:bg-white h-1/2">
               <h3 className="text-[7px] font-black uppercase italic text-brand-yellow mb-1 print:text-slate-700">vs Média Lista Preferencial</h3>
@@ -333,7 +361,6 @@ function PlayerProfileContent() {
             </div>
           </div>
 
-          {/* COLUNA DIREITA - MÉTRICAS */}
           <div className="w-1/5 bg-slate-900/40 border border-slate-800/50 rounded-2xl p-3 print:border-slate-100 print:bg-white overflow-y-auto">
             <h3 className="text-[7px] font-black uppercase italic text-brand-yellow mb-2 print:text-slate-700 sticky top-0 bg-slate-900/40 print:bg-white py-1 z-10">Métricas p/90</h3>
             <div className="space-y-1">
@@ -347,7 +374,6 @@ function PlayerProfileContent() {
           </div>
         </div>
 
-        {/* FOOTER */}
         <div className="mt-2 pt-2 border-t border-slate-800 flex justify-center print:border-slate-100">
           <p className="text-[6px] font-bold text-slate-600 uppercase tracking-[0.3em]">Confidencial • Grêmio Novorizontino Scouting</p>
         </div>
@@ -359,6 +385,8 @@ function PlayerProfileContent() {
           body { background: white !important; -webkit-print-color-adjust: exact; }
           .print\:hidden { display: none !important; }
           canvas { max-width: 100% !important; height: auto !important; }
+          text { fill: #000000 !important; }
+          .plotly text { fill: #000000 !important; }
         }
       `}</style>
     </div>
