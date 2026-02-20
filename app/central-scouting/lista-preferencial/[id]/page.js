@@ -219,19 +219,19 @@ function PlayerProfileContent() {
     },
     showlegend: true,
     legend: { 
-      orientation: 'v', 
-      x: 1.02, 
-      y: 1, 
-      font: { size: 8, color: '#ffffff', family: 'Arial, sans-serif' },
-      bgcolor: 'rgba(0,0,0,0.3)',
-      bordercolor: 'rgba(255,255,255,0.2)',
-      borderwidth: 1,
-      xanchor: 'left',
+      orientation: 'h', 
+      x: 0.5, 
+      y: -0.25, 
+      font: { size: 7, color: '#ffffff', family: 'Arial, sans-serif' },
+      bgcolor: 'rgba(0,0,0,0)',
+      bordercolor: 'rgba(0,0,0,0)',
+      borderwidth: 0,
+      xanchor: 'center',
       yanchor: 'top'
     },
     paper_bgcolor: 'rgba(0,0,0,0)',
     plot_bgcolor: 'rgba(0,0,0,0)',
-    margin: { t: 30, b: 30, l: 80, r: 150 },
+    margin: { t: 20, b: 80, l: 60, r: 60 },
     height: 300,
     font: { family: 'Arial, sans-serif', color: '#ffffff' }
   };
