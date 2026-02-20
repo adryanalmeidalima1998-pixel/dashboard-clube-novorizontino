@@ -6,6 +6,7 @@ import Papa from 'papaparse';
 import { EXTREMOS_PLAYERS } from '@/app/utils/extremosData';
 import { cleanData, safeParseFloat } from '@/app/utils/dataCleaner';
 import { Scatter } from 'react-chartjs-2';
+import ChartDataLabels from 'chartjs-plugin-datalabels';
 import {
   Chart as ChartJS,
   LinearScale,
@@ -14,7 +15,7 @@ import {
   Legend,
 } from 'chart.js';
 
-ChartJS.register(LinearScale, PointElement, Tooltip, Legend);
+ChartJS.register(LinearScale, PointElement, Tooltip, Legend, ChartDataLabels);
 
 export default function ComparacaoExtremos() {
   const router = useRouter();
@@ -119,6 +120,20 @@ export default function ComparacaoExtremos() {
     },
     plugins: {
       legend: { labels: { color: '#94a3b8', font: { size: 11 } } },
+      datalabels: {
+        display: true,
+        color: '#fbbf24',
+        font: { size: 9, weight: 'bold' },
+        anchor: 'center',
+        align: 'top',
+        offset: 10,
+        formatter: function(value, context) {
+          if (value && value.name) {
+            return value.name.split(' ')[0];
+          }
+          return '';
+        }
+      },
       tooltip: {
         backgroundColor: 'rgba(10, 12, 16, 0.9)',
         titleColor: '#fbbf24',
@@ -126,9 +141,15 @@ export default function ComparacaoExtremos() {
         borderColor: '#fbbf24',
         borderWidth: 1,
         callbacks: {
+          title: function(context) {
+            if (context[0] && context[0].raw && context[0].raw.name) {
+              return context[0].raw.name;
+            }
+            return '';
+          },
           label: function(context) {
             const point = context.raw;
-            return `${point.name}: (${point.x.toFixed(2)}, ${point.y.toFixed(2)})`;
+            return `${context.dataset.label}: (${point.x.toFixed(2)}, ${point.y.toFixed(2)})`;
           }
         }
       }

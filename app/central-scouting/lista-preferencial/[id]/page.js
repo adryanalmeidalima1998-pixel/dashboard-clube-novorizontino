@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Papa from 'papaparse';
-import { EXTREMOS_PLAYERS, EXTREMO_METRICS, RADAR_METRICS } from '@/app/utils/extremosData';
+import { EXTREMOS_PLAYERS, EXTREMO_METRICS } from '@/app/utils/extremosData';
 import { cleanData, safeParseFloat } from '@/app/utils/dataCleaner';
 import { Radar } from 'react-chartjs-2';
 import {
@@ -60,60 +60,117 @@ export default function PlayerProfile() {
     fetchPlayerData();
   }, [id]);
 
+  const radarMetrics = [
+    { label: 'Gols', key: 'Gols', max: 30, color: '#ef4444' },
+    { label: 'xG', key: 'xG', max: 10, color: '#f97316' },
+    { label: 'Assistências', key: 'Assistências', max: 15, color: '#3b82f6' },
+    { label: 'xA', key: 'xA', max: 8, color: '#06b6d4' },
+    { label: 'Dribles %', key: 'Dribles com sucesso (%)', max: 100, color: '#fbbf24' },
+    { label: 'Cruzamentos %', key: 'Cruzamentos precisos (%)', max: 100, color: '#10b981' },
+    { label: 'Recuperações', key: 'Recuperações de bola campo ataque', max: 50, color: '#8b5cf6' },
+    { label: 'Desarmes', key: 'Desarmes', max: 30, color: '#ec4899' }
+  ];
+
   const radarData = useMemo(() => {
     if (!player) return null;
 
-    const values = RADAR_METRICS.map(metric => {
-      let val = safeParseFloat(player[metric]);
-      // Normalizar valores para escala 0-100
-      if (metric.includes('%')) {
-        return val;
-      } else if (metric === 'Gols' || metric === 'xG') {
-        return Math.min(val * 15, 100);
-      } else if (metric === 'xA') {
-        return Math.min(val * 20, 100);
-      } else if (metric === 'Recuperações de bola campo ataque') {
-        return Math.min(val * 10, 100);
-      }
-      return val;
+    const values = radarMetrics.map(metric => {
+      const val = safeParseFloat(player[metric.key]);
+      const normalized = (val / metric.max) * 100;
+      return Math.min(normalized, 100);
     });
 
     return {
-      labels: RADAR_METRICS,
+      labels: radarMetrics.map(m => m.label),
       datasets: [
         {
           label: player.name,
           data: values,
-          backgroundColor: 'rgba(251, 191, 36, 0.2)',
+          backgroundColor: 'rgba(251, 191, 36, 0.15)',
           borderColor: '#fbbf24',
           borderWidth: 3,
-          pointBackgroundColor: '#fbbf24',
+          pointBackgroundColor: radarMetrics.map(m => m.color),
           pointBorderColor: '#fff',
           pointHoverBackgroundColor: '#fff',
-          pointHoverBorderColor: '#fbbf24',
-          pointRadius: 5,
-          pointHoverRadius: 7
+          pointHoverBorderColor: radarMetrics.map(m => m.color),
+          pointRadius: 6,
+          pointHoverRadius: 8,
+          fill: true
         },
       ],
     };
   }, [player]);
 
   const radarOptions = {
+    indexAxis: 'r',
     scales: {
       r: {
-        angleLines: { color: 'rgba(255, 255, 255, 0.1)' },
-        grid: { color: 'rgba(255, 255, 255, 0.1)' },
-        pointLabels: { color: '#94a3b8', font: { size: 11, weight: 'bold' } },
-        ticks: { display: true, color: '#64748b', max: 100, stepSize: 20 },
-        suggestedMin: 0,
-        suggestedMax: 100
+        beginAtZero: true,
+        min: 0,
+        max: 100,
+        ticks: {
+          display: true,
+          color: '#64748b',
+          font: { size: 10, weight: 'bold' },
+          stepSize: 20,
+          callback: function(value) {
+            return value + '%';
+          }
+        },
+        angleLines: {
+          color: 'rgba(255, 255, 255, 0.08)',
+          lineWidth: 1
+        },
+        grid: {
+          color: 'rgba(255, 255, 255, 0.08)',
+          circular: true,
+          drawBorder: false
+        },
+        pointLabels: {
+          color: '#e2e8f0',
+          font: { size: 11, weight: 'bold' },
+          padding: 12,
+          callback: function(label, index) {
+            return label;
+          }
+        }
       }
     },
     plugins: {
-      legend: { display: false },
-      tooltip: { backgroundColor: 'rgba(10, 12, 16, 0.9)', titleColor: '#fbbf24', bodyColor: '#fff', borderColor: '#fbbf24', borderWidth: 1 }
+      legend: {
+        display: true,
+        position: 'bottom',
+        labels: {
+          color: '#94a3b8',
+          font: { size: 12, weight: 'bold' },
+          padding: 20,
+          usePointStyle: true,
+          pointStyle: 'circle'
+        }
+      },
+      tooltip: {
+        backgroundColor: 'rgba(10, 12, 16, 0.95)',
+        titleColor: '#fbbf24',
+        bodyColor: '#fff',
+        borderColor: '#fbbf24',
+        borderWidth: 2,
+        padding: 12,
+        displayColors: true,
+        callbacks: {
+          label: function(context) {
+            const metricIndex = context.dataIndex;
+            const metric = radarMetrics[metricIndex];
+            const rawValue = safeParseFloat(player[metric.key]);
+            return `${metric.label}: ${rawValue.toFixed(2)} (${context.parsed.r.toFixed(0)}%)`;
+          }
+        }
+      },
+      filler: {
+        propagate: true
+      }
     },
-    maintainAspectRatio: true
+    maintainAspectRatio: true,
+    responsive: true
   };
 
   if (loading) return (
@@ -163,23 +220,36 @@ export default function PlayerProfile() {
               </div>
             </div>
 
-            {/* RADAR CHART */}
-            <div className="bg-slate-900/40 border border-slate-800 rounded-[2.5rem] p-8">
-              <h3 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-8 text-center italic">Radar de Competências</h3>
-              <div className="w-full aspect-square flex items-center justify-center">
-                {radarData && <Radar data={radarData} options={radarOptions} />}
+            {/* LEGENDA DO RADAR */}
+            <div className="bg-slate-900/40 border border-slate-800 rounded-[2rem] p-6">
+              <h4 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-4">Legenda de Cores</h4>
+              <div className="space-y-3">
+                {radarMetrics.map((metric, idx) => (
+                  <div key={idx} className="flex items-center gap-3">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: metric.color }}></div>
+                    <span className="text-[10px] text-slate-400 font-bold">{metric.label}</span>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
 
-          {/* COLUNA DIREITA: DADOS E MAPA */}
+          {/* COLUNA DIREITA: RADAR E DADOS */}
           <div className="lg:col-span-8 space-y-8">
+            {/* GRÁFICO DE RADAR */}
+            <div className="bg-slate-900/40 border border-slate-800 rounded-[2.5rem] p-10">
+              <h3 className="text-lg font-black uppercase italic text-brand-yellow mb-8 text-center">Análise de Desempenho</h3>
+              <div className="w-full h-96 flex items-center justify-center">
+                {radarData && <Radar data={radarData} options={radarOptions} />}
+              </div>
+            </div>
+
             {/* MÉTRICAS CATEGORIZADAS */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <MetricBox title="Ataque & Finalização" metrics={EXTREMO_METRICS.ataque} data={player} color="text-red-400" />
-              <MetricBox title="Criação & Passes" metrics={EXTREMO_METRICS.criacao} data={player} color="text-blue-400" />
-              <MetricBox title="Posse & Dribles" metrics={EXTREMO_METRICS.posse} data={player} color="text-brand-yellow" />
-              <MetricBox title="Defesa & Duelos" metrics={EXTREMO_METRICS.defesa} data={player} color="text-green-400" />
+              <MetricBox title="Ataque & Finalização" metrics={EXTREMO_METRICS.ataque} data={player} color="text-red-400" icon="⚽" />
+              <MetricBox title="Criação & Passes" metrics={EXTREMO_METRICS.criacao} data={player} color="text-blue-400" icon="🎯" />
+              <MetricBox title="Posse & Dribles" metrics={EXTREMO_METRICS.posse} data={player} color="text-brand-yellow" icon="🔄" />
+              <MetricBox title="Defesa & Duelos" metrics={EXTREMO_METRICS.defesa} data={player} color="text-green-400" icon="🛡️" />
             </div>
 
             {/* MAPA DE CALOR / CAMPINHO */}
@@ -238,10 +308,13 @@ export default function PlayerProfile() {
   );
 }
 
-function MetricBox({ title, metrics, data, color }) {
+function MetricBox({ title, metrics, data, color, icon }) {
   return (
     <div className="bg-slate-900/40 border border-slate-800 rounded-[2rem] p-6">
-      <h4 className={`text-[10px] font-black uppercase tracking-[0.2em] mb-6 ${color}`}>{title}</h4>
+      <div className="flex items-center gap-3 mb-6">
+        <span className="text-2xl">{icon}</span>
+        <h4 className={`text-[10px] font-black uppercase tracking-[0.2em] ${color}`}>{title}</h4>
+      </div>
       <div className="space-y-4">
         {metrics.map(m => (
           <div key={m} className="flex justify-between items-center py-2 border-b border-slate-800/50 last:border-0">

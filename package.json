@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "chart.js": "4.5.1",
+    "chartjs-plugin-datalabels": "^2.2.0",
     "jspdf": "^2.5.1",
     "jspdf-autotable": "^3.8.4",
     "lucide-react": "^0.562.0",
