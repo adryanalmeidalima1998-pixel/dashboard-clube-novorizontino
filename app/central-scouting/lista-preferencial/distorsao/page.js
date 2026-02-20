@@ -262,6 +262,25 @@ function DistorsaoContent() {
       autosize: true
     };
 
+    // Ajustar layout para PDF (cores pretas e fundo branco)
+    if (typeof window !== 'undefined' && window.matchMedia('print').matches) {
+      layout.paper_bgcolor = '#ffffff';
+      layout.plot_bgcolor = '#ffffff';
+      layout.font.color = '#000000';
+      layout.title.font.color = '#000000';
+      layout.xaxis.title.font.color = '#000000';
+      layout.xaxis.tickfont.color = '#000000';
+      layout.xaxis.linecolor = '#000000';
+      layout.xaxis.gridcolor = 'rgba(0,0,0,0.2)';
+      layout.yaxis.title.font.color = '#000000';
+      layout.yaxis.tickfont.color = '#000000';
+      layout.yaxis.linecolor = '#000000';
+      layout.yaxis.gridcolor = 'rgba(0,0,0,0.2)';
+      layout.legend.bgcolor = 'rgba(255,255,255,0.9)';
+      layout.legend.bordercolor = '#000000';
+      layout.legend.font.color = '#000000';
+    }
+
     return { data: plotData, layout };
   };
 

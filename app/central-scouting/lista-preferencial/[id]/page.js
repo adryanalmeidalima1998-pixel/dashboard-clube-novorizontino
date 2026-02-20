@@ -270,6 +270,10 @@ function PlayerProfileContent() {
     },
     paper_bgcolor: 'rgba(0,0,0,0)',
     plot_bgcolor: 'rgba(0,0,0,0)',
+    '@media print': {
+      paper_bgcolor: '#ffffff',
+      plot_bgcolor: '#ffffff'
+    },
     margin: { t: 20, b: 80, l: 60, r: 60 },
     height: 300,
     font: { family: 'Arial, sans-serif', color: '#ffffff' }
@@ -419,11 +423,11 @@ function PlayerProfileContent() {
           <div className="flex-1 flex flex-col gap-3">
             <div className="bg-slate-900/40 border border-slate-800/50 rounded-2xl p-2 print:border-slate-100 print:bg-white h-1/2">
               <h3 className="text-[7px] font-black uppercase italic text-brand-yellow mb-1 print:text-slate-700">vs Média Lista Preferencial</h3>
-              <Plot data={getRadarData('media')} layout={getRadarLayoutWithDynamicRange('media')} config={{ displayModeBar: false, responsive: true, toImageButtonOptions: { format: 'png', width: 800, height: 600 } }} style={{ width: '100%', height: '100%' }} />
+              <Plot data={getRadarData('media')} layout={{...getRadarLayoutWithDynamicRange('media'), paper_bgcolor: '#ffffff', plot_bgcolor: '#ffffff', font: { family: 'Arial, sans-serif', color: '#000000' }, polar: { ...getRadarLayoutWithDynamicRange('media').polar, radialaxis: { ...getRadarLayoutWithDynamicRange('media').polar.radialaxis, tickfont: { size: 6, color: '#000000', family: 'Arial, sans-serif' }, linecolor: '#000000', gridcolor: 'rgba(0,0,0,0.2)' }, angularaxis: { ...getRadarLayoutWithDynamicRange('media').polar.angularaxis, tickfont: { size: 8, color: '#000000', family: 'Arial, sans-serif' }, linecolor: '#000000', gridcolor: 'rgba(0,0,0,0.2)' } }}} config={{ displayModeBar: false, responsive: true, toImageButtonOptions: { format: 'png', width: 800, height: 600 } }} style={{ width: '100%', height: '100%' }} />
             </div>
             <div className="bg-slate-900/40 border border-slate-800/50 rounded-2xl p-2 print:border-slate-100 print:bg-white h-1/2">
               <h3 className="text-[7px] font-black uppercase italic text-brand-yellow mb-1 print:text-slate-700">vs Grêmio Novorizontino</h3>
-              <Plot data={getRadarData('gremio')} layout={getRadarLayoutWithDynamicRange('gremio')} config={{ displayModeBar: false, responsive: true, toImageButtonOptions: { format: 'png', width: 800, height: 600 } }} style={{ width: '100%', height: '100%' }} />
+              <Plot data={getRadarData('gremio')} layout={{...getRadarLayoutWithDynamicRange('gremio'), paper_bgcolor: '#ffffff', plot_bgcolor: '#ffffff', font: { family: 'Arial, sans-serif', color: '#000000' }, polar: { ...getRadarLayoutWithDynamicRange('gremio').polar, radialaxis: { ...getRadarLayoutWithDynamicRange('gremio').polar.radialaxis, tickfont: { size: 6, color: '#000000', family: 'Arial, sans-serif' }, linecolor: '#000000', gridcolor: 'rgba(0,0,0,0.2)' }, angularaxis: { ...getRadarLayoutWithDynamicRange('gremio').polar.angularaxis, tickfont: { size: 8, color: '#000000', family: 'Arial, sans-serif' }, linecolor: '#000000', gridcolor: 'rgba(0,0,0,0.2)' } }}} config={{ displayModeBar: false, responsive: true, toImageButtonOptions: { format: 'png', width: 800, height: 600 } }} style={{ width: '100%', height: '100%' }} />
             </div>
           </div>
 
