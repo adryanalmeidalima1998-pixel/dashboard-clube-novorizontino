@@ -12,69 +12,46 @@ const COLUNAS_FIXAS = [
   'Posição', 'Falhas em gol', 'Erros graves'
 ];
 
-// Categorização dinâmica - palavras-chave expandidas
+// Categorização dinâmica com palavras-chave
 const CATEGORIAS_METRICAS = {
   'ATAQUE': {
-    icon: '⚽',
-    color: 'from-red-900/30 to-red-900/10',
-    borderColor: 'border-red-900/50',
     keywords: ['gol', 'finalização', 'toque', 'área', 'chance', 'xg', 'shot', 'remate', 'chute', 'tentativa']
   },
   'DEFESA': {
-    icon: '🛡️',
-    color: 'from-blue-900/30 to-blue-900/10',
-    borderColor: 'border-blue-900/50',
     keywords: ['desarme', 'interceptação', 'recuperação', 'bloqueio', 'falta', 'cartão', 'defesa', 'roubo', 'corte']
   },
   'PASSES & CRIAÇÃO': {
-    icon: '🪄',
-    color: 'from-purple-900/30 to-purple-900/10',
-    borderColor: 'border-purple-900/50',
     keywords: ['assistência', 'passe', 'cruzamento', 'decisivo', 'progressão', 'criação', 'através', 'bola']
   },
   'POSSE & CONTROLE': {
-    icon: '🎯',
-    color: 'from-cyan-900/30 to-cyan-900/10',
-    borderColor: 'border-cyan-900/50',
     keywords: ['posse', 'controle', 'toque', 'drible', 'condução', 'domínio', 'bola']
   },
   'FÍSICO & DUELOS': {
-    icon: '💪',
-    color: 'from-yellow-900/30 to-yellow-900/10',
-    borderColor: 'border-yellow-900/50',
     keywords: ['duelo', 'aceleração', 'velocidade', 'físico', 'corrida', 'distância', 'sprint', 'ganho']
   },
   'GERAL': {
-    icon: '📊',
-    color: 'from-slate-900/30 to-slate-900/10',
-    borderColor: 'border-slate-900/50',
     keywords: []
   }
 };
 
-// Função de categorização inteligente e robusta
 function categorizarMetrica(metrica) {
   const metricaLower = metrica.toLowerCase().trim();
   
-  // Se for uma coluna fixa, não é métrica
   if (COLUNAS_FIXAS.some(col => col.toLowerCase() === metricaLower)) {
     return null;
   }
   
-  // Procurar por palavras-chave em cada categoria
   for (const [categoria, config] of Object.entries(CATEGORIAS_METRICAS)) {
-    if (categoria === 'GERAL') continue; // Deixar GERAL por último
+    if (categoria === 'GERAL') continue;
     
     if (config.keywords.some(keyword => metricaLower.includes(keyword))) {
       return categoria;
     }
   }
   
-  // Se não encontrou em nenhuma categoria, é GERAL
   return 'GERAL';
 }
 
-// Função para verificar se uma coluna é numérica
 function ehNumerico(valor) {
   if (valor === null || valor === undefined || valor === '') return false;
   if (valor === '-') return false;
@@ -89,12 +66,10 @@ function ListaPreferencialContent() {
   const [loading, setLoading] = useState(true);
   const [filterTeam, setFilterTeam] = useState('');
   const [filterType, setFilterType] = useState('todos');
-  const [selectedPlayers, setSelectedPlayers] = useState(new Set());
   const [metricasSelecionadas, setMetricasSelecionadas] = useState([]);
   const [todasMetricas, setTodasMetricas] = useState([]);
-  const [expandedCategories, setExpandedCategories] = useState({});
+  const [categoriaAtiva, setCategoriaAtiva] = useState('ATAQUE');
 
-  // Função para calcular métrica por 90 minutos
   const calcularPor90 = (valor, minutosJogados) => {
     const val = safeParseFloat(valor);
     const minutos = safeParseFloat(minutosJogados);
@@ -103,20 +78,13 @@ function ListaPreferencialContent() {
     return (val / minutos) * 90;
   };
 
-  // Função para processar dados - TOTALMENTE DINÂMICA
   const processarDados = (dados, aba) => {
     if (dados.length === 0) return [];
 
-    // Detectar TODAS as colunas que são métricas (dinâmico)
     const primeiraLinha = dados[0];
     const metricasReais = Object.keys(primeiraLinha).filter(coluna => {
-      // Não é métrica se estiver em COLUNAS_FIXAS
       if (COLUNAS_FIXAS.includes(coluna)) return false;
-      
-      // Não é métrica se a coluna estiver vazia
       if (!coluna || coluna.trim() === '') return false;
-      
-      // É métrica se tiver valores numéricos
       const temNumerico = dados.some(d => ehNumerico(d[coluna]));
       return temNumerico;
     });
@@ -130,7 +98,6 @@ function ListaPreferencialContent() {
         minutosJogados: minutosJogados,
       };
 
-      // Calcular TODAS as métricas por 90
       metricasReais.forEach(metrica => {
         const chaveCalc = `${metrica}_por_90`;
         processado[chaveCalc] = calcularPor90(jogador[metrica], minutosJogados);
@@ -140,48 +107,6 @@ function ListaPreferencialContent() {
     });
   };
 
-  // Carregar preferências de métricas do LocalStorage
-  useEffect(() => {
-    const saved = localStorage.getItem('metricasTemplate');
-    if (saved) {
-      try {
-        setMetricasSelecionadas(JSON.parse(saved));
-      } catch (e) {
-        console.error('Erro ao carregar template:', e);
-      }
-    }
-  }, []);
-
-  const salvarTemplate = () => {
-    localStorage.setItem('metricasTemplate', JSON.stringify(metricasSelecionadas));
-    alert('✅ Template de métricas salvo com sucesso!');
-  };
-
-  const toggleMetrica = (metrica) => {
-    setMetricasSelecionadas(prev => {
-      if (prev.includes(metrica)) {
-        return prev.filter(m => m !== metrica);
-      } else {
-        return [...prev, metrica];
-      }
-    });
-  };
-
-  const toggleCategoryAll = (categoria) => {
-    const metricasCategoria = todasMetricas.filter(m => categorizarMetrica(m) === categoria);
-    const todasSelecionadas = metricasCategoria.every(m => metricasSelecionadas.includes(m));
-    
-    if (todasSelecionadas) {
-      setMetricasSelecionadas(prev => prev.filter(m => !metricasCategoria.includes(m)));
-    } else {
-      setMetricasSelecionadas(prev => [
-        ...prev,
-        ...metricasCategoria.filter(m => !prev.includes(m))
-      ]);
-    }
-  };
-
-  // Carregar dados - TOTALMENTE AUTOMÁTICO
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -192,7 +117,6 @@ function ListaPreferencialContent() {
         let gremioProcessada = [];
         let todasMetricasDetectadas = [];
 
-        // Carregar Aba 1
         const response1 = await fetch(urlAba1);
         const csvText1 = await response1.text();
         
@@ -204,42 +128,30 @@ function ListaPreferencialContent() {
             listaProcessada = processarDados(dadosLimpos, 'LISTA PREFERENCIAL');
             
             if (listaProcessada.length > 0) {
-              // Detectar TODAS as métricas dinamicamente
               todasMetricasDetectadas = Object.keys(listaProcessada[0])
                 .filter(k => k.endsWith('_por_90'))
-                .sort(); // Ordenar alfabeticamente
+                .sort();
             }
             
             setListaPreferencial(listaProcessada);
             setTodasMetricas(todasMetricasDetectadas);
 
-            // Carregar template salvo ou usar padrão
             const saved = localStorage.getItem('metricasTemplate');
             if (saved) {
               try {
                 const metricas = JSON.parse(saved);
                 setMetricasSelecionadas(metricas);
               } catch (e) {
-                // Se template inválido, usar padrão
                 if (todasMetricasDetectadas.length > 0) {
                   setMetricasSelecionadas(todasMetricasDetectadas.slice(0, 5));
                 }
               }
             } else if (todasMetricasDetectadas.length > 0) {
-              // Padrão: primeiras 5 métricas
               setMetricasSelecionadas(todasMetricasDetectadas.slice(0, 5));
             }
-
-            // Inicializar categorias expandidas
-            const categoriesInit = {};
-            Object.keys(CATEGORIAS_METRICAS).forEach(cat => {
-              categoriesInit[cat] = true;
-            });
-            setExpandedCategories(categoriesInit);
           }
         });
 
-        // Carregar Aba 2
         const response2 = await fetch(urlAba2);
         const csvText2 = await response2.text();
         
@@ -263,7 +175,6 @@ function ListaPreferencialContent() {
     loadData();
   }, []);
 
-  // Agrupar métricas por categoria
   const metricasPorCategoria = useMemo(() => {
     const grouped = {};
     Object.keys(CATEGORIAS_METRICAS).forEach(cat => {
@@ -277,7 +188,6 @@ function ListaPreferencialContent() {
       }
     });
     
-    // Ordenar métricas dentro de cada categoria
     Object.keys(grouped).forEach(cat => {
       grouped[cat].sort();
     });
@@ -300,29 +210,26 @@ function ListaPreferencialContent() {
     });
   }, [todosJogadores, filterTeam, filterType]);
 
-  const toggleSelect = (idx) => {
-    const newSelected = new Set(selectedPlayers);
-    if (newSelected.has(idx)) {
-      newSelected.delete(idx);
+  const handleToggleMetrica = (metrica) => {
+    if (metricasSelecionadas.includes(metrica)) {
+      setMetricasSelecionadas(metricasSelecionadas.filter(m => m !== metrica));
     } else {
-      newSelected.add(idx);
+      if (metricasSelecionadas.length < 8) {
+        setMetricasSelecionadas([...metricasSelecionadas, metrica]);
+      }
     }
-    setSelectedPlayers(newSelected);
   };
 
-  const toggleSelectAll = () => {
-    if (selectedPlayers.size === jogadoresFiltrados.length) {
-      setSelectedPlayers(new Set());
-    } else {
-      setSelectedPlayers(new Set(jogadoresFiltrados.map((_, idx) => idx)));
-    }
+  const salvarTemplate = () => {
+    localStorage.setItem('metricasTemplate', JSON.stringify(metricasSelecionadas));
+    alert('✅ Template de métricas salvo com sucesso!');
   };
 
   if (loading) return (
     <div className="min-h-screen bg-[#0a0c10] flex items-center justify-center">
       <div className="flex flex-col items-center gap-4">
         <div className="w-16 h-16 border-4 border-brand-yellow/20 border-t-brand-yellow rounded-full animate-spin"></div>
-        <p className="text-brand-yellow font-black tracking-widest uppercase text-xs italic">Carregando Lista Preferencial...</p>
+        <p className="text-brand-yellow font-black tracking-widest uppercase text-xs italic">Carregando...</p>
       </div>
     </div>
   );
@@ -331,217 +238,135 @@ function ListaPreferencialContent() {
     <div className="min-h-screen bg-[#0a0c10] text-white p-4 md:p-8">
       <div className="max-w-[1800px] mx-auto">
         {/* HEADER */}
-        <div className="mb-8">
-          <button 
-            onClick={() => router.push('/central-scouting')}
-            className="mb-4 p-2 hover:bg-slate-900 rounded-lg transition-all text-slate-400 hover:text-brand-yellow"
-          >
-            ← Voltar
+        <div className="flex items-center gap-6 mb-12">
+          <button onClick={() => router.push('/central-scouting')} className="p-4 bg-slate-900/80 hover:bg-brand-yellow/20 rounded-2xl border border-slate-800 transition-all group">
+            <svg className="w-6 h-6 text-slate-500 group-hover:text-brand-yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
           </button>
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-4xl font-black italic uppercase text-brand-yellow mb-2">Lista Preferencial</h1>
-              <p className="text-slate-400 font-bold">Comparação de Atletas - Métricas por 90 minutos</p>
+          <h1 className="text-4xl md:text-6xl font-black italic uppercase tracking-tighter leading-none">Lista <span className="text-brand-yellow">Preferencial</span></h1>
+        </div>
+
+        {/* FILTROS PRINCIPAIS */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4 ml-1">Tipo</h3>
+            <div className="flex gap-2">
+              {['todos', 'lista', 'gremio'].map(type => (
+                <button
+                  key={type}
+                  onClick={() => setFilterType(type)}
+                  className={`flex-1 px-3 py-2 rounded-lg font-black uppercase text-[9px] transition-all ${
+                    filterType === type
+                      ? 'bg-brand-yellow text-black'
+                      : 'bg-slate-950 border border-slate-800 text-slate-400 hover:border-brand-yellow'
+                  }`}
+                >
+                  {type === 'todos' ? 'Todos' : type === 'lista' ? 'Lista' : 'Grêmio'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4 ml-1">Time</h3>
+            <input
+              type="text"
+              placeholder="FILTRAR POR TIME..."
+              value={filterTeam}
+              onChange={(e) => setFilterTeam(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50"
+            />
+          </div>
+
+          <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4 ml-1">Estatísticas</h3>
+            <div className="flex gap-3 text-center">
+              <div className="flex-1">
+                <p className="text-2xl font-black text-brand-yellow">{listaPreferencial.length}</p>
+                <p className="text-[8px] text-slate-500 font-bold">LISTA</p>
+              </div>
+              <div className="flex-1">
+                <p className="text-2xl font-black text-brand-yellow">{gremioBravo.length}</p>
+                <p className="text-[8px] text-slate-500 font-bold">GRÊMIO</p>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* ESTATÍSTICAS */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <div className="bg-gradient-to-br from-blue-900/30 to-blue-900/10 border border-blue-900/50 rounded-xl p-6">
-            <p className="text-[11px] text-blue-300 uppercase font-black tracking-wider mb-2">Lista Preferencial</p>
-            <p className="text-3xl font-black text-brand-yellow">{listaPreferencial.length}</p>
-          </div>
-          <div className="bg-gradient-to-br from-green-900/30 to-green-900/10 border border-green-900/50 rounded-xl p-6">
-            <p className="text-[11px] text-green-300 uppercase font-black tracking-wider mb-2">Grêmio Novorizontino</p>
-            <p className="text-3xl font-black text-brand-yellow">{gremioBravo.length}</p>
-          </div>
-          <div className="bg-gradient-to-br from-purple-900/30 to-purple-900/10 border border-purple-900/50 rounded-xl p-6">
-            <p className="text-[11px] text-purple-300 uppercase font-black tracking-wider mb-2">Selecionados</p>
-            <p className="text-3xl font-black text-brand-yellow">{selectedPlayers.size}</p>
-          </div>
-        </div>
-
-        {/* SELETOR DE MÉTRICAS - CATEGORIZADO */}
+        {/* SELETOR DE MÉTRICAS */}
         {todasMetricas.length > 0 && (
-          <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-8 mb-8">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className="text-lg font-black uppercase italic text-brand-yellow">📊 Selecionar Métricas</h3>
-                <p className="text-[11px] text-slate-400 mt-1">{todasMetricas.length} métricas detectadas automaticamente</p>
+          <div className="bg-slate-900/40 p-8 rounded-[2.5rem] border border-slate-800/50 mb-8 shadow-xl">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-4">
+                <h2 className="text-xl font-black italic uppercase tracking-tighter">Escolher <span className="text-brand-yellow">Métricas</span></h2>
+                <span className="px-3 py-1 bg-brand-yellow/10 text-brand-yellow rounded-full text-[10px] font-black">{metricasSelecionadas.length}/8</span>
               </div>
+              <div className="flex gap-2 flex-wrap">
+                {Object.keys(CATEGORIAS_METRICAS).map(cat => (
+                  <button key={cat} onClick={() => setCategoriaAtiva(cat)} className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${categoriaAtiva === cat ? 'bg-brand-yellow text-slate-950 shadow-[0_0_15px_rgba(251,191,36,0.3)]' : 'bg-slate-950/50 text-slate-500 hover:text-white border border-slate-800'}`}>{cat}</button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+              {metricasPorCategoria[categoriaAtiva].map(metrica => (
+                <button key={metrica} onClick={() => handleToggleMetrica(metrica)} className={`group relative p-4 rounded-2xl border transition-all text-left overflow-hidden ${metricasSelecionadas.includes(metrica) ? 'bg-brand-yellow/10 border-brand-yellow/50 shadow-inner' : 'bg-slate-950/40 border-slate-800/50 hover:border-slate-700'}`}>
+                  <div className={`text-[9px] font-black uppercase tracking-tight leading-tight transition-colors ${metricasSelecionadas.includes(metrica) ? 'text-brand-yellow' : 'text-slate-500 group-hover:text-slate-300'}`}>{metrica.replace('_por_90', '')}</div>
+                  {metricasSelecionadas.includes(metrica) && <div className="absolute top-2 right-2 w-1.5 h-1.5 bg-brand-yellow rounded-full shadow-[0_0_8px_#fbbf24]" />}
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-6 flex justify-end">
               <button
                 onClick={salvarTemplate}
-                className="px-4 py-2 bg-brand-yellow text-black font-black uppercase text-[10px] rounded-lg hover:bg-yellow-500 transition-all"
+                className="px-6 py-2.5 bg-brand-yellow text-slate-950 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-yellow/80 transition-all"
               >
                 💾 Salvar Template
               </button>
             </div>
-
-            <div className="space-y-4">
-              {Object.entries(metricasPorCategoria).map(([categoria, metricas]) => {
-                if (metricas.length === 0) return null;
-                
-                const config = CATEGORIAS_METRICAS[categoria];
-                const todasSelecionadas = metricas.every(m => metricasSelecionadas.includes(m));
-                const algunaSelecionada = metricas.some(m => metricasSelecionadas.includes(m));
-
-                return (
-                  <div key={categoria} className={`bg-gradient-to-r ${config.color} border ${config.borderColor} rounded-xl overflow-hidden`}>
-                    <button
-                      onClick={() => setExpandedCategories(prev => ({ ...prev, [categoria]: !prev[categoria] }))}
-                      className="w-full px-6 py-4 flex items-center justify-between hover:bg-white/5 transition-all"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl">{config.icon}</span>
-                        <div className="text-left">
-                          <p className="font-black uppercase text-[12px] text-white">{categoria}</p>
-                          <p className="text-[10px] text-slate-400">{metricas.length} métricas</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="checkbox"
-                          checked={todasSelecionadas}
-                          ref={el => {
-                            if (el) el.indeterminate = algunaSelecionada && !todasSelecionadas;
-                          }}
-                          onChange={() => toggleCategoryAll(categoria)}
-                          onClick={(e) => e.stopPropagation()}
-                          className="w-5 h-5 cursor-pointer"
-                        />
-                        <span className="text-brand-yellow font-black">{expandedCategories[categoria] ? '▼' : '▶'}</span>
-                      </div>
-                    </button>
-
-                    {expandedCategories[categoria] && (
-                      <div className="px-6 py-4 bg-black/20 border-t border-white/10 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                        {metricas.map(metrica => (
-                          <label key={metrica} className="flex items-center gap-2 cursor-pointer p-2 hover:bg-white/5 rounded-lg transition-all">
-                            <input
-                              type="checkbox"
-                              checked={metricasSelecionadas.includes(metrica)}
-                              onChange={() => toggleMetrica(metrica)}
-                              className="w-4 h-4 cursor-pointer"
-                            />
-                            <span className="text-[11px] font-bold uppercase text-slate-200 break-words">
-                              {metrica.replace('_por_90', '')}
-                            </span>
-                          </label>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
           </div>
         )}
 
-        {/* FILTROS */}
-        <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-8 mb-8">
-          <h3 className="text-lg font-black uppercase italic text-brand-yellow mb-6">🔍 Filtros</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <div>
-              <label className="block text-[11px] font-black uppercase text-slate-400 mb-3">Tipo</label>
-              <div className="flex gap-3">
-                {['todos', 'lista', 'gremio'].map(type => (
-                  <button
-                    key={type}
-                    onClick={() => setFilterType(type)}
-                    className={`px-4 py-2 rounded-lg font-black uppercase text-[10px] transition-all ${
-                      filterType === type
-                        ? 'bg-brand-yellow text-black'
-                        : 'bg-slate-950 border border-slate-700 text-slate-400 hover:border-brand-yellow'
-                    }`}
-                  >
-                    {type === 'todos' ? 'Todos' : type === 'lista' ? 'Lista' : 'Grêmio'}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <label className="block text-[11px] font-black uppercase text-slate-400 mb-3">Time</label>
-              <input
-                type="text"
-                placeholder="Filtrar por time..."
-                value={filterTeam}
-                onChange={(e) => setFilterTeam(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-brand-yellow text-[12px]"
-              />
-            </div>
-            <div className="flex items-end gap-3">
-              <button
-                onClick={() => setSelectedPlayers(new Set())}
-                className="flex-1 px-4 py-2 bg-slate-950 border border-slate-700 text-slate-400 font-black uppercase text-[10px] rounded-lg hover:border-brand-yellow transition-all"
-              >
-                Limpar
-              </button>
-              <button
-                onClick={toggleSelectAll}
-                className="flex-1 px-4 py-2 bg-slate-700 text-white font-black uppercase text-[10px] rounded-lg hover:bg-slate-600 transition-all"
-              >
-                Selecionar Todos
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* TABELA DE ATLETAS */}
-        <div className="bg-slate-900/30 rounded-2xl border border-slate-800 overflow-hidden mb-8">
+        {/* TABELA */}
+        <div className="bg-slate-900/20 rounded-[2.5rem] border border-slate-800/50 overflow-hidden shadow-2xl backdrop-blur-sm">
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full border-collapse">
               <thead>
-                <tr className="bg-slate-950/80 border-b border-brand-yellow/20">
-                  <th className="p-4 text-[10px] font-black uppercase text-slate-500 w-12">
-                    <input 
-                      type="checkbox" 
-                      checked={selectedPlayers.size === jogadoresFiltrados.length && jogadoresFiltrados.length > 0}
-                      onChange={toggleSelectAll}
-                      className="cursor-pointer"
-                    />
-                  </th>
-                  <th className="p-4 text-[10px] font-black uppercase text-slate-500">Jogador</th>
-                  <th className="p-4 text-[10px] font-black uppercase text-slate-500">Time</th>
-                  <th className="p-4 text-[10px] font-black uppercase text-slate-500">Pos</th>
-                  <th className="p-4 text-[10px] font-black uppercase text-slate-500">Idade</th>
-                  <th className="p-4 text-[10px] font-black uppercase text-slate-500">Min</th>
-                  {metricasSelecionadas.map(metrica => (
-                    <th key={metrica} className="p-4 text-[10px] font-black uppercase text-slate-500 text-center whitespace-nowrap">
-                      {metrica.replace('_por_90', '').substring(0, 10)}/90
-                    </th>
+                <tr className="border-b border-slate-800/50">
+                  <th className="p-6 text-left text-[10px] font-black uppercase tracking-widest text-slate-500">Atleta</th>
+                  <th className="p-6 text-left text-[10px] font-black uppercase tracking-widest text-slate-500">Time</th>
+                  <th className="p-6 text-left text-[10px] font-black uppercase tracking-widest text-slate-500">Pos</th>
+                  <th className="p-6 text-left text-[10px] font-black uppercase tracking-widest text-slate-500">Idade</th>
+                  <th className="p-6 text-left text-[10px] font-black uppercase tracking-widest text-slate-500">Min</th>
+                  {metricasSelecionadas.map(m => (
+                    <th key={m} className="p-6 text-center text-[10px] font-black uppercase tracking-widest text-brand-yellow/80">{m.replace('_por_90', '')}</th>
                   ))}
-                  <th className="p-4 text-[10px] font-black uppercase text-slate-500">Aba</th>
+                  <th className="p-6 text-center text-[10px] font-black uppercase tracking-widest text-slate-500">Aba</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/30">
-                {jogadoresFiltrados.map((jogador, idx) => (
-                  <tr key={idx} className="hover:bg-brand-yellow/[0.03] transition-all border-b border-slate-800/20">
-                    <td className="p-4">
-                      <input 
-                        type="checkbox" 
-                        checked={selectedPlayers.has(idx)}
-                        onChange={() => toggleSelect(idx)}
-                        className="cursor-pointer"
-                      />
+                {jogadoresFiltrados.map((j, idx) => (
+                  <tr key={idx} className="hover:bg-brand-yellow/[0.02] transition-colors">
+                    <td className="p-6">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-500 border border-slate-700">{j.Jogador?.substring(0,2).toUpperCase()}</div>
+                        <span className="text-sm font-black uppercase italic tracking-tighter">{j.Jogador}</span>
+                      </div>
                     </td>
-                    <td className="p-4 font-black text-white text-[12px]">{jogador['Jogador']}</td>
-                    <td className="p-4 text-slate-400 text-[10px]">{jogador['Time']}</td>
-                    <td className="p-4 text-slate-400 text-[10px]">{jogador['Posição']}</td>
-                    <td className="p-4 text-slate-400 text-[10px]">{jogador['Idade']}</td>
-                    <td className="p-4 text-slate-400 text-[10px]">{jogador['minutosJogados']}</td>
-                    {metricasSelecionadas.map(metrica => (
-                      <td key={metrica} className="p-4 text-brand-yellow font-black text-center text-[11px]">
-                        {typeof jogador[metrica] === 'number' ? jogador[metrica].toFixed(2) : '-'}
-                      </td>
+                    <td className="p-6"><span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{j.Time}</span></td>
+                    <td className="p-6"><span className="px-3 py-1 bg-slate-950 rounded-lg text-[9px] font-black text-slate-500 border border-slate-800">{j.Posição}</span></td>
+                    <td className="p-6"><span className="text-[10px] font-black">{j.Idade}</span></td>
+                    <td className="p-6"><span className="text-[10px] font-black">{j.minutosJogados}</span></td>
+                    {metricasSelecionadas.map(m => (
+                      <td key={m} className="p-6 text-center"><span className="text-sm font-black italic tabular-nums">{typeof j[m] === 'number' ? j[m].toFixed(2) : '-'}</span></td>
                     ))}
-                    <td className="p-4">
-                      <span className={`px-2 py-1 rounded text-[10px] font-black ${
-                        jogador['aba'] === 'GRÊMIO NOVORIZONTINO' 
+                    <td className="p-6 text-center">
+                      <span className={`px-2 py-1 rounded text-[9px] font-black ${
+                        j.aba === 'GRÊMIO NOVORIZONTINO' 
                           ? 'bg-green-900/30 text-green-400' 
                           : 'bg-blue-900/30 text-blue-400'
                       }`}>
-                        {jogador['aba'] === 'GRÊMIO NOVORIZONTINO' ? 'GN' : 'LP'}
+                        {j.aba === 'GRÊMIO NOVORIZONTINO' ? 'GN' : 'LP'}
                       </span>
                     </td>
                   </tr>
@@ -556,13 +381,6 @@ function ListaPreferencialContent() {
             <p className="text-slate-400 font-bold">Nenhum atleta encontrado com os filtros selecionados.</p>
           </div>
         )}
-
-        {/* FOOTER INFO */}
-        <div className="bg-slate-900/40 border border-slate-800 rounded-lg p-4">
-          <p className="text-[10px] text-slate-400 font-bold">
-            ℹ️ <strong>Sistema 100% Automático:</strong> Todas as métricas são detectadas dinamicamente do CSV. Adicione novos jogadores ou colunas no Google Sheets e eles aparecerão automaticamente aqui!
-          </p>
-        </div>
       </div>
     </div>
   );
