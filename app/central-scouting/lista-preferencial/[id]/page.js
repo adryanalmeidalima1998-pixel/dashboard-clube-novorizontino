@@ -134,41 +134,62 @@ function PlayerProfileContent() {
     if (!player) return [];
     const data = [];
 
+    const playerValues = METRICAS_RADAR.map(m => (getValorMetrica(player, m) / statsGerais[m.label].max) * 100);
+    const playerRealValues = METRICAS_RADAR.map(m => getValorMetrica(player, m));
+
     data.push({
       type: 'scatterpolar',
-      r: METRICAS_RADAR.map(m => (getValorMetrica(player, m) / statsGerais[m.label].max) * 100),
+      r: playerValues,
       theta: METRICAS_RADAR.map(m => m.label),
+      text: playerRealValues.map(v => v.toFixed(2)),
+      textposition: 'outside',
+      hovertemplate: '<b>%{theta}</b><br>Valor: %{text}<extra></extra>',
       fill: 'toself',
       name: player.Jogador,
       line: { color: '#fbbf24', width: 3 },
-      fillcolor: 'rgba(251, 191, 36, 0.3)'
+      fillcolor: 'rgba(251, 191, 36, 0.3)',
+      mode: 'lines+markers+text'
     });
 
     if (type === 'media') {
-      const mediaLista = METRICAS_RADAR.map(m => {
+      const mediaListaValues = METRICAS_RADAR.map(m => {
         const valores = listaPreferencial.map(j => getValorMetrica(j, m));
         const avg = valores.reduce((a, b) => a + b, 0) / (valores.length || 1);
         return (avg / statsGerais[m.label].max) * 100;
       });
+      const mediaListaRealValues = METRICAS_RADAR.map(m => {
+        const valores = listaPreferencial.map(j => getValorMetrica(j, m));
+        return valores.reduce((a, b) => a + b, 0) / (valores.length || 1);
+      });
       data.push({
         type: 'scatterpolar',
-        r: mediaLista,
+        r: mediaListaValues,
         theta: METRICAS_RADAR.map(m => m.label),
+        text: mediaListaRealValues.map(v => v.toFixed(2)),
+        textposition: 'outside',
+        hovertemplate: '<b>%{theta}</b><br>Media: %{text}<extra></extra>',
         fill: 'toself',
-        name: 'Média Lista Preferencial',
+        name: 'Media Lista Preferencial',
         line: { color: '#ef4444', dash: 'dot', width: 2 },
-        fillcolor: 'rgba(239, 68, 68, 0.1)'
+        fillcolor: 'rgba(239, 68, 68, 0.1)',
+        mode: 'lines+markers+text'
       });
     } else {
       const coresGremio = ['#3b82f6', '#10b981', '#8b5cf6'];
       gremioNovorizontino.slice(0, 3).forEach((p, i) => {
+        const gremioValues = METRICAS_RADAR.map(m => (getValorMetrica(p, m) / statsGerais[m.label].max) * 100);
+        const gremioRealValues = METRICAS_RADAR.map(m => getValorMetrica(p, m));
         data.push({
           type: 'scatterpolar',
-          r: METRICAS_RADAR.map(m => (getValorMetrica(p, m) / statsGerais[m.label].max) * 100),
+          r: gremioValues,
           theta: METRICAS_RADAR.map(m => m.label),
+          text: gremioRealValues.map(v => v.toFixed(2)),
+          textposition: 'outside',
+          hovertemplate: '<b>%{theta}</b><br>' + p.Jogador + ': %{text}<extra></extra>',
           fill: 'none',
           name: `GN: ${p.Jogador}`,
-          line: { color: coresGremio[i], width: 2 }
+          line: { color: coresGremio[i], width: 2 },
+          mode: 'lines+markers+text'
         });
       });
     }
@@ -182,10 +203,10 @@ function PlayerProfileContent() {
       bgcolor: 'rgba(255, 255, 255, 0.5)'
     },
     showlegend: true,
-    legend: { orientation: 'v', x: 1.05, y: 0.5, font: { size: 8, color: '#1e293b' } },
+    legend: { orientation: 'v', x: 1.15, y: 0.5, font: { size: 7, color: '#1e293b' } },
     paper_bgcolor: 'rgba(0,0,0,0)',
     plot_bgcolor: 'rgba(0,0,0,0)',
-    margin: { t: 15, b: 15, l: 35, r: 35 },
+    margin: { t: 20, b: 20, l: 50, r: 80 },
     height: 280
   };
 
