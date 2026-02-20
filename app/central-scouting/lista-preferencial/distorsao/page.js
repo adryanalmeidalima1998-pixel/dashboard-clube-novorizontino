@@ -13,9 +13,9 @@ const Plot = dynamic(() => import('react-plotly.js'), {
 
 const METRICAS_DISPERSAO = [
   { label: 'Passes Chave', key: 'Passes chave', type: 'per90' },
-  { label: 'Passes Progressivos %', key: 'Passes progressivos precisos %', type: 'raw' },
+  { label: 'Passes Progressivos %', key: 'Passes progressivos precisos', type: 'raw' },
   { label: 'xG', key: 'Xg', type: 'per90' },
-  { label: 'Entradas 1/3 Final (C)', key: 'Entradas no terço final carregando a bola, % do total', type: 'raw' },
+  { label: 'Entradas 1/3 Final (C)', key: 'Entradas no terço final carregando a bola', type: 'raw' },
   { label: 'Dribles Certos/90', key: 'dribles_certos_90', type: 'custom' }
 ];
 
@@ -222,22 +222,26 @@ function DistorsaoContent() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 print:gap-2">
           {getScatterData.map((data, idx) => {
-            const { data: plotData, layout } = createScatterPlot(data);
-            return (
-              <div key={idx} className="bg-slate-900/20 border border-slate-800/50 rounded-2xl p-3 print:border-slate-200 print:bg-white print:p-2 print:page-break-inside-avoid">
-                <Plot 
-                  data={plotData} 
-                  layout={layout} 
-                  config={{ displayModeBar: false, responsive: true }} 
-                  style={{ width: '100%', height: '100%' }} 
-                />
-              </div>
-            );
+            // Renderizar os primeiros 4 gráficos em grid 2x2
+            if (idx < 4) {
+              const { data: plotData, layout } = createScatterPlot(data);
+              return (
+                <div key={idx} className="bg-slate-900/20 border border-slate-800/50 rounded-2xl p-3 print:border-slate-200 print:bg-white print:p-2 print:page-break-inside-avoid">
+                  <Plot 
+                    data={plotData} 
+                    layout={layout} 
+                    config={{ displayModeBar: false, responsive: true }} 
+                    style={{ width: '100%', height: '100%' }} 
+                  />
+                </div>
+              );
+            }
+            return null;
           })}
           
-          {/* Espaço para o 5º gráfico em tela cheia */}
+          {/* 5º gráfico em tela cheia */}
           {getScatterData.length === 5 && (
-            <div key={4} className="lg:col-span-2 bg-slate-900/20 border border-slate-800/50 rounded-2xl p-3 print:border-slate-200 print:bg-white print:p-2 print:page-break-inside-avoid">
+            <div key="fifth" className="lg:col-span-2 bg-slate-900/20 border border-slate-800/50 rounded-2xl p-3 print:border-slate-200 print:bg-white print:p-2 print:page-break-inside-avoid">
               {(() => {
                 const data = getScatterData[4];
                 const { data: plotData, layout } = createScatterPlot(data);
