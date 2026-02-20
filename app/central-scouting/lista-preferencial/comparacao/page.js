@@ -30,7 +30,7 @@ ChartJS.register(
 function ComparacaoContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const player1Id = searchParams.get('player1');
+  const playersParam = searchParams.get('players');
   
   const [players, setPlayers] = useState([]);
   const [allMetrics, setAllMetrics] = useState([]);
@@ -40,80 +40,61 @@ function ComparacaoContent() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchPlayer = async (playerId) => {
-      const config = EXTREMOS_PLAYERS.find(p => p.id === playerId);
-      if (!config) return null;
-
-      try {
-        const response = await fetch(config.url);
-        const csvText = await response.text();
-        return new Promise((resolve) => {
-          Papa.parse(csvText, {
-            header: true,
-            skipEmptyLines: true,
-            complete: (results) => {
-              const cleaned = cleanData(results.data);
-              resolve({ ...config, ...cleaned[0], rawData: cleaned[0] });
-            }
-          });
-        });
-      } catch (error) {
-        console.error("Erro ao carregar atleta:", error);
-        return null;
-      }
-    };
-
     const loadPlayers = async () => {
-      if (player1Id) {
-        const player1 = await fetchPlayer(player1Id);
-        if (player1) {
-          setPlayers([player1]);
-          
-          // Extrair todas as métricas do primeiro jogador
-          const metrics = Object.keys(player1.rawData || {})
-            .filter(key => key && typeof key === 'string' && key.trim() !== '')
-            .sort();
-          setAllMetrics(metrics);
+      if (!playersParam) {
+        router.push('/central-scouting/lista-preferencial');
+        return;
+      }
+
+      const playerIds = playersParam.split(',');
+      const playersData = [];
+
+      for (const playerId of playerIds) {
+        const config = EXTREMOS_PLAYERS.find(p => p.id === playerId);
+        if (!config) continue;
+
+        try {
+          const response = await fetch(config.url);
+          const csvText = await response.text();
+          await new Promise((resolve) => {
+            Papa.parse(csvText, {
+              header: true,
+              skipEmptyLines: true,
+              complete: (results) => {
+                const cleaned = cleanData(results.data);
+                playersData.push({
+                  ...config,
+                  ...cleaned[0],
+                  rawData: cleaned[0]
+                });
+                resolve();
+              }
+            });
+          });
+        } catch (error) {
+          console.error(`Erro ao carregar ${playerId}:`, error);
         }
       }
+
+      setPlayers(playersData);
+      
+      if (playersData.length > 0) {
+        const metrics = Object.keys(playersData[0].rawData || {})
+          .filter(key => key && typeof key === 'string' && key.trim() !== '')
+          .sort();
+        setAllMetrics(metrics);
+      }
+
       setLoading(false);
     };
 
     loadPlayers();
-  }, [player1Id]);
+  }, [playersParam]);
 
-  const addPlayer = async (playerId) => {
-    if (players.some(p => p.id === playerId)) return;
-    
-    const config = EXTREMOS_PLAYERS.find(p => p.id === playerId);
-    if (!config) return;
-
-    try {
-      const response = await fetch(config.url);
-      const csvText = await response.text();
-      Papa.parse(csvText, {
-        header: true,
-        skipEmptyLines: true,
-        complete: (results) => {
-          const cleaned = cleanData(results.data);
-          setPlayers([...players, { ...config, ...cleaned[0], rawData: cleaned[0] }]);
-        }
-      });
-    } catch (error) {
-      console.error("Erro ao carregar atleta:", error);
-    }
-  };
-
-  const removePlayer = (playerId) => {
-    setPlayers(players.filter(p => p.id !== playerId));
-  };
-
-  // Normalizar valores para o radar (0-100)
   const getNormalizedValue = (value, metric) => {
     const val = safeParseFloat(value);
     if (val === 0) return 0;
     
-    // Normalização adaptativa baseada no tipo de métrica
     if (metric.includes('%')) return Math.min(val, 100);
     if (metric.includes('Gols') || metric.includes('Finalizações')) return Math.min((val / 30) * 100, 100);
     if (metric.includes('Assistências') || metric.includes('Cruzamentos')) return Math.min((val / 15) * 100, 100);
@@ -124,7 +105,6 @@ function ComparacaoContent() {
 
   const radarMetrics = useMemo(() => {
     if (allMetrics.length === 0) return [];
-    // Selecionar as 8 primeiras métricas mais relevantes
     return allMetrics.slice(0, 8);
   }, [allMetrics]);
 
@@ -182,14 +162,7 @@ function ComparacaoContent() {
         bodyColor: '#fff',
         borderColor: '#fbbf24',
         borderWidth: 2,
-        padding: 10,
-        callbacks: {
-          label: (context) => {
-            const metric = radarMetrics[context.dataIndex];
-            const rawValue = safeParseFloat(players[context.datasetIndex][metric]);
-            return `${metric}: ${rawValue.toFixed(2)} (${context.parsed.r.toFixed(0)}%)`;
-          }
-        }
+        padding: 10
       }
     }
   };
@@ -243,12 +216,7 @@ function ComparacaoContent() {
         bodyColor: '#fff',
         borderColor: '#fbbf24',
         borderWidth: 2,
-        padding: 10,
-        callbacks: {
-          label: (context) => {
-            return `${selectedMetricX}: ${context.parsed.x.toFixed(2)}, ${selectedMetricY}: ${context.parsed.y.toFixed(2)}`;
-          }
-        }
+        padding: 10
       }
     }
   };
@@ -256,6 +224,20 @@ function ComparacaoContent() {
   if (loading) return (
     <div className="min-h-screen bg-[#0a0c10] flex items-center justify-center">
       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-yellow"></div>
+    </div>
+  );
+
+  if (players.length === 0) return (
+    <div className="min-h-screen bg-[#0a0c10] flex items-center justify-center">
+      <div className="text-center">
+        <p className="text-white text-lg font-black uppercase mb-4">Nenhum atleta selecionado</p>
+        <button
+          onClick={() => router.back()}
+          className="px-6 py-3 bg-brand-yellow text-black font-black uppercase text-[10px] tracking-widest rounded-lg"
+        >
+          Voltar
+        </button>
+      </div>
     </div>
   );
 
@@ -271,21 +253,13 @@ function ComparacaoContent() {
             Voltar
           </button>
           <h1 className="text-2xl font-black italic uppercase text-brand-yellow">Comparação de Atletas</h1>
+          <div className="text-[10px] font-black uppercase text-slate-500">{players.length} Atletas</div>
         </div>
 
-        {/* CARDS DOS ATLETAS SELECIONADOS */}
+        {/* CARDS DOS ATLETAS */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          {players.map((player, idx) => (
-            <div key={player.id} className="bg-slate-900/40 border border-slate-800 rounded-2xl p-4 relative group">
-              <button
-                onClick={() => removePlayer(player.id)}
-                className="absolute top-2 right-2 w-6 h-6 bg-red-500/20 hover:bg-red-500/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
-              >
-                <svg className="w-3 h-3 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-              
+          {players.map((player) => (
+            <div key={player.id} className="bg-slate-900/40 border border-slate-800 rounded-2xl p-4">
               <div className="w-16 h-16 rounded-xl bg-slate-800 border border-slate-700 overflow-hidden mb-3 mx-auto">
                 <img 
                   src={`/images/players/${player.id}.png`} 
@@ -298,40 +272,20 @@ function ComparacaoContent() {
               <p className="text-[8px] text-slate-500 text-center">{player.Time}</p>
             </div>
           ))}
-
-          {/* BOTÃO PARA ADICIONAR MAIS */}
-          {players.length < EXTREMOS_PLAYERS.length && (
-            <div className="bg-slate-900/40 border-2 border-dashed border-slate-800 rounded-2xl p-4 flex items-center justify-center">
-              <div className="text-center">
-                <p className="text-[10px] font-black uppercase text-slate-500 mb-3">Adicionar Atleta</p>
-                <div className="flex flex-col gap-2 max-h-48 overflow-y-auto">
-                  {EXTREMOS_PLAYERS.filter(p => !players.some(pl => pl.id === p.id)).map(player => (
-                    <button
-                      key={player.id}
-                      onClick={() => addPlayer(player.id)}
-                      className="px-2 py-1 text-[8px] bg-slate-950/50 hover:bg-brand-yellow/20 border border-slate-800 hover:border-brand-yellow/50 rounded-lg transition-all text-slate-300 hover:text-brand-yellow font-bold uppercase"
-                    >
-                      {player.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* ABAS */}
-        <div className="flex gap-4 mb-8 border-b border-slate-800">
+        <div className="flex gap-4 mb-8 border-b border-slate-800 overflow-x-auto">
           {[
             { id: 'visao-geral', label: 'Visão Geral' },
-            { id: 'radar', label: 'Radar de Desempenho' },
-            { id: 'dispersao', label: 'Gráfico de Dispersão' },
+            { id: 'radar', label: 'Radar' },
+            { id: 'dispersao', label: 'Dispersão' },
             { id: 'atributos', label: 'Atributos' }
           ].map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-6 py-3 text-[10px] font-black uppercase tracking-widest transition-all border-b-2 ${
+              className={`px-6 py-3 text-[10px] font-black uppercase tracking-widest transition-all border-b-2 whitespace-nowrap ${
                 activeTab === tab.id
                   ? 'text-brand-yellow border-brand-yellow'
                   : 'text-slate-500 border-transparent hover:text-slate-300'
@@ -342,7 +296,7 @@ function ComparacaoContent() {
           ))}
         </div>
 
-        {/* CONTEÚDO DAS ABAS */}
+        {/* CONTEÚDO */}
         {activeTab === 'visao-geral' && (
           <div className="space-y-8">
             {players.map(player => (
