@@ -241,12 +241,36 @@ function ListaPreferencialContent() {
           </div>
         </div>
 
-        {/* GRÁFICOS */}
+        {/* BOTÕES DE GRÁFICOS */}
+        {selected.size > 0 && (
+          <div className="flex gap-4 mb-8">
+            <button
+              onClick={() => {
+                const playerIds = Array.from(selected).join(',');
+                router.push(`/central-scouting/lista-preferencial/radar?players=${playerIds}`);
+              }}
+              className="flex-1 px-6 py-4 bg-blue-600 text-white font-black uppercase text-[10px] rounded-lg hover:bg-blue-700 transition-all"
+            >
+              📊 Abrir Radar Completo
+            </button>
+            <button
+              onClick={() => {
+                const playerIds = Array.from(selected).join(',');
+                router.push(`/central-scouting/lista-preferencial/dispersao?players=${playerIds}`);
+              }}
+              className="flex-1 px-6 py-4 bg-purple-600 text-white font-black uppercase text-[10px] rounded-lg hover:bg-purple-700 transition-all"
+            >
+              📈 Abrir Dispersão Completa
+            </button>
+          </div>
+        )}
+
+        {/* GRÁFICOS PREVIEW */}
         {selected.size > 0 && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-            {/* RADAR */}
-            <div className="bg-slate-900/40 border border-slate-800 rounded-[2rem] p-8">
-              <h3 className="text-lg font-black uppercase italic text-brand-yellow mb-4">Análise de Desempenho (Radar)</h3>
+            {/* RADAR PREVIEW */}
+            <div className="bg-slate-900/40 border border-slate-800 rounded-[2rem] p-8 opacity-50 pointer-events-none">
+              <h3 className="text-lg font-black uppercase italic text-slate-500 mb-4">Análise de Desempenho (Radar) - Preview</h3>
               {radarData.length > 0 && (
                 <Plot
                   data={radarData}
