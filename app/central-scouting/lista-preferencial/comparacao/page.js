@@ -6,7 +6,6 @@ import Papa from 'papaparse';
 import { EXTREMOS_PLAYERS } from '@/app/utils/extremosData';
 import { cleanData, safeParseFloat } from '@/app/utils/dataCleaner';
 import { Radar, Scatter } from 'react-chartjs-2';
-import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import {
   Chart as ChartJS,
@@ -44,8 +43,7 @@ function ComparacaoContent() {
   const [player1Compare, setPlayer1Compare] = useState(null);
   const [player2Compare, setPlayer2Compare] = useState(null);
   
-  const radarRef = useRef(null);
-  const scatterRef = useRef(null);
+
 
   useEffect(() => {
     const loadPlayers = async () => {
@@ -229,7 +227,7 @@ function ComparacaoContent() {
     }
   };
 
-  const exportPDF = async () => {
+  const exportPDF = () => {
     try {
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pageWidth = pdf.internal.pageSize.getWidth();
@@ -267,45 +265,46 @@ function ComparacaoContent() {
         yPosition += 10;
       });
 
-      // NOVA PÁGINA PARA GRÁFICOS
+      // NOVA PÁGINA PARA MÉTRICAS
       pdf.addPage();
       yPosition = 20;
 
-      // RADAR
-      if (radarRef.current) {
-        try {
-          const radarCanvas = await html2canvas(radarRef.current, { scale: 2, backgroundColor: '#0a0c10' });
-          const radarImg = radarCanvas.toDataURL('image/png');
-          pdf.setFontSize(12);
-          pdf.setTextColor(251, 191, 36);
-          pdf.text('GRÁFICO DE RADAR - DESEMPENHO', 20, yPosition);
-          yPosition += 5;
-          pdf.addImage(radarImg, 'PNG', 15, yPosition, 180, 100);
-          yPosition += 110;
-        } catch (error) {
-          console.error('Erro ao capturar radar:', error);
-        }
-      }
+      // TABELA DE COMPARAÇÃO
+      pdf.setFontSize(12);
+      pdf.setTextColor(251, 191, 36);
+      pdf.text('COMPARAÇÃO DE MÉTRICAS', 20, yPosition);
+      yPosition += 10;
 
-      // NOVA PÁGINA PARA DISPERSÃO
-      if (yPosition > pageHeight - 50) {
-        pdf.addPage();
-        yPosition = 20;
-      }
+      // CABEÇALHO
+      pdf.setFontSize(8);
+      pdf.setTextColor(200, 200, 200);
+      const colWidth = (pageWidth - 40) / (players.length + 1);
+      
+      // Métrica
+      pdf.text('Métrica', 20, yPosition);
+      // Nomes dos atletas
+      players.forEach((player, idx) => {
+        pdf.text(player.name.substring(0, 12), 20 + colWidth * (idx + 1), yPosition);
+      });
+      yPosition += 8;
 
-      if (scatterRef.current) {
-        try {
-          const scatterCanvas = await html2canvas(scatterRef.current, { scale: 2, backgroundColor: '#0a0c10' });
-          const scatterImg = scatterCanvas.toDataURL('image/png');
-          pdf.setFontSize(12);
-          pdf.setTextColor(251, 191, 36);
-          pdf.text(`GRÁFICO DE DISPERSÃO - ${selectedMetricX} vs ${selectedMetricY}`, 20, yPosition);
-          yPosition += 5;
-          pdf.addImage(scatterImg, 'PNG', 15, yPosition, 180, 100);
-        } catch (error) {
-          console.error('Erro ao capturar scatter:', error);
+      // Dados
+      radarMetrics.forEach(metric => {
+        if (yPosition > pageHeight - 20) {
+          pdf.addPage();
+          yPosition = 20;
         }
-      }
+        
+        pdf.setTextColor(150, 150, 150);
+        pdf.text(metric.label.substring(0, 15), 20, yPosition);
+        
+        players.forEach((player, idx) => {
+          const value = safeParseFloat(player[metric.key]).toFixed(1);
+          pdf.setTextColor(251, 191, 36);
+          pdf.text(value, 20 + colWidth * (idx + 1), yPosition);
+        });
+        yPosition += 7;
+      });
 
       // SALVAR PDF
       const fileName = `comparacao-${players.map(p => p.name.split(' ')[0]).join('-vs-')}.pdf`;
@@ -448,7 +447,7 @@ function ComparacaoContent() {
         {activeTab === 'radar' && radarData && (
           <div className="bg-slate-900/40 border border-slate-800 rounded-[2.5rem] p-10">
             <h3 className="text-lg font-black uppercase italic text-brand-yellow mb-8 text-center">Análise de Desempenho Comparativa</h3>
-            <div ref={radarRef} className="w-full h-96 flex items-center justify-center">
+            <div className="w-full h-96 flex items-center justify-center">
               <Radar data={radarData} options={radarOptions} />
             </div>
           </div>
@@ -484,7 +483,7 @@ function ComparacaoContent() {
             </div>
 
             {scatterData && (
-              <div ref={scatterRef} className="bg-slate-900/40 border border-slate-800 rounded-[2.5rem] p-10">
+              <div className="bg-slate-900/40 border border-slate-800 rounded-[2.5rem] p-10">
                 <div className="w-full h-96 flex items-center justify-center">
                   <Scatter data={scatterData} options={scatterOptions} />
                 </div>
