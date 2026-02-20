@@ -16,15 +16,14 @@ const METRICAS_RADAR = [
   { label: 'Passes Chave', key: 'Passes chave', type: 'per90' },
   { label: 'Passes Progressivos %', key: 'Passes progressivos precisos %', type: 'raw' },
   { label: 'Passes na Área %', key: 'Passes dentro da área / precisos, %', type: 'raw' },
-  { label: 'Dribles %', key: '% de dribles com sucesso', type: 'raw' },
-  { label: 'Dribles 1/3 Final %', key: 'Dribles no último terço do campo com sucesso, %', type: 'raw' },
+  { label: 'Dribles Certos/90', key: 'dribles_certos_90', type: 'custom' },
+  { label: 'Dribles 1/3 Final Certos/90', key: 'dribles_13_certos_90', type: 'custom' },
   { label: 'Entradas 1/3 Final (C)', key: 'Entradas no terço final carregando a bola, % do total', type: 'raw' },
   { label: 'Recuperações Campo Adv', key: 'Bolas recuperadas no campo do adversário', type: 'per90' },
   { label: 'xA', key: 'xA', type: 'per90' },
   { label: 'xG', key: 'Xg', type: 'per90' },
-  { label: 'Dribles Certos/90', key: 'dribles_certos_90', type: 'custom' },
   { label: 'Ações Área Adv Certas/90', key: 'acoes_area_adv_certas_90', type: 'custom' },
-  { label: 'Duelos Ganhos/90', key: 'duelos_ganhos_90', type: 'custom' },
+  { label: 'Desafios Ganhos/90', key: 'desafios_ganhos_90', type: 'custom' },
   { label: 'Disputas Ataque Ganhas/90', key: 'disputas_ataque_ganhas_90', type: 'custom' }
 ];
 
@@ -41,24 +40,26 @@ function RadarComparativoContent() {
     const minutos = safeParseFloat(jogador['Minutos jogados']);
     if (minutos <= 0) return jogador;
 
-    // Dribles Certos por 90: (Dribles * % sucesso) / minutos * 90
+    // 1. Dribles Certos por 90: (Dribles * % sucesso) / minutos * 90
     const dribles = safeParseFloat(jogador['Dribles']);
     const driblesSucessoPct = safeParseFloat(jogador['% de dribles com sucesso']) / 100;
     jogador.dribles_certos_90 = (dribles * driblesSucessoPct / minutos) * 90;
 
-    // Ações na Área Adv Certas por 90
-    const acoesAreaAdv = safeParseFloat(jogador['Ações na área adv.']);
-    const acoesAreaAdvSucessoPct = safeParseFloat(jogador['Ações na área adversária bem-sucedidas']) / Math.max(acoesAreaAdv, 1); // Se o CSV já tiver a média, ajustamos
-    // Nota: O CSV tem "Ações na área adversária bem-sucedidas" que parece ser o valor absoluto ou %
-    // Vamos usar o valor absoluto se disponível e dividir por minutos
+    // 2. Dribles no Último Terço Certos por 90
+    const dribles13 = safeParseFloat(jogador['Dribles no último terço do campo']);
+    const dribles13SucessoPct = safeParseFloat(jogador['Dribles no último terço do campo com sucesso, %']) / 100;
+    jogador.dribles_13_certos_90 = (dribles13 * dribles13SucessoPct / minutos) * 90;
+
+    // 3. Ações na Área Adv Certas por 90
+    // O CSV tem "Ações na área adversária bem-sucedidas" que parece ser o valor absoluto
     const acoesCertasAbs = safeParseFloat(jogador['Ações na área adversária bem-sucedidas']);
     jogador.acoes_area_adv_certas_90 = (acoesCertasAbs / minutos) * 90;
 
-    // Duelos Ganhos por 90 (Desafios vencidos)
+    // 4. Desafios Ganhos por 90 (Média de acerto por jogo)
     const desafiosVencidos = safeParseFloat(jogador['Desafios vencidos']);
-    jogador.duelos_ganhos_90 = (desafiosVencidos / minutos) * 90;
+    jogador.desafios_ganhos_90 = (desafiosVencidos / minutos) * 90;
 
-    // Disputas Ataque Ganhas por 90
+    // 5. Disputas Ataque Ganhas por 90
     const disputasAtaqueGanhos = safeParseFloat(jogador['Disputas de bola no ataque / com sucesso']);
     jogador.disputas_ataque_ganhas_90 = (disputasAtaqueGanhos / minutos) * 90;
 
@@ -294,7 +295,7 @@ function RadarComparativoContent() {
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
-                  {METRICAS_RADAR.slice(0, 4).map(m => (
+                  {METRICAS_RADAR.slice(0, 8).map(m => (
                     <div key={m.label} className="bg-slate-950/50 border border-slate-800 p-4 rounded-2xl">
                       <p className="text-[8px] font-black text-slate-500 uppercase mb-1">{m.label}</p>
                       <p className="text-lg font-black text-brand-yellow">{getValorMetrica(selectedPlayer, m).toFixed(2)}</p>
