@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Papa from 'papaparse';
 import { EXTREMOS_PLAYERS, EXTREMO_METRICS } from '@/app/utils/extremosData';
@@ -25,7 +25,7 @@ ChartJS.register(
   Legend
 );
 
-export default function ComparacaoAtletas() {
+function ComparacaoContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const player1Id = searchParams.get('player1');
@@ -298,5 +298,17 @@ export default function ComparacaoAtletas() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function ComparacaoAtletas() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#0a0c10] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-yellow"></div>
+      </div>
+    }>
+      <ComparacaoContent />
+    </Suspense>
   );
 }
