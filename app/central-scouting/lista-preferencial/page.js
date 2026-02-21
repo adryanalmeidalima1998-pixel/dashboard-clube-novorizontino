@@ -245,7 +245,6 @@ function ListaPreferencialContent() {
           <h1 className="text-4xl md:text-6xl font-black italic uppercase tracking-tighter leading-none">Lista <span className="text-brand-yellow">Preferencial</span></h1>
           <div className="flex-1 flex justify-end gap-3">
             <button 
-            <button 
               onClick={() => router.push('/central-scouting/lista-preferencial/ponderacao')}
               className="px-6 py-3 bg-slate-800 text-white font-black uppercase text-[10px] rounded-xl hover:bg-slate-700 transition-all flex items-center gap-2 border border-slate-700"
             >
