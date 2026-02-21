@@ -6,6 +6,9 @@ import Papa from 'papaparse';
 import { cleanData, safeParseFloat } from '@/app/utils/dataCleaner';
 import dynamic from 'next/dynamic';
 import HeatmapComponent from '@/app/components/HeatmapComponent';
+import { calcularPerfilSugerido } from '@/app/utils/perfilAnalyzer';
+import { gerarTextoAnalise } from '@/app/utils/textGenerator';
+import { PERFIL_DESCRICOES, POSICAO_TO_PERFIS } from '@/app/utils/perfilWeights';
 
 const Plot = dynamic(() => import('react-plotly.js'), { 
   ssr: false, 
@@ -33,6 +36,12 @@ function PlayerProfileContent() {
   const [gremioNovorizontino, setGremioNovorizontino] = useState([]);
   const [serieB, setSerieB] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // ── NOVOS STATES: perfil e texto analítico ──
+  const [perfisRankeados, setPerfisRankeados] = useState([]);
+  const [perfilSelecionado, setPerfilSelecionado] = useState('');
+  const [textoAnalitico, setTextoAnalitico] = useState('');
+  const [perfilEditando, setPerfilEditando] = useState(false);
 
   const processarDados = (dados, aba) => {
     return dados.map(jogador => {
@@ -68,7 +77,6 @@ function PlayerProfileContent() {
             setListaPreferencial(dados);
             const p = dados.find(d => d.ID_ATLETA === id || d.Jogador === decodeURIComponent(id));
             if (p) {
-              // Forçar mapeamento da coluna C (TIME) caso o nome varie
               const timeKey = Object.keys(p).find(k => k.toLowerCase() === 'time') || 'TIME';
               p.TIME_FIXED = p[timeKey] || p['Equipa'] || p['Equipe'] || '-';
               console.log('Jogador encontrado:', p.Jogador, 'TIME mapeado:', p.TIME_FIXED);
@@ -95,6 +103,33 @@ function PlayerProfileContent() {
     };
     loadData();
   }, [id]);
+
+  // ── Calcula perfil sugerido e texto quando os dados ficarem prontos ──
+  useEffect(() => {
+    if (!player || listaPreferencial.length === 0) return;
+
+    const populacao = [...listaPreferencial, ...serieB];
+    const ranked = calcularPerfilSugerido(player, populacao);
+    setPerfisRankeados(ranked);
+
+    const melhorPerfil = ranked[0]?.perfil || '';
+    // Só define o perfil sugerido se ainda não tiver sido escolhido manualmente
+    setPerfilSelecionado(prev => prev || melhorPerfil);
+  }, [player, listaPreferencial, serieB]);
+
+  // ── Regenera o texto sempre que o perfil mudar ──
+  useEffect(() => {
+    if (!player || !perfilSelecionado || listaPreferencial.length === 0) return;
+    const texto = gerarTextoAnalise({
+      player,
+      perfil: perfilSelecionado,
+      descricaoPerfil: PERFIL_DESCRICOES[perfilSelecionado] || '',
+      listaPreferencial,
+      serieB,
+      metricas: METRICAS_RADAR,
+    });
+    setTextoAnalitico(texto);
+  }, [perfilSelecionado, player, listaPreferencial, serieB]);
 
   const getValorMetrica = (jogador, metrica) => {
     if (!jogador) return 0;
@@ -294,6 +329,66 @@ function PlayerProfileContent() {
             ))}
           </div>
         </div>
+
+        {/* ── ANÁLISE TÉCNICA: Perfil Sugerido + Texto Analítico ── */}
+        {textoAnalitico && (
+          <div className="bg-white border-2 border-slate-900 rounded-[1.5rem] overflow-hidden shadow-lg">
+            <div className="bg-slate-900 text-white font-black text-center py-2 text-[10px] uppercase tracking-widest">
+              Análise Técnica
+            </div>
+            <div className="p-5 flex flex-col gap-3">
+
+              {/* Perfil sugerido + seletor */}
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Perfil Técnico:</span>
+                {!perfilEditando ? (
+                  <>
+                    <span className="bg-amber-500 text-black font-black text-[11px] uppercase px-3 py-1 rounded-full tracking-wide">
+                      {perfilSelecionado}
+                    </span>
+                    <button
+                      onClick={() => setPerfilEditando(true)}
+                      className="no-print text-[9px] font-black text-slate-400 hover:text-black uppercase tracking-widest underline underline-offset-2 transition-colors"
+                    >
+                      Ajustar
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <select
+                      value={perfilSelecionado}
+                      onChange={e => { setPerfilSelecionado(e.target.value); setPerfilEditando(false); }}
+                      className="no-print border-2 border-amber-500 rounded-lg px-3 py-1 text-[11px] font-black bg-white text-black uppercase focus:outline-none"
+                      autoFocus
+                    >
+                      {perfisRankeados.map(({ perfil, percentual }) => (
+                        <option key={perfil} value={perfil}>
+                          {perfil} {percentual >= 100 ? '★' : `(${percentual}%)`}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={() => setPerfilEditando(false)}
+                      className="no-print text-[9px] font-black text-slate-400 hover:text-black uppercase tracking-widest underline underline-offset-2 transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                  </>
+                )}
+              </div>
+
+              {/* Parágrafo analítico */}
+              <p className="text-[11px] text-slate-800 leading-relaxed font-medium">
+                {textoAnalitico.split('**').map((part, i) =>
+                  i % 2 === 1
+                    ? <strong key={i} className="font-black text-black">{part}</strong>
+                    : <span key={i}>{part}</span>
+                )}
+              </p>
+
+            </div>
+          </div>
+        )}
 
         <footer className="flex justify-between items-center border-t-2 border-slate-900 pt-3 no-print">
           <div className="flex gap-4">
