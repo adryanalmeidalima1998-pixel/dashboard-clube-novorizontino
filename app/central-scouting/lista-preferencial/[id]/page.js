@@ -179,8 +179,9 @@ function PlayerProfileContent() {
           @page { size: landscape; margin: 0.2cm; }
           .no-print { display: none !important; }
           body { background: white !important; color: black !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-          .print-container { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0.1cm !important; transform: scale(0.96); transform-origin: top left; }
-          .radar-chart { height: 320px !important; }
+          .print-container { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important; transform: scale(0.88); transform-origin: top center; }
+          .radar-chart { height: 260px !important; }
+          .heatmap-container { transform: scale(0.8); transform-origin: top left; }
         }
       `}</style>
 
@@ -202,7 +203,7 @@ function PlayerProfileContent() {
         <div className="grid grid-cols-12 gap-3">
           <div className="col-span-3 flex flex-col gap-3">
             <div className="bg-white border-2 border-slate-900 rounded-[2rem] overflow-hidden shadow-lg">
-              <div className="relative h-48 bg-slate-50 border-b-2 border-slate-900">
+              <div className="relative h-40 bg-slate-50 border-b-2 border-slate-900">
                 <img src={getPlayerPhoto(player.Jogador)} alt={player.Jogador} className="absolute bottom-0 left-1/2 -translate-x-1/2 h-full object-contain" onError={(e) => { e.target.src = '/images/players/default.png'; }} />
               </div>
               <div className="p-4">
@@ -215,30 +216,30 @@ function PlayerProfileContent() {
                 </div>
               </div>
             </div>
-            <div className="scale-95 origin-top-left">
+            <div className="heatmap-container scale-95 origin-top-left">
               <HeatmapComponent player={player} />
             </div>
           </div>
 
           <div className="col-span-9 flex flex-col gap-3">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-white border-2 border-slate-900 rounded-[2rem] p-4 flex flex-col items-center shadow-lg">
-                <h3 className="text-black font-black text-[10px] uppercase tracking-widest mb-2 border-b-2 border-amber-500 px-4 pb-0.5">Vs Média Lista</h3>
-                <div className="w-full h-[320px] radar-chart">
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-white border-2 border-slate-900 rounded-[2rem] p-3 flex flex-col items-center shadow-lg">
+                <h3 className="text-black font-black text-[10px] uppercase tracking-widest mb-1 border-b-2 border-amber-500 px-4">Vs Média Lista</h3>
+                <div className="w-full h-[280px] radar-chart">
                   <Plot data={getRadarData('media')} layout={radarLayout} config={{ displayModeBar: false, responsive: true }} style={{ width: '100%', height: '100%' }} />
                 </div>
               </div>
-              <div className="bg-white border-2 border-slate-900 rounded-[2rem] p-4 flex flex-col items-center shadow-lg">
-                <h3 className="text-black font-black text-[10px] uppercase tracking-widest mb-2 border-b-2 border-amber-500 px-4 pb-0.5">Vs Elenco GN</h3>
-                <div className="w-full h-[320px] radar-chart">
+              <div className="bg-white border-2 border-slate-900 rounded-[2rem] p-3 flex flex-col items-center shadow-lg">
+                <h3 className="text-black font-black text-[10px] uppercase tracking-widest mb-1 border-b-2 border-amber-500 px-4">Vs Elenco GN</h3>
+                <div className="w-full h-[280px] radar-chart">
                   <Plot data={getRadarData('gremio')} layout={radarLayout} config={{ displayModeBar: false, responsive: true }} style={{ width: '100%', height: '100%' }} />
                 </div>
               </div>
-            </div>
-            <div className="bg-white border-2 border-slate-900 rounded-[2rem] p-4 flex flex-col items-center shadow-lg">
-              <h3 className="text-black font-black text-[10px] uppercase tracking-widest mb-2 border-b-2 border-amber-500 px-4 pb-0.5">Vs Série B</h3>
-              <div className="w-full h-[320px] radar-chart">
-                <Plot data={getRadarData('serieb')} layout={radarLayout} config={{ displayModeBar: false, responsive: true }} style={{ width: '100%', height: '100%' }} />
+              <div className="bg-white border-2 border-slate-900 rounded-[2rem] p-3 flex flex-col items-center shadow-lg">
+                <h3 className="text-black font-black text-[10px] uppercase tracking-widest mb-1 border-b-2 border-amber-500 px-4">Vs Série B</h3>
+                <div className="w-full h-[280px] radar-chart">
+                  <Plot data={getRadarData('serieb')} layout={radarLayout} config={{ displayModeBar: false, responsive: true }} style={{ width: '100%', height: '100%' }} />
+                </div>
               </div>
             </div>
           </div>
