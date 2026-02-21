@@ -224,7 +224,7 @@ function PlayerProfileContent() {
           .no-print { display: none !important; }
           body { background: white !important; color: black !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
           .print-container { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0.1cm !important; transform: scale(0.96); transform-origin: top left; }
-          .radar-chart { height: 320px !important; }
+          .radar-chart { height: 260px !important; }
         }
       `}</style>
 
@@ -267,7 +267,10 @@ function PlayerProfileContent() {
           </div>
         </header>
 
+        {/* ── GRID PRINCIPAL ── */}
         <div className="grid grid-cols-12 gap-3">
+
+          {/* COLUNA ESQUERDA: Foto + Heatmap */}
           <div className="col-span-3 flex flex-col gap-3">
             <div className="bg-white border-2 border-slate-900 rounded-[2rem] overflow-hidden shadow-lg">
               <div className="relative h-48 bg-slate-50 border-b-2 border-slate-900">
@@ -288,30 +291,99 @@ function PlayerProfileContent() {
             </div>
           </div>
 
-          <div className="col-span-9 flex flex-col gap-3">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-white border-2 border-slate-900 rounded-[2rem] p-4 flex flex-col items-center shadow-lg">
-                <h3 className="text-black font-black text-[10px] uppercase tracking-widest mb-2 border-b-2 border-amber-500 px-4 pb-0.5">Vs Média Lista</h3>
-                <div className="w-full h-[320px] radar-chart">
-                  <Plot data={getRadarData('media')} layout={radarLayout} config={{ displayModeBar: false, responsive: true }} style={{ width: '100%', height: '100%' }} />
+          {/* COLUNA DIREITA: Radares (col-span-6) + Análise Técnica (col-span-3) */}
+          <div className="col-span-9 grid grid-cols-3 gap-3">
+
+            {/* Radares: ocupa 2 das 3 colunas internas */}
+            <div className="col-span-2 flex flex-col gap-3">
+              {/* Radar Média Lista + Radar Elenco GN lado a lado */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-white border-2 border-slate-900 rounded-[2rem] p-4 flex flex-col items-center shadow-lg">
+                  <h3 className="text-black font-black text-[10px] uppercase tracking-widest mb-2 border-b-2 border-amber-500 px-4 pb-0.5">Vs Média Lista</h3>
+                  <div className="w-full h-[260px] radar-chart">
+                    <Plot data={getRadarData('media')} layout={radarLayout} config={{ displayModeBar: false, responsive: true }} style={{ width: '100%', height: '100%' }} />
+                  </div>
+                </div>
+                <div className="bg-white border-2 border-slate-900 rounded-[2rem] p-4 flex flex-col items-center shadow-lg">
+                  <h3 className="text-black font-black text-[10px] uppercase tracking-widest mb-2 border-b-2 border-amber-500 px-4 pb-0.5">Vs Elenco GN</h3>
+                  <div className="w-full h-[260px] radar-chart">
+                    <Plot data={getRadarData('gremio')} layout={radarLayout} config={{ displayModeBar: false, responsive: true }} style={{ width: '100%', height: '100%' }} />
+                  </div>
                 </div>
               </div>
+              {/* Radar Série B ocupa a largura total dos 2/3 */}
               <div className="bg-white border-2 border-slate-900 rounded-[2rem] p-4 flex flex-col items-center shadow-lg">
-                <h3 className="text-black font-black text-[10px] uppercase tracking-widest mb-2 border-b-2 border-amber-500 px-4 pb-0.5">Vs Elenco GN</h3>
-                <div className="w-full h-[320px] radar-chart">
-                  <Plot data={getRadarData('gremio')} layout={radarLayout} config={{ displayModeBar: false, responsive: true }} style={{ width: '100%', height: '100%' }} />
+                <h3 className="text-black font-black text-[10px] uppercase tracking-widest mb-2 border-b-2 border-amber-500 px-4 pb-0.5">Vs Série B</h3>
+                <div className="w-full h-[260px] radar-chart">
+                  <Plot data={getRadarData('serieb')} layout={radarLayout} config={{ displayModeBar: false, responsive: true }} style={{ width: '100%', height: '100%' }} />
                 </div>
               </div>
             </div>
-            <div className="bg-white border-2 border-slate-900 rounded-[2rem] p-4 flex flex-col items-center shadow-lg">
-              <h3 className="text-black font-black text-[10px] uppercase tracking-widest mb-2 border-b-2 border-amber-500 px-4 pb-0.5">Vs Série B</h3>
-              <div className="w-full h-[320px] radar-chart">
-                <Plot data={getRadarData('serieb')} layout={radarLayout} config={{ displayModeBar: false, responsive: true }} style={{ width: '100%', height: '100%' }} />
+
+            {/* Análise Técnica: ocupa 1 das 3 colunas internas, altura total */}
+            {textoAnalitico && (
+              <div className="col-span-1 bg-white border-2 border-slate-900 rounded-[1.5rem] overflow-hidden shadow-lg flex flex-col">
+                <div className="bg-slate-900 text-white font-black text-center py-2 text-[10px] uppercase tracking-widest">
+                  Análise Técnica
+                </div>
+                <div className="p-4 flex flex-col gap-3 flex-1">
+
+                  {/* Perfil sugerido + seletor */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Perfil Técnico:</span>
+                    {!perfilEditando ? (
+                      <>
+                        <span className="bg-amber-500 text-black font-black text-[10px] uppercase px-2 py-0.5 rounded-full tracking-wide">
+                          {perfilSelecionado}
+                        </span>
+                        <button
+                          onClick={() => setPerfilEditando(true)}
+                          className="no-print text-[9px] font-black text-slate-400 hover:text-black uppercase tracking-widest underline underline-offset-2 transition-colors"
+                        >
+                          Ajustar
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <select
+                          value={perfilSelecionado}
+                          onChange={e => { setPerfilSelecionado(e.target.value); setPerfilEditando(false); }}
+                          className="no-print border-2 border-amber-500 rounded-lg px-2 py-0.5 text-[10px] font-black bg-white text-black uppercase focus:outline-none"
+                          autoFocus
+                        >
+                          {perfisRankeados.map(({ perfil, percentual }) => (
+                            <option key={perfil} value={perfil}>
+                              {perfil} {percentual >= 100 ? '★' : `(${percentual}%)`}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={() => setPerfilEditando(false)}
+                          className="no-print text-[9px] font-black text-slate-400 hover:text-black uppercase tracking-widest underline underline-offset-2 transition-colors"
+                        >
+                          Cancelar
+                        </button>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Parágrafo analítico */}
+                  <p className="text-[10px] text-slate-800 leading-relaxed font-medium">
+                    {textoAnalitico.split('**').map((part, i) =>
+                      i % 2 === 1
+                        ? <strong key={i} className="font-black text-black">{part}</strong>
+                        : <span key={i}>{part}</span>
+                    )}
+                  </p>
+
+                </div>
               </div>
-            </div>
+            )}
+
           </div>
         </div>
 
+        {/* ── MÉTRICAS DETALHADAS ── */}
         <div className="bg-white border-2 border-slate-900 rounded-[1.5rem] overflow-hidden shadow-lg">
           <div className="bg-slate-900 text-white font-black text-center py-2 text-[10px] uppercase tracking-widest">Métricas Detalhadas por 90 Minutos</div>
           <div className="grid grid-cols-2 divide-x-2 divide-slate-900">
@@ -329,66 +401,6 @@ function PlayerProfileContent() {
             ))}
           </div>
         </div>
-
-        {/* ── ANÁLISE TÉCNICA: Perfil Sugerido + Texto Analítico ── */}
-        {textoAnalitico && (
-          <div className="bg-white border-2 border-slate-900 rounded-[1.5rem] overflow-hidden shadow-lg">
-            <div className="bg-slate-900 text-white font-black text-center py-2 text-[10px] uppercase tracking-widest">
-              Análise Técnica
-            </div>
-            <div className="p-5 flex flex-col gap-3">
-
-              {/* Perfil sugerido + seletor */}
-              <div className="flex items-center gap-3 flex-wrap">
-                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Perfil Técnico:</span>
-                {!perfilEditando ? (
-                  <>
-                    <span className="bg-amber-500 text-black font-black text-[11px] uppercase px-3 py-1 rounded-full tracking-wide">
-                      {perfilSelecionado}
-                    </span>
-                    <button
-                      onClick={() => setPerfilEditando(true)}
-                      className="no-print text-[9px] font-black text-slate-400 hover:text-black uppercase tracking-widest underline underline-offset-2 transition-colors"
-                    >
-                      Ajustar
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <select
-                      value={perfilSelecionado}
-                      onChange={e => { setPerfilSelecionado(e.target.value); setPerfilEditando(false); }}
-                      className="no-print border-2 border-amber-500 rounded-lg px-3 py-1 text-[11px] font-black bg-white text-black uppercase focus:outline-none"
-                      autoFocus
-                    >
-                      {perfisRankeados.map(({ perfil, percentual }) => (
-                        <option key={perfil} value={perfil}>
-                          {perfil} {percentual >= 100 ? '★' : `(${percentual}%)`}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      onClick={() => setPerfilEditando(false)}
-                      className="no-print text-[9px] font-black text-slate-400 hover:text-black uppercase tracking-widest underline underline-offset-2 transition-colors"
-                    >
-                      Cancelar
-                    </button>
-                  </>
-                )}
-              </div>
-
-              {/* Parágrafo analítico */}
-              <p className="text-[11px] text-slate-800 leading-relaxed font-medium">
-                {textoAnalitico.split('**').map((part, i) =>
-                  i % 2 === 1
-                    ? <strong key={i} className="font-black text-black">{part}</strong>
-                    : <span key={i}>{part}</span>
-                )}
-              </p>
-
-            </div>
-          </div>
-        )}
 
         <footer className="flex justify-between items-center border-t-2 border-slate-900 pt-3 no-print">
           <div className="flex gap-4">
