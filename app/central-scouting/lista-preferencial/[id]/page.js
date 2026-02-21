@@ -150,6 +150,27 @@ function PlayerProfileContent() {
     return escalas;
   }, [listaPreferencial, gremioNovorizontino, serieB]);
 
+  // ── Calcula pontos fortes e fracos comparando atleta com média da lista ──
+  const pontosFortesFragos = useMemo(() => {
+    if (!player || listaPreferencial.length === 0) return { fortes: [], fracos: [] };
+
+    const comparacoes = METRICAS_RADAR.map(m => {
+      const valAtleta = getValorMetrica(player, m);
+      const valores = listaPreferencial.map(j => getValorMetrica(j, m)).filter(v => v >= 0);
+      const media = valores.reduce((a, b) => a + b, 0) / (valores.length || 1);
+      const diff = media > 0 ? ((valAtleta - media) / media) * 100 : 0;
+      // percentil: quantos jogadores o atleta supera
+      const percentil = Math.round((valores.filter(v => v <= valAtleta).length / valores.length) * 100);
+      return { label: m.label, diff, percentil, valAtleta, media };
+    });
+
+    const ordenado = [...comparacoes].sort((a, b) => b.diff - a.diff);
+    return {
+      fortes: ordenado.slice(0, 3),
+      fracos: ordenado.slice(-3).reverse()
+    };
+  }, [player, listaPreferencial, escalasMetricas]);
+
   const getRadarData = (type) => {
     if (!player) return [];
     const labels = [...METRICAS_RADAR.map(m => m.label), METRICAS_RADAR[0].label];
@@ -375,6 +396,59 @@ function PlayerProfileContent() {
                         : <span key={i}>{part}</span>
                     )}
                   </p>
+
+                  {/* ── PONTOS FORTES & FRACOS ── */}
+                  {pontosFortesFragos.fortes.length > 0 && (
+                    <div className="flex flex-col gap-2 mt-1">
+
+                      {/* Pontos Fortes */}
+                      <div>
+                        <div className="flex items-center gap-1.5 mb-1.5">
+                          <div className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" />
+                          <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Pontos Fortes</span>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          {pontosFortesFragos.fortes.map((item, i) => (
+                            <div key={i} className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-lg px-2.5 py-1.5">
+                              <span className="text-[9px] font-black text-slate-700 uppercase tracking-tight leading-tight">{item.label}</span>
+                              <div className="flex items-center gap-1.5 flex-shrink-0 ml-1">
+                                <span className="text-[9px] font-black text-emerald-700">
+                                  +{Math.round(item.diff)}%
+                                </span>
+                                <span className="text-[8px] font-bold text-slate-400 bg-white border border-emerald-200 rounded px-1">
+                                  Top {100 - item.percentil}%
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Pontos de Atenção */}
+                      <div>
+                        <div className="flex items-center gap-1.5 mb-1.5">
+                          <div className="w-2 h-2 rounded-full bg-red-400 flex-shrink-0" />
+                          <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Pontos de Atenção</span>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          {pontosFortesFragos.fracos.map((item, i) => (
+                            <div key={i} className="flex items-center justify-between bg-red-50 border border-red-200 rounded-lg px-2.5 py-1.5">
+                              <span className="text-[9px] font-black text-slate-700 uppercase tracking-tight leading-tight">{item.label}</span>
+                              <div className="flex items-center gap-1.5 flex-shrink-0 ml-1">
+                                <span className="text-[9px] font-black text-red-600">
+                                  {Math.round(item.diff)}%
+                                </span>
+                                <span className="text-[8px] font-bold text-slate-400 bg-white border border-red-200 rounded px-1">
+                                  Bot {item.percentil}%
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                    </div>
+                  )}
 
                 </div>
               </div>
