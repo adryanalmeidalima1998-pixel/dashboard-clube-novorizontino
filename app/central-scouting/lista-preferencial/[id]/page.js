@@ -4,13 +4,7 @@ import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Papa from 'papaparse';
 import { cleanData, safeParseFloat } from '@/app/utils/dataCleaner';
-import dynamic from 'next/dynamic';
 import HeatmapComponent from '@/app/components/HeatmapComponent';
-
-const Plot = dynamic(() => import('react-plotly.js'), { 
-  ssr: false, 
-  loading: () => <div className="h-48 flex items-center justify-center text-slate-500 font-bold italic animate-pulse text-2xl">CARREGANDO GRÁFICOS...</div> 
-});
 
 const METRICAS_RADAR = [
   { label: 'Passes Chave', key: 'Passes chave', type: 'per90' },
@@ -24,6 +18,94 @@ const METRICAS_RADAR = [
   { label: 'xG', key: 'Xg', type: 'per90' },
   { label: 'Ações Área Adv Certas/90', key: 'Ações na área adversária bem-sucedidas', type: 'per90' }
 ];
+
+// Componente de Radar usando Canvas (mais confiável que Plotly dinâmico)
+function RadarChart({ data, layout, title }) {
+  const canvasRef = useRef(null);
+
+  useEffect(() => {
+    if (!canvasRef.current || !data || data.length === 0) return;
+
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width;
+    const height = canvas.height;
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const radius = Math.min(width, height) / 2.5;
+
+    // Limpar canvas
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, width, height);
+
+    // Desenhar grades
+    ctx.strokeStyle = '#ddd';
+    ctx.lineWidth = 1;
+    for (let i = 1; i <= 5; i++) {
+      const r = (radius / 5) * i;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, r, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // Desenhar eixos
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
+    const angles = data[0].theta.map((_, i) => (i / data[0].theta.length) * Math.PI * 2 - Math.PI / 2);
+    angles.forEach(angle => {
+      const x = centerX + radius * Math.cos(angle);
+      const y = centerY + radius * Math.sin(angle);
+      ctx.beginPath();
+      ctx.moveTo(centerX, centerY);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+    });
+
+    // Desenhar rótulos
+    ctx.fillStyle = '#000';
+    ctx.font = 'bold 11px Arial';
+    ctx.textAlign = 'center';
+    data[0].theta.forEach((label, i) => {
+      const angle = (i / data[0].theta.length) * Math.PI * 2 - Math.PI / 2;
+      const x = centerX + (radius + 30) * Math.cos(angle);
+      const y = centerY + (radius + 30) * Math.sin(angle);
+      ctx.fillText(label, x, y);
+    });
+
+    // Desenhar dados (polígonos)
+    const cores = ['#fbbf24', '#ef4444', '#3b82f6', '#10b981', '#8b5cf6'];
+    data.forEach((dataset, dataIdx) => {
+      ctx.fillStyle = cores[dataIdx % cores.length].replace(')', ', 0.3)').replace('rgb', 'rgba');
+      ctx.strokeStyle = cores[dataIdx % cores.length];
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      dataset.r.forEach((value, i) => {
+        const angle = (i / dataset.r.length) * Math.PI * 2 - Math.PI / 2;
+        const normalizedValue = (value / 100) * radius;
+        const x = centerX + normalizedValue * Math.cos(angle);
+        const y = centerY + normalizedValue * Math.sin(angle);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    });
+
+    // Desenhar legenda
+    ctx.fillStyle = '#000';
+    ctx.font = 'bold 12px Arial';
+    ctx.textAlign = 'left';
+    data.forEach((dataset, idx) => {
+      ctx.fillStyle = cores[idx % cores.length];
+      ctx.fillRect(20, height - 40 + idx * 20, 15, 15);
+      ctx.fillStyle = '#000';
+      ctx.fillText(dataset.name, 40, height - 30 + idx * 20);
+    });
+  }, [data]);
+
+  return <canvas ref={canvasRef} width={500} height={500} className="w-full h-full" />;
+}
 
 function PlayerProfileContent() {
   const { id } = useParams();
@@ -65,7 +147,10 @@ function PlayerProfileContent() {
             const dados = processarDados(cleaned, 'LISTA PREFERENCIAL');
             setListaPreferencial(dados);
             const p = dados.find(d => d.ID_ATLETA === id || d.Jogador === decodeURIComponent(id));
-            if (p) setPlayer(p);
+            if (p) {
+              console.log('Jogador encontrado:', p.Jogador, 'TIME:', p.TIME);
+              setPlayer(p);
+            }
           }
         });
 
@@ -113,8 +198,7 @@ function PlayerProfileContent() {
     const playerVals = [...METRICAS_RADAR.map(m => (getValorMetrica(player, m) / (escalasMetricas[m.label]?.max || 1)) * 100), (getValorMetrica(player, METRICAS_RADAR[0]) / (escalasMetricas[METRICAS_RADAR[0].label]?.max || 1)) * 100];
 
     const data = [{
-      type: 'scatterpolar', r: playerVals, theta: labels, fill: 'toself', name: player.Jogador,
-      line: { color: '#fbbf24', width: 4 }, fillcolor: 'rgba(251, 191, 36, 0.5)', mode: 'lines'
+      r: playerVals, theta: labels, name: player.Jogador
     }];
 
     if (type === 'media') {
@@ -123,33 +207,21 @@ function PlayerProfileContent() {
         return ((valores.reduce((a, b) => a + b, 0) / (valores.length || 1)) / (escalasMetricas[m.label]?.max || 1)) * 100;
       }), 0];
       mediaVals[mediaVals.length-1] = mediaVals[0];
-      data.push({ type: 'scatterpolar', r: mediaVals, theta: labels, fill: 'toself', name: 'Média Lista', line: { color: '#ef4444', dash: 'dot', width: 2.5 }, fillcolor: 'rgba(239, 68, 68, 0.2)', mode: 'lines' });
+      data.push({ r: mediaVals, theta: labels, name: 'Média Lista' });
     } else if (type === 'serieb') {
       const mediaVals = [...METRICAS_RADAR.map(m => {
         const valores = serieB.map(j => safeParseFloat(j[m.key]));
         return ((valores.reduce((a, b) => a + b, 0) / (valores.length || 1)) / (escalasMetricas[m.label]?.max || 1)) * 100;
       }), 0];
       mediaVals[mediaVals.length-1] = mediaVals[0];
-      data.push({ type: 'scatterpolar', r: mediaVals, theta: labels, fill: 'toself', name: 'Média Série B', line: { color: '#3b82f6', dash: 'dot', width: 2.5 }, fillcolor: 'rgba(59, 130, 246, 0.2)', mode: 'lines' });
+      data.push({ r: mediaVals, theta: labels, name: 'Média Série B' });
     } else {
-      const cores = ['#3b82f6', '#10b981', '#8b5cf6'];
       gremioNovorizontino.slice(0, 3).forEach((p, i) => {
         const gVals = [...METRICAS_RADAR.map(m => (getValorMetrica(p, m) / (escalasMetricas[m.label]?.max || 1)) * 100), (getValorMetrica(p, METRICAS_RADAR[0]) / (escalasMetricas[METRICAS_RADAR[0].label]?.max || 1)) * 100];
-        data.push({ type: 'scatterpolar', r: gVals, theta: labels, name: p.Jogador, line: { color: cores[i], width: 2 }, mode: 'lines' });
+        data.push({ r: gVals, theta: labels, name: p.Jogador });
       });
     }
     return data;
-  };
-
-  const radarLayout = {
-    polar: {
-      radialaxis: { visible: true, range: [0, 100], gridcolor: '#ddd', showticklabels: false },
-      angularaxis: { tickfont: { size: 10, color: '#000', weight: '900' }, gridcolor: '#ddd', rotation: 90, direction: 'clockwise' },
-      bgcolor: '#fff'
-    },
-    showlegend: true, 
-    legend: { orientation: 'h', x: 0.5, y: -0.15, font: { size: 11, color: '#000', weight: 'bold' }, xanchor: 'center' },
-    margin: { l: 70, r: 70, t: 40, b: 40 }, paper_bgcolor: '#fff', plot_bgcolor: '#fff', autosize: true
   };
 
   const getPlayerPhoto = (name) => {
@@ -171,15 +243,8 @@ function PlayerProfileContent() {
           @page { size: landscape; margin: 0.1cm; }
           .no-print { display: none !important; }
           body { background: white !important; color: black !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-          .print-container { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0.2cm !important; transform: scale(0.98); transform-origin: top left; background: white !important; }
-          .bg-slate-900, .bg-slate-900\/50, .bg-gradient-to-b { background: white !important; border: 2px solid #000 !important; color: black !important; }
-          .text-white, .text-amber-500, .text-slate-300, .text-slate-400, .text-slate-500 { color: black !important; font-weight: 900 !important; }
-          .angularaxis text, .legendtext { fill: black !important; font-weight: bold !important; font-size: 11px !important; }
-          .gridlayer path { stroke: #ccc !important; stroke-width: 0.5px !important; }
-          .divide-slate-700, .divide-slate-800, .border-slate-700, .border-slate-800 { border-color: #000 !important; }
-          .radar-chart { height: 480px !important; }
+          .print-container { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0.2cm !important; background: white !important; }
         }
-        .radar-chart .main-svg { background: white !important; }
       `}</style>
 
       <div className="max-w-[1600px] mx-auto print-container flex flex-col gap-4">
@@ -206,7 +271,7 @@ function PlayerProfileContent() {
               <div className="p-6">
                 <h2 className="text-4xl font-black text-black uppercase mb-4 leading-none">{player.Jogador}</h2>
                 <div className="grid grid-cols-2 gap-6">
-                  <div><p className="text-[11px] text-slate-500 uppercase font-black tracking-widest">Equipe</p><p className="text-base font-black truncate">{player.TIME || player.Equipa || player['TIME'] || '-'}</p></div>
+                  <div><p className="text-[11px] text-slate-500 uppercase font-black tracking-widest">Equipe</p><p className="text-base font-black truncate">{player['TIME'] || player.TIME || player.Equipa || '-'}</p></div>
                   <div><p className="text-[11px] text-slate-500 uppercase font-black tracking-widest">Pé</p><p className="text-base font-black">{player.Pé === 'R' ? 'Direito' : 'Esquerdo'}</p></div>
                   <div><p className="text-[11px] text-slate-500 uppercase font-black tracking-widest">Idade</p><p className="text-base font-black">{player.Idade} anos</p></div>
                   <div><p className="text-[11px] text-slate-500 uppercase font-black tracking-widest">Minutos</p><p className="text-base font-black">{player['Minutos jogados']}'</p></div>
@@ -220,21 +285,21 @@ function PlayerProfileContent() {
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-white border-4 border-slate-900 rounded-[2.5rem] p-6 flex flex-col items-center shadow-2xl">
                 <h3 className="text-black font-black text-sm uppercase tracking-widest mb-4 border-b-4 border-amber-500 px-6 pb-1">Vs Média Lista</h3>
-                <div className="w-full h-[400px] radar-chart">
-                  <Plot data={getRadarData('media')} layout={radarLayout} config={{ displayModeBar: false, responsive: true }} style={{ width: '100%', height: '100%' }} />
+                <div className="w-full h-[400px]">
+                  <RadarChart data={getRadarData('media')} title="Vs Média Lista" />
                 </div>
               </div>
               <div className="bg-white border-4 border-slate-900 rounded-[2.5rem] p-6 flex flex-col items-center shadow-2xl">
                 <h3 className="text-black font-black text-sm uppercase tracking-widest mb-4 border-b-4 border-amber-500 px-6 pb-1">Vs Elenco GN</h3>
-                <div className="w-full h-[400px] radar-chart">
-                  <Plot data={getRadarData('gremio')} layout={radarLayout} config={{ displayModeBar: false, responsive: true }} style={{ width: '100%', height: '100%' }} />
+                <div className="w-full h-[400px]">
+                  <RadarChart data={getRadarData('gremio')} title="Vs Elenco GN" />
                 </div>
               </div>
             </div>
             <div className="bg-white border-4 border-slate-900 rounded-[2.5rem] p-6 flex flex-col items-center shadow-2xl">
               <h3 className="text-black font-black text-sm uppercase tracking-widest mb-4 border-b-4 border-amber-500 px-6 pb-1">Vs Série B</h3>
-              <div className="w-full h-[400px] radar-chart">
-                <Plot data={getRadarData('serieb')} layout={radarLayout} config={{ displayModeBar: false, responsive: true }} style={{ width: '100%', height: '100%' }} />
+              <div className="w-full h-[400px]">
+                <RadarChart data={getRadarData('serieb')} title="Vs Série B" />
               </div>
             </div>
           </div>
@@ -272,6 +337,8 @@ function PlayerProfileContent() {
     </div>
   );
 }
+
+import { useRef } from 'react';
 
 export default function PlayerProfile() {
   return <Suspense fallback={<div>Carregando...</div>}><PlayerProfileContent /></Suspense>;
