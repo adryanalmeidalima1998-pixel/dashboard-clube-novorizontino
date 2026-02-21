@@ -238,12 +238,14 @@ function ListaPreferencialContent() {
     <div className="min-h-screen bg-[#0a0c10] text-white p-4 md:p-8">
       <div className="max-w-[1800px] mx-auto">
         {/* HEADER */}
-        <div className="flex items-center gap-4 mb-12 flex-wrap">
+        <div className="flex flex-col gap-4 mb-12">
+          <div className="flex items-center gap-6">
           <button onClick={() => router.push('/central-scouting')} className="p-4 bg-slate-900/80 hover:bg-brand-yellow/20 rounded-2xl border border-slate-800 transition-all group">
             <svg className="w-6 h-6 text-slate-500 group-hover:text-brand-yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
           </button>
-          <h1 className="text-4xl md:text-5xl font-black italic uppercase tracking-tighter leading-none whitespace-nowrap">Lista <span className="text-brand-yellow">Preferencial</span></h1>
-          <div className="flex-1 flex justify-end gap-2 flex-wrap">
+          <h1 className="text-4xl md:text-6xl font-black italic uppercase tracking-tighter leading-none">Lista <span className="text-brand-yellow">Preferencial</span></h1>
+          </div>
+          <div className="flex gap-3 flex-wrap">
             <button 
               onClick={() => router.push('/central-scouting/lista-preferencial/ponderacao')}
               className="px-6 py-3 bg-slate-800 text-white font-black uppercase text-[10px] rounded-xl hover:bg-slate-700 transition-all flex items-center gap-2 border border-slate-700"
