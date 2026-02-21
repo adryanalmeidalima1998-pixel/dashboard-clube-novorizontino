@@ -8,7 +8,7 @@ import dynamic from 'next/dynamic';
 
 const Plot = dynamic(() => import('react-plotly.js'), { 
   ssr: false, 
-  loading: () => <div className="h-64 flex items-center justify-center text-slate-500 font-bold italic animate-pulse">CARREGANDO GRÁFICOS...</div> 
+  loading: () => <div className="h-64 flex items-center justify-center text-slate-500 font-bold italic animate-pulse text-2xl">CARREGANDO GRÁFICOS...</div> 
 });
 
 const CORES_JOGADORES = [
@@ -153,8 +153,8 @@ function DistorsaoContent() {
         name: jogador.Jogador,
         text: [primeiroNome],
         textposition: 'top center',
-        textfont: { size: 12, color: '#fff', weight: 'bold' },
-        marker: { size: 16, color: mapaCores[jogador.Jogador], line: { color: '#fff', width: 2 } },
+        textfont: { size: 12, color: '#000', weight: 'bold' },
+        marker: { size: 16, color: mapaCores[jogador.Jogador], line: { color: '#000', width: 1.5 } },
         hovertemplate: `<b>${jogador.Jogador}</b><br>${config.xLabel}: %{x:.2f}<br>${config.yLabel}: %{y:.2f}<extra></extra>`
       });
     });
@@ -170,7 +170,7 @@ function DistorsaoContent() {
         text: [primeiroNome],
         textposition: 'bottom center',
         textfont: { size: 11, color: '#3b82f6', weight: 'bold' },
-        marker: { size: 14, color: '#3b82f6', symbol: 'diamond', line: { color: '#fff', width: 1.5 } },
+        marker: { size: 14, color: '#3b82f6', symbol: 'diamond', line: { color: '#000', width: 1.5 } },
         hovertemplate: `<b>${jogador.Jogador} (Elenco GN)</b><br>${config.xLabel}: %{x:.2f}<br>${config.yLabel}: %{y:.2f}<extra></extra>`,
         showlegend: false
       });
@@ -178,7 +178,7 @@ function DistorsaoContent() {
 
     plotData.push({
       x: [null], y: [null], mode: 'markers', type: 'scatter', name: 'Elenco GN',
-      marker: { size: 14, color: '#3b82f6', symbol: 'diamond', line: { color: '#fff', width: 1.5 } },
+      marker: { size: 14, color: '#3b82f6', symbol: 'diamond', line: { color: '#000', width: 1.5 } },
       showlegend: true
     });
 
@@ -190,61 +190,58 @@ function DistorsaoContent() {
       x: [avgX], y: [avgY], mode: 'markers+text', type: 'scatter', name: 'Média Série B',
       text: ['SÉRIE B'], textposition: 'bottom center',
       textfont: { size: 13, color: '#ef4444', weight: 'bold' },
-      marker: { size: 22, color: 'rgba(239, 68, 68, 0.95)', symbol: 'star', line: { color: '#fff', width: 2.5 } },
+      marker: { size: 24, color: 'rgba(239, 68, 68, 0.95)', symbol: 'star', line: { color: '#000', width: 2 } },
       hovertemplate: `<b>Média Série B</b><br>${config.xLabel}: %{x:.2f}<br>${config.yLabel}: %{y:.2f}<extra></extra>`
     });
 
     const layout = {
-      title: { text: config.titulo, font: { size: 24, color: '#fbbf24', family: 'Arial Black' } },
-      xaxis: { title: { text: config.xLabel, font: { size: 14, color: '#fff', weight: 'bold' } }, gridcolor: 'rgba(255,255,255,0.1)', tickfont: { size: 12, color: '#fff', weight: 'bold' }, showline: true, linecolor: '#fff' },
-      yaxis: { title: { text: config.yLabel, font: { size: 14, color: '#fff', weight: 'bold' } }, gridcolor: 'rgba(255,255,255,0.1)', tickfont: { size: 12, color: '#fff', weight: 'bold' }, showline: true, linecolor: '#fff' },
-      paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
-      margin: { t: 80, b: 100, l: 100, r: 50 }, height: 750, showlegend: true,
-      legend: { font: { size: 12, color: '#fff', weight: 'bold' }, orientation: 'h', y: -0.15, x: 0.5, xanchor: 'center' },
+      title: { text: config.titulo, font: { size: 26, color: '#000', family: 'Arial Black' } },
+      xaxis: { title: { text: config.xLabel, font: { size: 16, color: '#000', weight: '900' } }, gridcolor: '#eee', tickfont: { size: 13, color: '#000', weight: 'bold' }, showline: true, linecolor: '#000', linewidth: 3 },
+      yaxis: { title: { text: config.yLabel, font: { size: 16, color: '#000', weight: '900' } }, gridcolor: '#eee', tickfont: { size: 13, color: '#000', weight: 'bold' }, showline: true, linecolor: '#000', linewidth: 3 },
+      paper_bgcolor: '#fff', plot_bgcolor: '#fff',
+      margin: { t: 80, b: 100, l: 100, r: 60 }, height: 750, showlegend: true,
+      legend: { font: { size: 13, color: '#000', weight: 'bold' }, orientation: 'h', y: -0.15, x: 0.5, xanchor: 'center' },
       hovermode: 'closest'
     };
 
     return { data: plotData, layout };
   };
 
-  if (loading) return <div className="min-h-screen bg-[#08101e] flex items-center justify-center text-amber-500 font-black italic animate-pulse text-2xl">CARREGANDO GRÁFICOS...</div>;
+  if (loading) return <div className="min-h-screen bg-white flex items-center justify-center text-amber-600 font-black italic animate-pulse text-3xl">CARREGANDO ANÁLISE...</div>;
 
   return (
-    <div className="min-h-screen bg-[#08101e] text-white p-6 font-sans print:bg-white print:text-black print:p-0">
+    <div className="min-h-screen bg-white text-black p-6 font-sans print:p-0">
       <style jsx global>{`
         @media print {
           @page { size: landscape; margin: 0.5cm; }
           .no-print { display: none !important; }
           body { background: white !important; color: black !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
           .print-container { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important; background: white !important; }
-          .bg-slate-900, .bg-slate-900\/50 { background: white !important; border: 3px solid #000 !important; }
-          .text-amber-500 { color: #000 !important; font-weight: 900 !important; }
-          .js-plotly-plot .main-svg { background: transparent !important; }
-          .chart-card { break-inside: avoid; page-break-after: always; padding: 1.5cm !important; height: 19cm !important; display: flex !important; flex-direction: column !important; justify-content: center !important; border: 4px solid #000 !important; margin-bottom: 0 !important; filter: brightness(0.1) contrast(2); }
+          .chart-card { break-inside: avoid; page-break-after: always; padding: 1.5cm !important; height: 19.5cm !important; display: flex !important; flex-direction: column !important; justify-content: center !important; border: 4px solid #000 !important; margin-bottom: 0 !important; }
           .chart-card:last-child { page-break-after: auto; }
         }
       `}</style>
 
-      <div className="max-w-[1500px] mx-auto print-container">
-        <header className="flex justify-between items-center mb-10 border-b-4 border-amber-500 pb-6">
-          <div className="flex items-center gap-8">
-            <img src="/club/escudonovorizontino.png" alt="Shield" className="h-24 w-auto" />
+      <div className="max-w-[1550px] mx-auto print-container">
+        <header className="flex justify-between items-center mb-10 border-b-8 border-amber-500 pb-6">
+          <div className="flex items-center gap-10">
+            <img src="/club/escudonovorizontino.png" alt="Shield" className="h-28 w-auto" />
             <div>
-              <h1 className="text-4xl font-black tracking-tighter text-amber-500 uppercase leading-none print:text-black">Grêmio Novorizontino</h1>
-              <p className="text-xl font-black tracking-widest text-slate-400 uppercase">Análise de Correlação e Dispersão de Atletas</p>
+              <h1 className="text-5xl font-black tracking-tighter text-black uppercase leading-none">Grêmio Novorizontino</h1>
+              <p className="text-2xl font-black tracking-widest text-slate-600 uppercase mt-1">Análise de Correlação e Dispersão</p>
             </div>
           </div>
-          <div className="flex gap-4 no-print">
-            <button onClick={() => window.print()} className="bg-amber-500 hover:bg-amber-600 text-black px-10 py-4 font-black rounded-2xl text-lg shadow-2xl">PDF</button>
-            <button onClick={() => router.back()} className="bg-slate-800 hover:bg-slate-700 text-white px-10 py-4 font-black rounded-2xl text-lg border-2 border-slate-700">VOLTAR</button>
+          <div className="flex gap-6 no-print">
+            <button onClick={() => window.print()} className="bg-slate-900 hover:bg-black text-white px-12 py-5 font-black rounded-[1.5rem] text-xl shadow-2xl transition-all transform hover:scale-105">GERAR PDF</button>
+            <button onClick={() => router.back()} className="bg-white hover:bg-slate-50 text-black px-12 py-5 font-black rounded-[1.5rem] text-xl border-4 border-slate-900 shadow-xl">VOLTAR</button>
           </div>
         </header>
 
-        <div className="flex flex-col gap-16">
+        <div className="flex flex-col gap-20">
           {GRAFICOS_CORRELACAO.map((config, idx) => {
             const { data, layout } = criarGraficoCorrelacao(config);
             return (
-              <div key={idx} className="chart-card bg-slate-900/50 border border-slate-700 rounded-[3rem] p-10 shadow-2xl overflow-hidden backdrop-blur-sm">
+              <div key={idx} className="chart-card bg-white border-8 border-slate-100 rounded-[4rem] p-12 shadow-2xl overflow-hidden transition-all hover:border-amber-100">
                 <Plot data={data} layout={layout} config={{ displayModeBar: false, responsive: true }} style={{ width: '100%', height: '100%' }} />
               </div>
             );
