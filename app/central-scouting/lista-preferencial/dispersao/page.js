@@ -49,38 +49,80 @@ function processarDados(dados, aba) {
   });
 }
 
-function gerarAnalise(lista, gn, serieB, labelX, labelY, nomeX, nomeY, resumoQualidade) {
-  if (lista.length === 0) return 'Dados insuficientes para gerar análise.';
+function gerarAnalise(lista, gn, serieB, labelX, labelY, idGrafico) {
+  if (lista.length === 0) return [['Dados insuficientes para gerar análise.']];
 
   const mediaListaX = lista.reduce((s, j) => s + getVal(j, labelX), 0) / lista.length;
   const mediaListaY = lista.reduce((s, j) => s + getVal(j, labelY), 0) / lista.length;
-  const mediaSerieBX = serieB.length > 0 ? serieB.reduce((s, j) => s + getVal(j, labelX), 0) / serieB.length : mediaListaX;
-  const mediaSerieBY = serieB.length > 0 ? serieB.reduce((s, j) => s + getVal(j, labelY), 0) / serieB.length : mediaListaY;
+  const mediaSBX = serieB.length > 0 ? serieB.reduce((s, j) => s + getVal(j, labelX), 0) / serieB.length : mediaListaX;
+  const mediaSBY = serieB.length > 0 ? serieB.reduce((s, j) => s + getVal(j, labelY), 0) / serieB.length : mediaListaY;
 
-  const liderX = [...lista].sort((a, b) => getVal(b, labelX) - getVal(a, labelX))[0];
-  const liderY = [...lista].sort((a, b) => getVal(b, labelY) - getVal(a, labelY))[0];
-  const completos = lista.filter(j => getVal(j, labelX) >= mediaListaX * 1.05 && getVal(j, labelY) >= mediaListaY * 1.05);
+  const sorted = (arr, key) => [...arr].sort((a, b) => getVal(b, key) - getVal(a, key));
+  const top2X = sorted(lista, labelX).slice(0, 2).map(j => j.Jogador?.split(' ')[0]).filter(Boolean);
+  const top2Y = sorted(lista, labelY).slice(0, 2).map(j => j.Jogador?.split(' ')[0]).filter(Boolean);
+  const completos = lista.filter(j => getVal(j, labelX) >= mediaListaX && getVal(j, labelY) >= mediaListaY);
   const nomesCompletos = completos.map(j => j.Jogador?.split(' ')[0]).filter(Boolean);
+  const liderX = sorted(lista, labelX)[0];
+  const liderY = sorted(lista, labelY)[0];
+  const gnAcima = gn.filter(j => getVal(j, labelX) >= mediaListaX && getVal(j, labelY) >= mediaListaY);
   const gnAbaixo = gn.filter(j => getVal(j, labelX) < mediaListaX && getVal(j, labelY) < mediaListaY);
+  const listaAcimaX = lista.filter(j => getVal(j, labelX) > mediaSBX).length;
+  const listaAcimaY = lista.filter(j => getVal(j, labelY) > mediaSBY).length;
 
-  let txt = `A média da lista em ${nomeX} é ${mediaListaX.toFixed(2)} `;
-  txt += `(Série B: ${mediaSerieBX.toFixed(2)}) e em ${nomeY} é ${mediaListaY.toFixed(2)} `;
-  txt += `(Série B: ${mediaSerieBY.toFixed(2)}). `;
+  // Helpers to build bold text segments: ['normal', '**bold**', 'normal'] → rendered with <strong>
+  const bold = (s) => `**${s}**`;
 
-  if (liderX) txt += `${liderX.Jogador?.split(' ')[0]} lidera em ${nomeX} (${getVal(liderX, labelX).toFixed(2)}). `;
-  if (liderY && liderY.Jogador !== liderX?.Jogador) txt += `${liderY.Jogador?.split(' ')[0]} lidera em ${nomeY} (${getVal(liderY, labelY).toFixed(2)}). `;
-
-  if (nomesCompletos.length > 0) {
-    txt += `${nomesCompletos.join(', ')} apresenta${nomesCompletos.length > 1 ? 'm' : ''} ${resumoQualidade} — posicionados no quadrante superior direito. `;
-  } else {
-    txt += `Nenhum atleta da lista supera a média da lista simultaneamente nos dois eixos. `;
+  if (idGrafico === 'criacao-finalizacao') {
+    const diffX = ((mediaListaX - mediaSBX) / mediaSBX * 100);
+    const diffY = ((mediaListaY - mediaSBY) / mediaSBY * 100);
+    let txt = `O gráfico cruza a capacidade de ${bold('criação de jogadas')} (passes chave/90) com o ${bold('potencial de finalização')} (xG/90), revelando quais atletas da lista acumulam influência direta tanto na construção quanto no desfecho das jogadas ofensivas. `;
+    txt += `A média da lista em passes chave é de ${bold(mediaListaX.toFixed(2))}/90 — ${Math.abs(diffX).toFixed(0)}% ${diffX >= 0 ? 'acima' : 'abaixo'} da Série B (${mediaSBX.toFixed(2)}) — `;
+    txt += `enquanto em xG a lista registra ${bold(mediaListaY.toFixed(2))}/90 frente a ${mediaSBY.toFixed(2)} da divisão. `;
+    if (liderX) txt += `${bold(liderX.Jogador)} destaca-se como o principal criador da lista (${bold(getVal(liderX, labelX).toFixed(2))} passes chave/90)`;
+    if (liderY && liderY.Jogador !== liderX?.Jogador) txt += `, enquanto ${bold(liderY.Jogador)} lidera em xG com ${bold(getVal(liderY, labelY).toFixed(2))} por 90 minutos. `;
+    else txt += '. ';
+    if (nomesCompletos.length > 0) {
+      txt += `${bold(nomesCompletos.join(', '))} ${nomesCompletos.length > 1 ? 'se posicionam' : 'se posiciona'} no quadrante de alta performance nos dois eixos — perfil ideal para um extremo completo ofensivamente. `;
+    } else {
+      txt += `Nenhum atleta da lista supera a média da lista simultaneamente em criação e xG — indicando que os perfis tendem a ser especializados em uma das dimensões. `;
+    }
+    if (gnAbaixo.length > 0) txt += `Do elenco GN, ${bold(gnAbaixo.map(j => j.Jogador?.split(' ')[0] || j.name).join(', '))} ficam abaixo da média da lista nos dois eixos, reforçando a demanda por um extremo com maior participação direta nas finalizações.`;
+    return txt;
   }
 
-  if (gnAbaixo.length > 0) {
-    txt += `Do elenco GN, ${gnAbaixo.map(j => j.Jogador?.split(' ')[0] || j.name).filter(Boolean).join(', ')} ficam abaixo da média da lista nos dois eixos — reforçando a necessidade de ${resumoQualidade} no plantel.`;
+  if (idGrafico === 'drible-penetracao') {
+    const diffX = ((mediaListaX - mediaSBX) / mediaSBX * 100);
+    let txt = `Este gráfico avalia a ${bold('capacidade de desequilíbrio individual')} dos atletas, combinando o volume de dribles bem-sucedidos com a frequência de penetrações efetivas no terço final carregando a bola — dois indicadores centrais do perfil de extremo driblador. `;
+    txt += `A lista preferencial registra média de ${bold(mediaListaX.toFixed(2))} dribles certos/90 — ${Math.abs(diffX).toFixed(0)}% ${diffX >= 0 ? 'superior' : 'inferior'} ao padrão da Série B (${mediaSBX.toFixed(2)}) — `;
+    txt += `e ${bold(mediaListaY.toFixed(2))} entradas no terço final por 90 minutos. `;
+    if (liderX) txt += `${bold(liderX.Jogador)} lidera em volume de dribles (${bold(getVal(liderX, labelX).toFixed(2))}/90)`;
+    if (liderY && liderY.Jogador !== liderX?.Jogador) txt += `, enquanto ${bold(liderY.Jogador)} é o que mais penetra no terço final (${bold(getVal(liderY, labelY).toFixed(2))}/90). `;
+    else txt += `. `;
+    if (nomesCompletos.length > 0) {
+      txt += `${bold(nomesCompletos.join(', '))} combina${nomesCompletos.length > 1 ? 'm' : ''} alto índice de dribles com presença frequente no terço ofensivo — o perfil mais desequilibrante disponível na lista. `;
+    } else {
+      txt += `Nenhum atleta da lista supera a média da lista nos dois eixos simultaneamente, o que sugere que os dribladores mais produtivos tendem a atuar mais na periferia sem converter o drible em penetração efetiva. `;
+    }
+    if (gnAbaixo.length > 0) txt += `${bold(gnAbaixo.map(j => j.Jogador?.split(' ')[0] || j.name).join(', '))} do elenco GN aparecem abaixo da média da lista em ambas as dimensões — identificando uma lacuna no drible e na penetração que a lista poderia suprir.`;
+    return txt;
   }
 
-  return txt;
+  if (idGrafico === 'progressao-area') {
+    let txt = `O gráfico analisa a ${bold('qualidade de progressão com bola')} (% passes progressivos precisos) em relação à ${bold('presença e efetividade na área adversária')} (ações certas/90), mapeando os atletas com maior capacidade de avançar o jogo e ao mesmo tempo finalizar ou criar no interior da área. `;
+    txt += `A média da lista em passes progressivos precisos é de ${bold(mediaListaX.toFixed(2)+'%')}, e em ações na área adversária é ${bold(mediaListaY.toFixed(2))}/90. `;
+    if (liderX) txt += `${bold(liderX.Jogador)} se destaca como o atleta com maior precisão progressiva (${bold(getVal(liderX, labelX).toFixed(2)+'%')})`;
+    if (liderY && liderY.Jogador !== liderX?.Jogador) txt += `, ao passo que ${bold(liderY.Jogador)} lidera em ações certas na área (${bold(getVal(liderY, labelY).toFixed(2))}/90). `;
+    else txt += '. ';
+    if (nomesCompletos.length > 0) {
+      txt += `${bold(nomesCompletos.join(', '))} ${nomesCompletos.length > 1 ? 'reúnem' : 'reúne'} os dois atributos acima da média — perfil valioso para um sistema que exige que o extremo contribua tanto na transição quanto na finalização. `;
+    } else {
+      txt += `Nenhum atleta da lista combina progressão e presença de área acima da média da lista ao mesmo tempo — sugerindo que os alvos tendem a ser mais progressores ou mais finalizadores, mas raramente os dois. `;
+    }
+    if (gnAbaixo.length > 0) txt += `Do elenco GN, ${bold(gnAbaixo.map(j => j.Jogador?.split(' ')[0] || j.name).join(', '))} ficam abaixo da média nos dois eixos, destacando a necessidade de um perfil com maior influência na construção progressiva e nas ações dentro da área adversária.`;
+    return txt;
+  }
+
+  return 'Análise não disponível para este gráfico.';
 }
 
 const GRAFICOS = [
@@ -90,9 +132,6 @@ const GRAFICOS = [
     subtitulo: 'Passes chave por 90 min  ×  xG por 90 min',
     x: 'Passes Chave',
     y: 'xG',
-    nomeX: 'passes chave/90',
-    nomeY: 'xG/90',
-    resumo: 'alta capacidade de criação e finalização simultânea',
   },
   {
     id: 'drible-penetracao',
@@ -100,9 +139,6 @@ const GRAFICOS = [
     subtitulo: 'Dribles bem-sucedidos por 90  ×  Entradas no terço final carregando a bola por 90',
     x: 'Dribles Certos/90',
     y: 'Entradas 1/3 Final',
-    nomeX: 'dribles certos/90',
-    nomeY: 'entradas 1/3 final/90',
-    resumo: 'desequilíbrio no 1x1 com penetração efetiva no terço ofensivo',
   },
   {
     id: 'progressao-area',
@@ -110,15 +146,12 @@ const GRAFICOS = [
     subtitulo: '% passes progressivos precisos  ×  Ações certas na área adversária por 90',
     x: 'Passes Progressivos %',
     y: 'Ações Área Adv/90',
-    nomeX: 'passes progressivos (%)',
-    nomeY: 'ações na área/90',
-    resumo: 'progressão qualificada combinada com presença e ações certas na área',
   },
 ];
 
 function GraficoBloco({ config, lista, gn, serieB }) {
   const analise = useMemo(
-    () => gerarAnalise(lista, gn, serieB, config.x, config.y, config.nomeX, config.nomeY, config.resumo),
+    () => gerarAnalise(lista, gn, serieB, config.x, config.y, config.id),
     [lista, gn, serieB]
   );
 
@@ -230,7 +263,13 @@ function GraficoBloco({ config, lista, gn, serieB }) {
           <div className="flex-shrink-0 mt-0.5">
             <span className="text-[8px] font-black uppercase tracking-widest text-amber-700 bg-amber-200 px-2 py-0.5 rounded">Análise Técnica</span>
           </div>
-          <p className="text-[11px] text-slate-700 leading-relaxed">{analise}</p>
+          <p className="text-[11px] text-slate-700 leading-relaxed">
+            {typeof analise === 'string' && analise.split('**').map((part, i) =>
+              i % 2 === 1
+                ? <strong key={i} className="font-black text-slate-900">{part}</strong>
+                : <span key={i}>{part}</span>
+            )}
+          </p>
         </div>
       </div>
     </div>
