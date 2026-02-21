@@ -6,16 +6,16 @@ import Papa from 'papaparse';
 import { cleanData, safeParseFloat } from '@/app/utils/dataCleaner';
 
 const METRICAS_RADAR = [
-  { label: 'Passes Chave',               key: 'Passes chave',                                        type: 'per90' },
-  { label: 'Passes Progr. %',            key: 'Passes progressivos precisos,%',                      type: 'raw'   },
-  { label: 'Passes Área %',              key: 'Passes dentro da área / precisos, %',                 type: 'raw'   },
-  { label: 'Dribles Certos/90',          key: 'Dribles bem sucedidos',                               type: 'per90' },
-  { label: 'Dribles 1/3 Final/90',       key: 'Dribles no último terço do campo com sucesso',        type: 'per90' },
-  { label: 'Entradas 1/3 Final',         key: 'Entradas no terço final carregando a bola',           type: 'per90' },
-  { label: 'Recup. Campo Adv',           key: 'Bolas recuperadas no campo do adversário',            type: 'per90' },
-  { label: 'xA',                         key: 'xA',                                                  type: 'per90' },
-  { label: 'xG',                         key: 'Xg',                                                  type: 'per90' },
-  { label: 'Ações Área Adv/90',          key: 'Ações na área adversária bem-sucedidas',              type: 'per90' },
+  { label: 'Passes Chave',         key: 'Passes chave',                                   type: 'per90' },
+  { label: 'Passes Progr. %',      key: 'Passes progressivos precisos,%',                 type: 'raw'   },
+  { label: 'Passes Área %',        key: 'Passes dentro da área / precisos, %',            type: 'raw'   },
+  { label: 'Dribles Certos/90',    key: 'Dribles bem sucedidos',                          type: 'per90' },
+  { label: 'Dribles 1/3 Final/90', key: 'Dribles no último terço do campo com sucesso',   type: 'per90' },
+  { label: 'Entradas 1/3 Final',   key: 'Entradas no terço final carregando a bola',      type: 'per90' },
+  { label: 'Recup. Campo Adv',     key: 'Bolas recuperadas no campo do adversário',       type: 'per90' },
+  { label: 'xA',                   key: 'xA',                                             type: 'per90' },
+  { label: 'xG',                   key: 'Xg',                                             type: 'per90' },
+  { label: 'Ações Área Adv/90',    key: 'Ações na área adversária bem-sucedidas',         type: 'per90' },
 ];
 
 function getValorMetrica(jogador, metrica) {
@@ -42,8 +42,7 @@ function processarDados(dados, aba) {
   });
 }
 
-// Calcula o score composto normalizado 0-100 para cada atleta
-function calcularScore(jogador, medias, maxes) {
+function calcularScore(jogador, maxes) {
   let total = 0;
   METRICAS_RADAR.forEach(m => {
     const val = getValorMetrica(jogador, m);
@@ -68,23 +67,16 @@ function PonderacaoContent() {
       try {
         const urlAba1 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQKQDSwtQvkSq1v9P2TzUDnFsV_i1gRCNXyQ0aT5TewfwNMnouAoICwQKRAmtCUDLHcJXO4DYS0fL_R/pub?output=csv&gid=0';
         const urlSerieB = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQbSUvDghD3MPKBNEYz1cxeLgCmftwt5AoqkVmai6xCrA7W8fIy77Y2RlTmqR5w1A6a-MRPlV67pVYA/pub?output=csv';
-
         const [res1, res2] = await Promise.all([fetch(urlAba1), fetch(urlSerieB)]);
         const [csv1, csv2] = await Promise.all([res1.text(), res2.text()]);
-
         Papa.parse(csv1, {
           header: true, skipEmptyLines: true,
-          complete: (results) => {
-            const dados = processarDados(cleanData(results.data), 'LISTA PREFERENCIAL');
-            setListaPreferencial(dados);
-          }
+          complete: (results) => setListaPreferencial(processarDados(cleanData(results.data), 'LISTA PREFERENCIAL'))
         });
-
         Papa.parse(csv2, {
           header: true, skipEmptyLines: true,
           complete: (results) => setSerieB(cleanData(results.data))
         });
-
         setLoading(false);
       } catch (err) {
         console.error(err);
@@ -94,44 +86,27 @@ function PonderacaoContent() {
     loadData();
   }, []);
 
-  // Máximos e médias da base combinada (lista + série B) para percentil/destaque
-  const { maxes, medias } = useMemo(() => {
+  const { maxes } = useMemo(() => {
     const base = [...listaPreferencial, ...serieB];
-    const maxes = {}, medias = {};
+    const maxes = {};
     METRICAS_RADAR.forEach(m => {
       const vals = base.map(j => getValorMetrica(j, m)).filter(v => v >= 0);
       maxes[m.label] = Math.max(...vals, 0.01);
-      medias[m.label] = vals.reduce((a, b) => a + b, 0) / (vals.length || 1);
     });
-    return { maxes, medias };
+    return { maxes };
   }, [listaPreferencial, serieB]);
 
-  // Máximos apenas da lista preferencial (para destacar top performers da lista)
-  const maxesList = useMemo(() => {
-    const m = {};
-    METRICAS_RADAR.forEach(met => {
-      const vals = listaPreferencial.map(j => getValorMetrica(j, met)).filter(v => v >= 0);
-      m[met.label] = Math.max(...vals, 0.01);
-    });
-    return m;
-  }, [listaPreferencial]);
-
-  // Adiciona score e percentil a cada jogador da lista
   const jogadoresComScore = useMemo(() => {
     if (!listaPreferencial.length || !Object.keys(maxes).length) return [];
     const base = [...listaPreferencial, ...serieB];
-
     return listaPreferencial.map(j => {
-      const score = calcularScore(j, medias, maxes);
-
-      // Percentis por métrica (vs base combinada)
+      const score = calcularScore(j, maxes);
       const percentis = {};
       METRICAS_RADAR.forEach(m => {
         const val = getValorMetrica(j, m);
         const vals = base.map(x => getValorMetrica(x, m)).filter(v => v >= 0);
         percentis[m.label] = Math.round((vals.filter(v => v <= val).length / vals.length) * 100);
       });
-
       const timeKey = Object.keys(j).find(k => k.toLowerCase() === 'time') || 'TIME';
       return {
         ...j,
@@ -140,7 +115,7 @@ function PonderacaoContent() {
         TIME_FIXED: j[timeKey] || j['Equipa'] || j['Equipe'] || '-',
       };
     });
-  }, [listaPreferencial, serieB, maxes, medias]);
+  }, [listaPreferencial, serieB, maxes]);
 
   const times = useMemo(() => {
     const t = new Set(jogadoresComScore.map(j => j.TIME_FIXED).filter(Boolean));
@@ -162,198 +137,244 @@ function PonderacaoContent() {
   }, [jogadoresComScore, busca, filtroTime, sortMetrica, sortDir]);
 
   const handleSort = (col) => {
-    if (sortMetrica === col) {
-      setSortDir(d => d === 'desc' ? 'asc' : 'desc');
-    } else {
-      setSortMetrica(col);
-      setSortDir('desc');
-    }
+    if (sortMetrica === col) setSortDir(d => d === 'desc' ? 'asc' : 'desc');
+    else { setSortMetrica(col); setSortDir('desc'); }
   };
 
-  // Cor de destaque baseada no percentil do valor vs lista preferencial
-  function getDestaque(jogador, metrica) {
-    const val = getValorMetrica(jogador, metrica);
-    const max = maxesList[metrica.label] || 1;
-    const pct = val / max;
-    if (pct >= 0.85) return 'text-emerald-600 font-black';
-    if (pct >= 0.65) return 'text-amber-500 font-black';
-    return 'text-slate-700 font-bold';
-  }
-
   function getScoreColor(score) {
-    if (score >= 70) return 'bg-emerald-500';
-    if (score >= 50) return 'bg-amber-400';
-    if (score >= 30) return 'bg-orange-400';
-    return 'bg-red-400';
+    if (score >= 70) return '#10b981';
+    if (score >= 50) return '#f59e0b';
+    if (score >= 30) return '#f97316';
+    return '#ef4444';
+  }
+  function getScoreTextClass(score) {
+    if (score >= 70) return 'text-emerald-600';
+    if (score >= 50) return 'text-amber-500';
+    if (score >= 30) return 'text-orange-500';
+    return 'text-red-500';
   }
 
   if (loading) return (
-    <div className="min-h-screen bg-[#0a0c10] flex items-center justify-center">
-      <div className="flex flex-col items-center gap-4">
-        <div className="w-16 h-16 border-4 border-brand-yellow/20 border-t-brand-yellow rounded-full animate-spin" />
-        <p className="text-brand-yellow font-black tracking-widest uppercase text-xs italic animate-pulse">Carregando Ponderação...</p>
-      </div>
+    <div className="min-h-screen bg-white flex items-center justify-center text-amber-600 font-black italic animate-pulse text-2xl uppercase">
+      Carregando Ponderação...
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-[#0a0c10] text-white p-4 md:p-8">
-      <div className="max-w-[1800px] mx-auto">
+    <div className="min-h-screen bg-white text-black p-4 font-sans print:p-0 overflow-x-hidden">
+      <style jsx global>{`
+        @media print {
+          @page { size: landscape; margin: 0.3cm; }
+          .no-print { display: none !important; }
+          body { background: white !important; color: black !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          .print-container { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0.1cm !important; transform: scale(0.9); transform-origin: top left; }
+          table { font-size: 8px !important; }
+          th, td { padding: 3px 5px !important; }
+        }
+      `}</style>
 
-        {/* HEADER */}
-        <div className="flex items-center gap-6 mb-10">
-          <button
-            onClick={() => router.push('/central-scouting/lista-preferencial')}
-            className="p-4 bg-slate-900/80 hover:bg-brand-yellow/20 rounded-2xl border border-slate-800 transition-all group"
-          >
-            <svg className="w-6 h-6 text-slate-500 group-hover:text-brand-yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-          </button>
-          <div>
-            <h1 className="text-4xl md:text-6xl font-black italic uppercase tracking-tighter leading-none">
-              Ponderação <span className="text-brand-yellow">por Métrica</span>
-            </h1>
-            <p className="text-slate-500 font-black text-[10px] uppercase tracking-widest mt-1">
-              {jogadoresFiltrados.length} atletas · Score calculado pelas métricas do radar · Base: Lista + Série B
-            </p>
+      <div className="max-w-[1800px] mx-auto print-container flex flex-col gap-4">
+
+        {/* HEADER — idêntico ao relatório individual */}
+        <header className="flex justify-between items-center border-b-4 border-amber-500 pb-2">
+          <div className="flex items-center gap-4">
+            <img src="/club/escudonovorizontino.png" alt="Shield" className="h-16 w-auto" />
+            <div>
+              <h1 className="text-3xl font-black tracking-tighter text-black uppercase leading-none">Grêmio Novorizontino</h1>
+              <p className="text-base font-bold tracking-widest text-slate-600 uppercase">Departamento de Scouting</p>
+            </div>
           </div>
-        </div>
+          <div className="text-right flex flex-col items-end gap-2">
+            <button
+              onClick={() => router.push('/central-scouting/lista-preferencial')}
+              className="no-print bg-slate-200 text-slate-800 px-3 py-1 rounded-md text-xs font-bold hover:bg-slate-300 transition-colors"
+            >
+              ← VOLTAR
+            </button>
+            <div className="bg-amber-500 text-black px-6 py-1 font-black text-xl uppercase italic shadow-md">
+              Ponderação por Métrica
+            </div>
+            <div className="text-slate-600 font-black text-[10px] mt-1 tracking-wider uppercase">
+              DATA: {new Date().toLocaleDateString('pt-BR')} · {jogadoresFiltrados.length} ATLETAS
+            </div>
+          </div>
+        </header>
 
-        {/* FILTROS */}
-        <div className="flex flex-wrap gap-4 mb-6">
+        {/* FILTROS — só na tela */}
+        <div className="no-print flex flex-wrap gap-3 items-center">
           <input
             type="text"
             placeholder="BUSCAR ATLETA..."
             value={busca}
             onChange={e => setBusca(e.target.value)}
-            className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-[10px] font-black outline-none focus:border-brand-yellow/50 w-56"
+            className="border-2 border-slate-200 rounded-xl px-4 py-2 text-[10px] font-black outline-none focus:border-amber-500 w-48"
           />
           <select
             value={filtroTime}
             onChange={e => setFiltroTime(e.target.value)}
-            className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-[10px] font-black outline-none focus:border-brand-yellow/50"
+            className="border-2 border-slate-200 rounded-xl px-4 py-2 text-[10px] font-black outline-none focus:border-amber-500"
           >
             {times.map(t => <option key={t} value={t}>{t === 'todos' ? 'TODOS OS TIMES' : t.toUpperCase()}</option>)}
           </select>
-          <div className="ml-auto flex items-center gap-2">
-            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Legenda:</span>
-            <span className="text-[9px] font-black text-emerald-500">■ Top 15%</span>
-            <span className="text-[9px] font-black text-amber-400">■ Top 35%</span>
-            <span className="text-[9px] font-black text-slate-400">■ Demais</span>
+          <div className="flex items-center gap-3 ml-2">
+            <span className="text-[9px] font-black text-slate-400 uppercase">Legenda:</span>
+            <span className="text-[9px] font-black text-emerald-600">■ Top 15%</span>
+            <span className="text-[9px] font-black text-amber-500">■ Top 35%</span>
           </div>
+          <span className="ml-auto text-[8px] font-black text-slate-400 uppercase tracking-widest">Clique no cabeçalho para ordenar</span>
         </div>
 
         {/* TABELA */}
-        <div className="bg-slate-900/20 rounded-[2rem] border border-slate-800/50 overflow-hidden shadow-2xl">
+        <div className="border-2 border-slate-900 rounded-2xl overflow-hidden shadow-lg">
+          <div className="bg-slate-900 text-white font-black text-center py-2 text-[10px] uppercase tracking-widest">
+            Ponderação por Métrica · Score = média normalizada das 10 métricas do radar (0–100) · Base: Lista Preferencial + Série B
+          </div>
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-[11px]">
+            <table className="w-full border-collapse text-[10px]">
               <thead>
-                <tr className="border-b-2 border-slate-800 bg-slate-900/60">
-                  <th className="px-4 py-4 text-left text-[9px] font-black uppercase tracking-widest text-slate-500 sticky left-0 bg-slate-900/90 z-10 w-8">#</th>
-                  <th className="px-4 py-4 text-left text-[9px] font-black uppercase tracking-widest text-slate-500 sticky left-8 bg-slate-900/90 z-10 min-w-[180px]">Atleta</th>
-                  <th className="px-3 py-4 text-left text-[9px] font-black uppercase tracking-widest text-slate-500 min-w-[100px]">Time</th>
-
-                  {/* Score geral */}
+                <tr className="border-b-2 border-slate-900 bg-slate-50">
+                  <th className="px-3 py-3 text-left text-[8px] font-black uppercase tracking-widest text-slate-500 w-8">#</th>
+                  <th className="px-3 py-3 text-left text-[8px] font-black uppercase tracking-widest text-slate-500 min-w-[160px]">Atleta</th>
+                  <th className="px-3 py-3 text-left text-[8px] font-black uppercase tracking-widest text-slate-500 min-w-[90px]">Time</th>
                   <th
                     onClick={() => handleSort('_score')}
-                    className={`px-4 py-4 text-center text-[9px] font-black uppercase tracking-widest cursor-pointer select-none transition-colors min-w-[90px] ${sortMetrica === '_score' ? 'text-brand-yellow' : 'text-slate-500 hover:text-white'}`}
+                    className={`px-3 py-3 text-center text-[8px] font-black uppercase tracking-widest cursor-pointer no-print min-w-[80px] transition-colors ${sortMetrica === '_score' ? 'text-amber-600 bg-amber-50' : 'text-slate-500 hover:bg-slate-100'}`}
                   >
                     Score {sortMetrica === '_score' ? (sortDir === 'desc' ? '↓' : '↑') : ''}
                   </th>
-
-                  {/* Uma coluna por métrica do radar */}
                   {METRICAS_RADAR.map(m => (
                     <th
                       key={m.label}
                       onClick={() => handleSort(m.label)}
-                      className={`px-3 py-4 text-center text-[9px] font-black uppercase tracking-widest cursor-pointer select-none transition-colors min-w-[100px] ${sortMetrica === m.label ? 'text-brand-yellow' : 'text-slate-500 hover:text-white'}`}
+                      className={`px-2 py-3 text-center text-[8px] font-black uppercase tracking-widest cursor-pointer no-print min-w-[90px] transition-colors ${sortMetrica === m.label ? 'text-amber-600 bg-amber-50' : 'text-slate-500 hover:bg-slate-100'}`}
                     >
                       {m.label} {sortMetrica === m.label ? (sortDir === 'desc' ? '↓' : '↑') : ''}
                     </th>
                   ))}
+                  {/* Print headers (idênticos mas sem cursor/onClick para PDF limpo) */}
+                  <th className="px-3 py-3 text-center text-[8px] font-black uppercase tracking-widest text-slate-500 min-w-[80px]" style={{display:'none'}}>Score</th>
+                  {METRICAS_RADAR.map(m => (
+                    <th key={`ph-${m.label}`} className="px-2 py-3 text-center text-[8px] font-black uppercase tracking-widest text-slate-500" style={{display:'none'}}>{m.label}</th>
+                  ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/40">
-                {jogadoresFiltrados.map((j, idx) => (
-                  <tr
-                    key={j.ID_ATLETA || idx}
-                    onClick={() => router.push(`/central-scouting/lista-preferencial/${j.ID_ATLETA}`)}
-                    className="group hover:bg-brand-yellow/[0.03] transition-colors cursor-pointer"
-                  >
-                    {/* Ranking */}
-                    <td className="px-4 py-3 sticky left-0 bg-[#0a0c10] group-hover:bg-[#0f1116] z-10">
-                      <span className="text-[10px] font-black text-slate-600">#{idx + 1}</span>
-                    </td>
-
-                    {/* Atleta */}
-                    <td className="px-4 py-3 sticky left-8 bg-[#0a0c10] group-hover:bg-[#0f1116] z-10">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-[9px] font-black text-slate-500 border border-slate-700 group-hover:border-brand-yellow/40 transition-all flex-shrink-0">
-                          {j.Jogador?.substring(0, 2).toUpperCase()}
-                        </div>
-                        <div>
-                          <div className="font-black uppercase italic tracking-tight text-[11px] group-hover:text-brand-yellow transition-colors leading-tight">{j.Jogador}</div>
-                          <div className="text-[9px] text-slate-500 font-bold">{j.Idade} anos · {j.Posição || '-'}</div>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Time */}
-                    <td className="px-3 py-3">
-                      <span className="text-[9px] font-black uppercase tracking-wide text-slate-400">{j.TIME_FIXED}</span>
-                    </td>
-
-                    {/* Score */}
-                    <td className="px-4 py-3 text-center">
-                      <div className="flex flex-col items-center gap-1">
-                        <span className={`text-sm font-black tabular-nums ${j._score >= 70 ? 'text-emerald-400' : j._score >= 50 ? 'text-amber-400' : j._score >= 30 ? 'text-orange-400' : 'text-slate-400'}`}>
-                          {j._score.toFixed(1)}
-                        </span>
-                        <div className="w-12 h-1 bg-slate-800 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full rounded-full ${getScoreColor(j._score)}`}
-                            style={{ width: `${Math.min(j._score, 100)}%` }}
-                          />
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Métricas do radar */}
-                    {METRICAS_RADAR.map(m => {
-                      const val = getValorMetrica(j, m);
-                      const percentil = j._percentis?.[m.label] ?? 0;
-                      const isTop15 = percentil >= 85;
-                      const isTop35 = percentil >= 65 && percentil < 85;
-                      return (
-                        <td key={m.label} className="px-3 py-3 text-center">
-                          <div className={`tabular-nums text-[11px] ${isTop15 ? 'text-emerald-400 font-black' : isTop35 ? 'text-amber-400 font-black' : 'text-slate-400 font-bold'}`}>
-                            {val.toFixed(2)}{m.label.includes('%') ? '%' : ''}
+              <tbody className="divide-y divide-slate-100">
+                {jogadoresFiltrados.map((j, idx) => {
+                  const scoreColor = getScoreColor(j._score);
+                  const scoreClass = getScoreTextClass(j._score);
+                  return (
+                    <tr
+                      key={j.ID_ATLETA || idx}
+                      onClick={() => router.push(`/central-scouting/lista-preferencial/${j.ID_ATLETA}`)}
+                      className="hover:bg-amber-50/60 transition-colors cursor-pointer group"
+                    >
+                      <td className="px-3 py-2.5 text-[9px] font-black text-slate-400">#{idx + 1}</td>
+                      <td className="px-3 py-2.5">
+                        <div className="flex items-center gap-2">
+                          <div className="no-print w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center text-[8px] font-black text-slate-500 flex-shrink-0 group-hover:bg-amber-100 transition-colors">
+                            {j.Jogador?.substring(0, 2).toUpperCase()}
                           </div>
-                          {(isTop15 || isTop35) && (
-                            <div className={`text-[8px] font-black mt-0.5 ${isTop15 ? 'text-emerald-600' : 'text-amber-600'}`}>
-                              Top {100 - percentil}%
+                          <div>
+                            <div className="font-black uppercase italic tracking-tight text-[10px] group-hover:text-amber-600 transition-colors">{j.Jogador}</div>
+                            <div className="text-[8px] text-slate-400 font-bold">{j.Idade} anos</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-600">{j.TIME_FIXED}</td>
+                      {/* Score — screen */}
+                      <td className="px-3 py-2.5 text-center no-print">
+                        <div className="flex flex-col items-center gap-1">
+                          <span className={`text-sm font-black tabular-nums ${scoreClass}`}>{j._score.toFixed(1)}</span>
+                          <div className="w-10 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                            <div className="h-full rounded-full" style={{ width: `${Math.min(j._score, 100)}%`, backgroundColor: scoreColor }} />
+                          </div>
+                        </div>
+                      </td>
+                      {/* Score — print */}
+                      <td className="px-3 py-2.5 text-center" style={{display:'none'}}>
+                        <span style={{fontWeight:'900', color: scoreColor}}>{j._score.toFixed(1)}</span>
+                      </td>
+                      {/* Métricas — screen */}
+                      {METRICAS_RADAR.map(m => {
+                        const val = getValorMetrica(j, m);
+                        const percentil = j._percentis?.[m.label] ?? 0;
+                        const isTop15 = percentil >= 85;
+                        const isTop35 = percentil >= 65 && percentil < 85;
+                        return (
+                          <td key={m.label} className="px-2 py-2.5 text-center no-print">
+                            <div className={`tabular-nums text-[10px] ${isTop15 ? 'text-emerald-600 font-black' : isTop35 ? 'text-amber-500 font-black' : 'text-slate-500 font-bold'}`}>
+                              {val.toFixed(2)}{m.label.includes('%') ? '%' : ''}
                             </div>
-                          )}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
+                            {(isTop15 || isTop35) && (
+                              <div className={`text-[7px] font-black ${isTop15 ? 'text-emerald-600' : 'text-amber-500'}`}>
+                                Top {100 - percentil}%
+                              </div>
+                            )}
+                          </td>
+                        );
+                      })}
+                      {/* Métricas — print */}
+                      {METRICAS_RADAR.map(m => {
+                        const val = getValorMetrica(j, m);
+                        const percentil = j._percentis?.[m.label] ?? 0;
+                        const isTop15 = percentil >= 85;
+                        const isTop35 = percentil >= 65 && percentil < 85;
+                        const color = isTop15 ? '#059669' : isTop35 ? '#d97706' : '#64748b';
+                        return (
+                          <td key={`p-${m.label}`} className="px-2 py-2.5 text-center" style={{display:'none'}}>
+                            <div style={{fontWeight:'700', color}}>{val.toFixed(2)}{m.label.includes('%') ? '%' : ''}</div>
+                            {(isTop15 || isTop35) && (
+                              <div style={{fontSize:'7px', fontWeight:'900', color}}>Top {100 - percentil}%</div>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         </div>
 
-        {/* RODAPÉ INFO */}
-        <div className="mt-6 flex flex-wrap gap-6 text-[9px] font-black text-slate-600 uppercase tracking-widest">
-          <span>Score = média normalizada das 10 métricas do radar (0–100)</span>
-          <span>Destaques comparados vs. Lista Preferencial + Série B</span>
-          <span>Clique em qualquer atleta para abrir o relatório individual</span>
-          <span>Clique no cabeçalho para ordenar por coluna</span>
+        {/* LEGENDA RODAPÉ */}
+        <div className="flex flex-wrap gap-6 text-[8px] font-black text-slate-400 uppercase tracking-widest border-t-2 border-slate-900 pt-2">
+          <span>Score = média normalizada (0–100) das 10 métricas do radar</span>
+          <span className="text-emerald-600">■ Verde = Top 15% da base</span>
+          <span className="text-amber-500">■ Amarelo = Top 35% da base</span>
+          <span>Base: Lista Preferencial + Série B</span>
         </div>
 
+        {/* FOOTER AÇÕES */}
+        <footer className="no-print flex justify-between items-center border-t-2 border-slate-900 pt-3">
+          <div className="flex gap-4">
+            <button
+              onClick={() => window.print()}
+              className="bg-slate-900 hover:bg-black text-white font-black px-8 py-3 rounded-2xl text-sm shadow-xl transition-all transform hover:scale-105 active:scale-95 flex items-center gap-3"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+              </svg>
+              EXPORTAR PDF
+            </button>
+            <button
+              onClick={() => router.push('/central-scouting/lista-preferencial')}
+              className="text-slate-500 hover:text-black text-sm font-black uppercase tracking-widest px-4 transition-colors"
+            >
+              Voltar
+            </button>
+          </div>
+          <p className="text-[10px] text-slate-500 font-black italic tracking-tight uppercase">© Scouting System GN</p>
+        </footer>
+
       </div>
+
+      <style jsx global>{`
+        @media print {
+          .no-print { display: none !important; }
+          [style*="display:none"] { display: table-cell !important; }
+        }
+      `}</style>
     </div>
   );
 }
@@ -361,7 +382,7 @@ function PonderacaoContent() {
 export default function PonderacaoPorMetrica() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-[#0a0c10] flex items-center justify-center text-brand-yellow font-black italic animate-pulse uppercase">
+      <div className="min-h-screen bg-white flex items-center justify-center text-amber-600 font-black italic animate-pulse uppercase text-2xl">
         Carregando...
       </div>
     }>
