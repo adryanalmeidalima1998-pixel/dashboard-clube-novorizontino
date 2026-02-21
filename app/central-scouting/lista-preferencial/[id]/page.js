@@ -160,6 +160,15 @@ function PlayerProfileContent() {
     margin: { l: 50, r: 50, t: 30, b: 30 }, paper_bgcolor: '#fff', plot_bgcolor: '#fff', autosize: true
   };
 
+  const navigation = useMemo(() => {
+    if (!player || listaPreferencial.length === 0) return { prev: null, next: null };
+    const currentIndex = listaPreferencial.findIndex(p => p.ID_ATLETA === player.ID_ATLETA);
+    return {
+      prev: currentIndex > 0 ? listaPreferencial[currentIndex - 1] : null,
+      next: currentIndex < listaPreferencial.length - 1 ? listaPreferencial[currentIndex + 1] : null
+    };
+  }, [player, listaPreferencial]);
+
   const getPlayerPhoto = (name) => {
     if (!name) return '/images/players/default.png';
     const cleanName = name.trim();
@@ -193,7 +202,31 @@ function PlayerProfileContent() {
               <p className="text-base font-bold tracking-widest text-slate-600 uppercase">Departamento de Scouting</p>
             </div>
           </div>
-          <div className="text-right">
+          <div className="text-right flex flex-col items-end gap-2">
+            <div className="flex gap-2 no-print">
+              {navigation.prev && (
+                <button 
+                  onClick={() => router.push(`/central-scouting/lista-preferencial/${navigation.prev.ID_ATLETA}`)}
+                  className="bg-slate-800 text-white px-3 py-1 rounded-md text-xs font-bold hover:bg-slate-700 transition-colors flex items-center gap-1"
+                >
+                  ← ANTERIOR
+                </button>
+              )}
+              <button 
+                onClick={() => router.push('/central-scouting/lista-preferencial')}
+                className="bg-slate-200 text-slate-800 px-3 py-1 rounded-md text-xs font-bold hover:bg-slate-300 transition-colors"
+              >
+                MENU
+              </button>
+              {navigation.next && (
+                <button 
+                  onClick={() => router.push(`/central-scouting/lista-preferencial/${navigation.next.ID_ATLETA}`)}
+                  className="bg-amber-500 text-black px-3 py-1 rounded-md text-xs font-bold hover:bg-amber-400 transition-colors flex items-center gap-1"
+                >
+                  PRÓXIMO →
+                </button>
+              )}
+            </div>
             <div className="bg-amber-500 text-black px-6 py-1 font-black text-xl uppercase italic shadow-md">Relatório de Prospecção</div>
             <div className="text-slate-600 font-black text-[10px] mt-1 tracking-wider uppercase">DATA: {new Date().toLocaleDateString('pt-BR')} | ID: {player.ID_ATLETA}</div>
           </div>
