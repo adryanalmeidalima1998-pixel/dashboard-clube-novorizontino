@@ -9,7 +9,7 @@ import HeatmapComponent from '@/app/components/HeatmapComponent';
 
 const Plot = dynamic(() => import('react-plotly.js'), { 
   ssr: false, 
-  loading: () => <div className="h-48 flex items-center justify-center text-slate-500 font-bold italic animate-pulse text-2xl">CARREGANDO GRÁFICOS...</div> 
+  loading: () => <div className="h-40 flex items-center justify-center text-slate-500 font-bold italic animate-pulse text-xl uppercase">CARREGANDO GRÁFICOS...</div> 
 });
 
 const METRICAS_RADAR = [
@@ -149,12 +149,12 @@ function PlayerProfileContent() {
   const radarLayout = {
     polar: {
       radialaxis: { visible: true, range: [0, 100], gridcolor: '#ddd', showticklabels: false },
-      angularaxis: { tickfont: { size: 8, color: '#000', weight: 'bold' }, gridcolor: '#ddd', rotation: 90, direction: 'clockwise' },
+      angularaxis: { tickfont: { size: 7, color: '#000', weight: 'bold' }, gridcolor: '#ddd', rotation: 90, direction: 'clockwise' },
       bgcolor: '#fff'
     },
     showlegend: true, 
-    legend: { orientation: 'h', x: 0.5, y: -0.15, font: { size: 9, color: '#000' }, xanchor: 'center' },
-    margin: { l: 40, r: 40, t: 20, b: 20 }, paper_bgcolor: '#fff', plot_bgcolor: '#fff', autosize: true
+    legend: { orientation: 'h', x: 0.5, y: -0.1, font: { size: 8, color: '#000' }, xanchor: 'center' },
+    margin: { l: 30, r: 30, t: 15, b: 15 }, paper_bgcolor: '#fff', plot_bgcolor: '#fff', autosize: true
   };
 
   const getPlayerPhoto = (name) => {
@@ -166,7 +166,7 @@ function PlayerProfileContent() {
     return `/images/players/${cleanName.replace(/\s+/g, '_')}.png`;
   };
 
-  if (loading) return <div className="min-h-screen bg-white flex items-center justify-center text-amber-600 font-black italic animate-pulse text-2xl uppercase">Carregando Relatório...</div>;
+  if (loading) return <div className="min-h-screen bg-white flex items-center justify-center text-amber-600 font-black italic animate-pulse text-2xl uppercase tracking-tighter">Carregando Relatório...</div>;
   if (!player) return <div className="min-h-screen bg-white flex items-center justify-center text-black font-black uppercase text-2xl">Atleta não encontrado.</div>;
 
   return (
@@ -176,84 +176,85 @@ function PlayerProfileContent() {
           @page { size: landscape; margin: 0.1cm; }
           .no-print { display: none !important; }
           body { background: white !important; color: black !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-          .print-container { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important; transform: scale(0.8); transform-origin: top center; }
+          .print-container { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important; transform: scale(0.85); transform-origin: top center; }
           .radar-chart { height: 210px !important; }
           .heatmap-container { transform: scale(0.7); transform-origin: top left; }
-          .metrics-table td { padding-top: 1px !important; padding-bottom: 1px !important; font-size: 9px !important; }
-          .header-print { padding-bottom: 0.5rem !important; margin-bottom: 0.5rem !important; }
+          .metrics-table td { padding-top: 1px !important; padding-bottom: 1px !important; font-size: 8px !important; }
+          .header-print { padding-bottom: 0.3rem !important; margin-bottom: 0.3rem !important; }
+          .grid-container { gap: 0.5rem !important; }
         }
       `}</style>
 
-      <div className="max-w-[1600px] mx-auto print-container flex flex-col gap-2">
+      <div className="max-w-[1600px] mx-auto print-container flex flex-col gap-2 grid-container">
         <header className="flex justify-between items-center border-b-4 border-amber-500 pb-1 header-print">
           <div className="flex items-center gap-3">
-            <img src="/club/escudonovorizontino.png" alt="Shield" className="h-12 w-auto" />
+            <img src="/club/escudonovorizontino.png" alt="Shield" className="h-10 w-auto" />
             <div>
-              <h1 className="text-2xl font-black tracking-tighter text-black uppercase leading-none">Grêmio Novorizontino</h1>
-              <p className="text-[10px] font-bold tracking-widest text-slate-600 uppercase">Departamento de Scouting</p>
+              <h1 className="text-xl font-black tracking-tighter text-black uppercase leading-none">Grêmio Novorizontino</h1>
+              <p className="text-[8px] font-bold tracking-widest text-slate-600 uppercase">Departamento de Scouting</p>
             </div>
           </div>
           <div className="text-right">
             <div className="bg-amber-500 text-black px-4 py-0.5 font-black text-lg uppercase italic shadow-md">Relatório de Prospecção</div>
-            <div className="text-slate-600 font-black text-[9px] mt-0.5 tracking-wider uppercase">DATA: {new Date().toLocaleDateString('pt-BR')} | ID: {player.ID_ATLETA}</div>
+            <div className="text-slate-600 font-black text-[8px] mt-0.5 tracking-wider uppercase">DATA: {new Date().toLocaleDateString('pt-BR')} | ID: {player.ID_ATLETA}</div>
           </div>
         </header>
 
-        <div className="grid grid-cols-12 gap-2">
+        <div className="grid grid-cols-12 gap-2 grid-container">
           <div className="col-span-3 flex flex-col gap-2">
             <div className="bg-white border-2 border-slate-900 rounded-[1.5rem] overflow-hidden shadow-lg">
-              <div className="relative h-32 bg-slate-50 border-b-2 border-slate-900">
+              <div className="relative h-28 bg-slate-50 border-b-2 border-slate-900">
                 <img src={getPlayerPhoto(player.Jogador)} alt={player.Jogador} className="absolute bottom-0 left-1/2 -translate-x-1/2 h-full object-contain" onError={(e) => { e.target.src = '/images/players/default.png'; }} />
               </div>
-              <div className="p-3">
-                <h2 className="text-xl font-black text-black uppercase mb-1 leading-none">{player.Jogador}</h2>
+              <div className="p-2">
+                <h2 className="text-lg font-black text-black uppercase mb-1 leading-none">{player.Jogador}</h2>
                 <div className="grid grid-cols-2 gap-2">
-                  <div><p className="text-[8px] text-slate-500 uppercase font-black tracking-widest">TIME</p><p className="text-xs font-black truncate">{player.TIME_FIXED || '-'}</p></div>
-                  <div><p className="text-[8px] text-slate-500 uppercase font-black tracking-widest">Pé</p><p className="text-xs font-black">{player.Pé === 'R' ? 'Direito' : 'Esquerdo'}</p></div>
-                  <div><p className="text-[8px] text-slate-500 uppercase font-black tracking-widest">Idade</p><p className="text-xs font-black">{player.Idade} anos</p></div>
-                  <div><p className="text-[8px] text-slate-500 uppercase font-black tracking-widest">Minutos</p><p className="text-xs font-black">{player['Minutos jogados']}'</p></div>
+                  <div><p className="text-[7px] text-slate-500 uppercase font-black tracking-widest">TIME</p><p className="text-[10px] font-black truncate">{player.TIME_FIXED || '-'}</p></div>
+                  <div><p className="text-[7px] text-slate-500 uppercase font-black tracking-widest">Pé</p><p className="text-[10px] font-black">{player.Pé === 'R' ? 'Direito' : 'Esquerdo'}</p></div>
+                  <div><p className="text-[7px] text-slate-500 uppercase font-black tracking-widest">Idade</p><p className="text-[10px] font-black">{player.Idade} anos</p></div>
+                  <div><p className="text-[7px] text-slate-500 uppercase font-black tracking-widest">Minutos</p><p className="text-[10px] font-black">{player['Minutos jogados']}'</p></div>
                 </div>
               </div>
             </div>
-            <div className="heatmap-container scale-95 origin-top-left">
+            <div className="heatmap-container scale-90 origin-top-left">
               <HeatmapComponent player={player} />
             </div>
           </div>
 
           <div className="col-span-9 flex flex-col gap-2">
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               <div className="bg-white border-2 border-slate-900 rounded-[1.5rem] p-2 flex flex-col items-center shadow-lg">
-                <h3 className="text-black font-black text-[9px] uppercase tracking-widest mb-1 border-b-2 border-amber-500 px-3">Vs Média Lista</h3>
-                <div className="w-full h-[220px] radar-chart">
+                <h3 className="text-black font-black text-[8px] uppercase tracking-widest mb-1 border-b-2 border-amber-500 px-3">Vs Média Lista</h3>
+                <div className="w-full h-[210px] radar-chart">
                   <Plot data={getRadarData('media')} layout={radarLayout} config={{ displayModeBar: false, responsive: true }} style={{ width: '100%', height: '100%' }} />
                 </div>
               </div>
               <div className="bg-white border-2 border-slate-900 rounded-[1.5rem] p-2 flex flex-col items-center shadow-lg">
-                <h3 className="text-black font-black text-[9px] uppercase tracking-widest mb-1 border-b-2 border-amber-500 px-3">Vs Elenco GN</h3>
-                <div className="w-full h-[220px] radar-chart">
+                <h3 className="text-black font-black text-[8px] uppercase tracking-widest mb-1 border-b-2 border-amber-500 px-3">Vs Elenco GN</h3>
+                <div className="w-full h-[210px] radar-chart">
                   <Plot data={getRadarData('gremio')} layout={radarLayout} config={{ displayModeBar: false, responsive: true }} style={{ width: '100%', height: '100%' }} />
                 </div>
               </div>
-              <div className="bg-white border-2 border-slate-900 rounded-[1.5rem] p-2 flex flex-col items-center shadow-lg">
-                <h3 className="text-black font-black text-[9px] uppercase tracking-widest mb-1 border-b-2 border-amber-500 px-3">Vs Série B</h3>
-                <div className="w-full h-[220px] radar-chart">
-                  <Plot data={getRadarData('serieb')} layout={radarLayout} config={{ displayModeBar: false, responsive: true }} style={{ width: '100%', height: '100%' }} />
-                </div>
+            </div>
+            <div className="bg-white border-2 border-slate-900 rounded-[1.5rem] p-2 flex flex-col items-center shadow-lg">
+              <h3 className="text-black font-black text-[8px] uppercase tracking-widest mb-1 border-b-2 border-amber-500 px-3">Vs Série B</h3>
+              <div className="w-full h-[210px] radar-chart">
+                <Plot data={getRadarData('serieb')} layout={radarLayout} config={{ displayModeBar: false, responsive: true }} style={{ width: '100%', height: '100%' }} />
               </div>
             </div>
           </div>
         </div>
 
         <div className="bg-white border-2 border-slate-900 rounded-[1rem] overflow-hidden shadow-lg metrics-table">
-          <div className="bg-slate-900 text-white font-black text-center py-1 text-[9px] uppercase tracking-widest">Métricas Detalhadas por 90 Minutos</div>
+          <div className="bg-slate-900 text-white font-black text-center py-1 text-[8px] uppercase tracking-widest">Métricas Detalhadas por 90 Minutos</div>
           <div className="grid grid-cols-2 divide-x-2 divide-slate-900">
             {[0, 5].map(start => (
-              <table key={start} className="w-full text-left text-[9px]">
+              <table key={start} className="w-full text-left text-[8px]">
                 <tbody className="divide-y divide-slate-100">
                   {METRICAS_RADAR.slice(start, start + 5).map((m, idx) => (
                     <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-4 py-1 text-slate-700 font-black uppercase tracking-tight">{m.label}</td>
-                      <td className="px-4 py-1 text-right font-black text-black text-xs">{getValorMetrica(player, m).toFixed(2)}{m.label.includes('%') ? '%' : ''}</td>
+                      <td className="px-4 py-0.5 text-slate-700 font-black uppercase tracking-tight">{m.label}</td>
+                      <td className="px-4 py-0.5 text-right font-black text-black text-[10px]">{getValorMetrica(player, m).toFixed(2)}{m.label.includes('%') ? '%' : ''}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -270,7 +271,7 @@ function PlayerProfileContent() {
             </button>
             <button onClick={() => router.back()} className="text-slate-500 hover:text-black text-xs font-black uppercase tracking-widest px-4 transition-colors">Voltar</button>
           </div>
-          <p className="text-[9px] text-slate-500 font-black italic tracking-tight uppercase">© Scouting System GN</p>
+          <p className="text-[8px] text-slate-500 font-black italic tracking-tight uppercase">© Scouting System GN</p>
         </footer>
       </div>
     </div>
