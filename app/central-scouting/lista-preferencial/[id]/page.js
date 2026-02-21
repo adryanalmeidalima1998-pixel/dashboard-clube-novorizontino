@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, Suspense } from 'react';
+import { useState, useEffect, useMemo, Suspense, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Papa from 'papaparse';
 import { cleanData, safeParseFloat } from '@/app/utils/dataCleaner';
@@ -337,8 +337,6 @@ function PlayerProfileContent() {
     </div>
   );
 }
-
-import { useRef } from 'react';
 
 export default function PlayerProfile() {
   return <Suspense fallback={<div>Carregando...</div>}><PlayerProfileContent /></Suspense>;
