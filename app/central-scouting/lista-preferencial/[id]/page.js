@@ -9,7 +9,7 @@ import HeatmapComponent from '@/app/components/HeatmapComponent';
 
 const Plot = dynamic(() => import('react-plotly.js'), { 
   ssr: false, 
-  loading: () => <div className="h-48 flex items-center justify-center text-slate-500 font-bold italic animate-pulse">CARREGANDO...</div> 
+  loading: () => <div className="h-48 flex items-center justify-center text-slate-500 font-bold italic animate-pulse text-2xl">CARREGANDO GRÁFICOS...</div> 
 });
 
 const METRICAS_RADAR = [
@@ -61,8 +61,7 @@ function PlayerProfileContent() {
         Papa.parse(csv1, {
           header: true, skipEmptyLines: true,
           complete: (results) => {
-            const rawData = results.data;
-            const cleaned = cleanData(rawData);
+            const cleaned = cleanData(results.data);
             const dados = processarDados(cleaned, 'LISTA PREFERENCIAL');
             setListaPreferencial(dados);
             const p = dados.find(d => d.ID_ATLETA === id || d.Jogador === decodeURIComponent(id));
@@ -145,23 +144,12 @@ function PlayerProfileContent() {
   const radarLayout = {
     polar: {
       radialaxis: { visible: true, range: [0, 100], gridcolor: '#ddd', showticklabels: false },
-      angularaxis: { tickfont: { size: 9, color: '#000', weight: '900' }, gridcolor: '#ddd', rotation: 90, direction: 'clockwise' },
+      angularaxis: { tickfont: { size: 10, color: '#000', weight: '900' }, gridcolor: '#ddd', rotation: 90, direction: 'clockwise' },
       bgcolor: '#fff'
     },
     showlegend: true, 
-    legend: { orientation: 'h', x: 0.5, y: -0.2, font: { size: 10, color: '#000', weight: 'bold' }, xanchor: 'center' },
-    margin: { l: 60, r: 60, t: 40, b: 40 }, paper_bgcolor: '#fff', plot_bgcolor: '#fff', autosize: true
-  };
-
-  const getPerfilTecnico = () => {
-    if (!player) return [];
-    const perfil = [];
-    if (getValorMetrica(player, METRICAS_RADAR[3]) > 2) perfil.push('Driblador Vertical');
-    if (getValorMetrica(player, METRICAS_RADAR[0]) > 0.5) perfil.push('Criador de Chances');
-    if (getValorMetrica(player, METRICAS_RADAR[5]) > 1) perfil.push('Carregador de Bola');
-    if (getValorMetrica(player, METRICAS_RADAR[8]) > 0.15) perfil.push('Finalizador');
-    if (getValorMetrica(player, METRICAS_RADAR[6]) > 0.5) perfil.push('Recuperador Ativo');
-    return perfil.slice(0, 3);
+    legend: { orientation: 'h', x: 0.5, y: -0.15, font: { size: 11, color: '#000', weight: 'bold' }, xanchor: 'center' },
+    margin: { l: 70, r: 70, t: 40, b: 40 }, paper_bgcolor: '#fff', plot_bgcolor: '#fff', autosize: true
   };
 
   const getPlayerPhoto = (name) => {
@@ -173,77 +161,82 @@ function PlayerProfileContent() {
     return `/images/players/${cleanName.replace(/\s+/g, '_')}.png`;
   };
 
-  if (loading) return <div className="min-h-screen bg-white flex items-center justify-center text-amber-600 font-black italic animate-pulse text-2xl">CARREGANDO RELATÓRIO...</div>;
-  if (!player) return <div className="min-h-screen bg-white flex items-center justify-center text-black font-bold">Atleta não encontrado.</div>;
+  if (loading) return <div className="min-h-screen bg-white flex items-center justify-center text-amber-600 font-black italic animate-pulse text-2xl uppercase">Carregando Relatório...</div>;
+  if (!player) return <div className="min-h-screen bg-white flex items-center justify-center text-black font-black uppercase text-2xl">Atleta não encontrado.</div>;
 
   return (
     <div className="min-h-screen bg-white text-black p-4 font-sans print:p-0">
       <style jsx global>{`
         @media print {
-          @page { size: landscape; margin: 0.2cm; }
+          @page { size: landscape; margin: 0.1cm; }
           .no-print { display: none !important; }
           body { background: white !important; color: black !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-          .print-container { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0.2cm !important; transform: scale(0.98); transform-origin: top left; }
+          .print-container { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0.2cm !important; transform: scale(0.98); transform-origin: top left; background: white !important; }
+          .bg-slate-900, .bg-slate-900\/50, .bg-gradient-to-b { background: white !important; border: 2px solid #000 !important; color: black !important; }
+          .text-white, .text-amber-500, .text-slate-300, .text-slate-400, .text-slate-500 { color: black !important; font-weight: 900 !important; }
+          .angularaxis text, .legendtext { fill: black !important; font-weight: bold !important; font-size: 11px !important; }
+          .gridlayer path { stroke: #ccc !important; stroke-width: 0.5px !important; }
+          .divide-slate-700, .divide-slate-800, .border-slate-700, .border-slate-800 { border-color: #000 !important; }
+          .radar-chart { height: 480px !important; }
         }
         .radar-chart .main-svg { background: white !important; }
       `}</style>
 
-      <div className="max-w-[1550px] mx-auto print-container flex flex-col gap-6">
-        <header className="flex justify-between items-center border-b-4 border-amber-500 pb-3">
+      <div className="max-w-[1600px] mx-auto print-container flex flex-col gap-4">
+        <header className="flex justify-between items-center border-b-8 border-amber-500 pb-3">
           <div className="flex items-center gap-6">
             <img src="/club/escudonovorizontino.png" alt="Shield" className="h-20 w-auto" />
             <div>
               <h1 className="text-4xl font-black tracking-tighter text-black uppercase leading-none">Grêmio Novorizontino</h1>
-              <p className="text-lg font-bold tracking-widest text-slate-600 uppercase">Departamento de Scouting</p>
+              <p className="text-xl font-bold tracking-widest text-slate-600 uppercase">Departamento de Scouting</p>
             </div>
           </div>
           <div className="text-right">
-            <div className="bg-amber-500 text-black px-6 py-2 font-black text-2xl uppercase italic shadow-md">Relatório de Prospecção</div>
+            <div className="bg-amber-500 text-black px-8 py-2 font-black text-2xl uppercase italic shadow-lg">Relatório de Prospecção</div>
             <div className="text-slate-600 font-black text-sm mt-1 tracking-wider uppercase">DATA: {new Date().toLocaleDateString('pt-BR')} | ID: {player.ID_ATLETA}</div>
           </div>
         </header>
 
-        <div className="grid grid-cols-12 gap-6">
-          <div className="col-span-3 flex flex-col gap-6">
+        <div className="grid grid-cols-12 gap-4">
+          <div className="col-span-3 flex flex-col gap-4">
             <div className="bg-white border-4 border-slate-900 rounded-[2.5rem] overflow-hidden shadow-2xl">
-              <div className="relative h-64 bg-slate-100 border-b-4 border-slate-900">
+              <div className="relative h-64 bg-slate-50 border-b-4 border-slate-900">
                 <img src={getPlayerPhoto(player.Jogador)} alt={player.Jogador} className="absolute bottom-0 left-1/2 -translate-x-1/2 h-full object-contain" onError={(e) => { e.target.src = '/images/players/default.png'; }} />
               </div>
               <div className="p-6">
                 <h2 className="text-4xl font-black text-black uppercase mb-4 leading-none">{player.Jogador}</h2>
                 <div className="grid grid-cols-2 gap-6">
-                  <div><p className="text-[11px] text-slate-500 uppercase font-black tracking-widest">Equipe</p><p className="text-base font-black truncate">{player.TIME || player.Equipa || '-'}</p></div>
+                  <div><p className="text-[11px] text-slate-500 uppercase font-black tracking-widest">Equipe</p><p className="text-base font-black truncate">{player.TIME || player.Equipa || player['TIME'] || '-'}</p></div>
                   <div><p className="text-[11px] text-slate-500 uppercase font-black tracking-widest">Pé</p><p className="text-base font-black">{player.Pé === 'R' ? 'Direito' : 'Esquerdo'}</p></div>
                   <div><p className="text-[11px] text-slate-500 uppercase font-black tracking-widest">Idade</p><p className="text-base font-black">{player.Idade} anos</p></div>
                   <div><p className="text-[11px] text-slate-500 uppercase font-black tracking-widest">Minutos</p><p className="text-base font-black">{player['Minutos jogados']}'</p></div>
                 </div>
               </div>
             </div>
-            
-            <div className="bg-white border-4 border-slate-900 rounded-[2rem] p-5 shadow-xl flex flex-col gap-4">
-              <h3 className="text-black font-black text-sm uppercase tracking-widest border-b-2 border-slate-900 pb-2">Perfil Técnico</h3>
-              <div className="flex flex-wrap gap-2">
-                {getPerfilTecnico().map((p, i) => (
-                  <span key={i} className="bg-slate-900 text-white px-4 py-1.5 rounded-full text-[11px] font-black uppercase tracking-tight">{p}</span>
-                ))}
-              </div>
-              <p className="text-[11px] text-slate-600 font-bold italic leading-tight">Análise baseada em métricas normalizadas por 90 minutos de jogo.</p>
-            </div>
-
             <HeatmapComponent player={player} />
           </div>
 
-          <div className="col-span-9 grid grid-cols-3 gap-6">
-            {['media', 'gremio', 'serieb'].map((type) => (
-              <div key={type} className="bg-white border-4 border-slate-900 rounded-[2.5rem] p-6 flex flex-col items-center shadow-2xl">
-                <h3 className="text-black font-black text-sm uppercase tracking-widest mb-4 border-b-2 border-amber-500 px-4 pb-1">
-                  {type === 'media' ? 'Vs Média Lista' : type === 'serieb' ? 'Vs Série B' : 'Vs Elenco GN'}
-                </h3>
-                <div className="w-full h-[450px] radar-chart">
-                  <Plot data={getRadarData(type)} layout={radarLayout} config={{ displayModeBar: false, responsive: true }} style={{ width: '100%', height: '100%' }} />
+          <div className="col-span-9 flex flex-col gap-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-white border-4 border-slate-900 rounded-[2.5rem] p-6 flex flex-col items-center shadow-2xl">
+                <h3 className="text-black font-black text-sm uppercase tracking-widest mb-4 border-b-4 border-amber-500 px-6 pb-1">Vs Média Lista</h3>
+                <div className="w-full h-[400px] radar-chart">
+                  <Plot data={getRadarData('media')} layout={radarLayout} config={{ displayModeBar: false, responsive: true }} style={{ width: '100%', height: '100%' }} />
                 </div>
               </div>
-            ))}
+              <div className="bg-white border-4 border-slate-900 rounded-[2.5rem] p-6 flex flex-col items-center shadow-2xl">
+                <h3 className="text-black font-black text-sm uppercase tracking-widest mb-4 border-b-4 border-amber-500 px-6 pb-1">Vs Elenco GN</h3>
+                <div className="w-full h-[400px] radar-chart">
+                  <Plot data={getRadarData('gremio')} layout={radarLayout} config={{ displayModeBar: false, responsive: true }} style={{ width: '100%', height: '100%' }} />
+                </div>
+              </div>
+            </div>
+            <div className="bg-white border-4 border-slate-900 rounded-[2.5rem] p-6 flex flex-col items-center shadow-2xl">
+              <h3 className="text-black font-black text-sm uppercase tracking-widest mb-4 border-b-4 border-amber-500 px-6 pb-1">Vs Série B</h3>
+              <div className="w-full h-[400px] radar-chart">
+                <Plot data={getRadarData('serieb')} layout={radarLayout} config={{ displayModeBar: false, responsive: true }} style={{ width: '100%', height: '100%' }} />
+              </div>
+            </div>
           </div>
         </div>
 
@@ -256,7 +249,7 @@ function PlayerProfileContent() {
                   {METRICAS_RADAR.slice(start, start + 5).map((m, idx) => (
                     <tr key={idx} className="hover:bg-slate-50 transition-colors">
                       <td className="px-8 py-4 text-slate-700 font-black uppercase tracking-tight">{m.label}</td>
-                      <td className="px-8 py-4 text-right font-black text-black text-lg">{getValorMetrica(player, m).toFixed(2)}{m.label.includes('%') ? '%' : ''}</td>
+                      <td className="px-8 py-4 text-right font-black text-black text-xl">{getValorMetrica(player, m).toFixed(2)}{m.label.includes('%') ? '%' : ''}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -265,15 +258,15 @@ function PlayerProfileContent() {
           </div>
         </div>
 
-        <footer className="flex justify-between items-center border-t-4 border-slate-900 pt-6 mt-4 no-print">
+        <footer className="flex justify-between items-center border-t-8 border-slate-900 pt-6 mt-4 no-print">
           <div className="flex gap-6">
-            <button onClick={() => window.print()} className="bg-slate-900 hover:bg-black text-white font-black px-10 py-4 rounded-2xl text-base shadow-2xl transition-all transform hover:scale-105 active:scale-95 flex items-center gap-3">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
-              GERAR RELATÓRIO PDF
+            <button onClick={() => window.print()} className="bg-slate-900 hover:bg-black text-white font-black px-12 py-5 rounded-3xl text-xl shadow-2xl transition-all transform hover:scale-105 active:scale-95 flex items-center gap-4">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+              EXPORTAR RELATÓRIO PDF
             </button>
-            <button onClick={() => router.back()} className="text-slate-500 hover:text-black text-base font-black uppercase tracking-widest px-6 transition-colors">Voltar</button>
+            <button onClick={() => router.back()} className="text-slate-500 hover:text-black text-xl font-black uppercase tracking-widest px-8 transition-colors">Voltar</button>
           </div>
-          <p className="text-sm text-slate-500 font-black italic tracking-tight">© Scouting System GN - Análise Técnica Avançada</p>
+          <p className="text-base text-slate-500 font-black italic tracking-tight uppercase">© Scouting System GN - Dados automatizados</p>
         </footer>
       </div>
     </div>
