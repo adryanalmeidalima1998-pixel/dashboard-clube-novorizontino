@@ -164,12 +164,17 @@ function PonderacaoContent() {
     <div className="min-h-screen bg-white text-black p-4 font-sans print:p-0 overflow-x-hidden">
       <style jsx global>{`
         @media print {
-          @page { size: landscape; margin: 0.3cm; }
+          @page { size: A4 landscape; margin: 0.5cm; }
           .no-print { display: none !important; }
           body { background: white !important; color: black !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-          .print-container { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0.1cm !important; transform: scale(0.9); transform-origin: top left; }
-          table { font-size: 8px !important; }
-          th, td { padding: 3px 5px !important; }
+          .print-container { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important; }
+          .table-scroll-wrapper { overflow: visible !important; }
+          table { font-size: 7px !important; width: 100% !important; table-layout: fixed; }
+          th, td { padding: 2px 4px !important; word-break: break-word; }
+          thead tr { background: #0f172a !important; color: white !important; }
+          th { color: white !important; }
+          .score-bar { display: none !important; }
+          .avatar-initial { display: none !important; }
         }
       `}</style>
 
@@ -229,7 +234,7 @@ function PonderacaoContent() {
           <div className="bg-slate-900 text-white font-black text-center py-2 text-[10px] uppercase tracking-widest">
             Ponderação por Métrica · Score = média normalizada das 10 métricas do radar (0–100) · Base: Lista Preferencial + Série B
           </div>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto table-scroll-wrapper">
             <table className="w-full border-collapse text-[10px]">
               <thead>
                 <tr className="border-b-2 border-slate-900 bg-slate-50">
@@ -238,7 +243,7 @@ function PonderacaoContent() {
                   <th className="px-3 py-3 text-left text-[8px] font-black uppercase tracking-widest text-slate-500 min-w-[90px]">Time</th>
                   <th
                     onClick={() => handleSort('_score')}
-                    className={`px-3 py-3 text-center text-[8px] font-black uppercase tracking-widest cursor-pointer no-print min-w-[80px] transition-colors ${sortMetrica === '_score' ? 'text-amber-600 bg-amber-50' : 'text-slate-500 hover:bg-slate-100'}`}
+                    className={`px-3 py-3 text-center text-[8px] font-black uppercase tracking-widest cursor-pointer min-w-[80px] transition-colors ${sortMetrica === '_score' ? 'text-amber-600 bg-amber-50' : 'text-slate-500 hover:bg-slate-100'}`}
                   >
                     Score {sortMetrica === '_score' ? (sortDir === 'desc' ? '↓' : '↑') : ''}
                   </th>
@@ -246,16 +251,12 @@ function PonderacaoContent() {
                     <th
                       key={m.label}
                       onClick={() => handleSort(m.label)}
-                      className={`px-2 py-3 text-center text-[8px] font-black uppercase tracking-widest cursor-pointer no-print min-w-[90px] transition-colors ${sortMetrica === m.label ? 'text-amber-600 bg-amber-50' : 'text-slate-500 hover:bg-slate-100'}`}
+                      className={`px-2 py-3 text-center text-[8px] font-black uppercase tracking-widest cursor-pointer min-w-[90px] transition-colors ${sortMetrica === m.label ? 'text-amber-600 bg-amber-50' : 'text-slate-500 hover:bg-slate-100'}`}
                     >
                       {m.label} {sortMetrica === m.label ? (sortDir === 'desc' ? '↓' : '↑') : ''}
                     </th>
                   ))}
-                  {/* Print headers (idênticos mas sem cursor/onClick para PDF limpo) */}
-                  <th className="px-3 py-3 text-center text-[8px] font-black uppercase tracking-widest text-slate-500 min-w-[80px]" style={{display:'none'}}>Score</th>
-                  {METRICAS_RADAR.map(m => (
-                    <th key={`ph-${m.label}`} className="px-2 py-3 text-center text-[8px] font-black uppercase tracking-widest text-slate-500" style={{display:'none'}}>{m.label}</th>
-                  ))}
+
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -271,7 +272,7 @@ function PonderacaoContent() {
                       <td className="px-3 py-2.5 text-[9px] font-black text-slate-400">#{idx + 1}</td>
                       <td className="px-3 py-2.5">
                         <div className="flex items-center gap-2">
-                          <div className="no-print w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center text-[8px] font-black text-slate-500 flex-shrink-0 group-hover:bg-amber-100 transition-colors">
+                          <div className="no-print avatar-initial w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center text-[8px] font-black text-slate-500 flex-shrink-0 group-hover:bg-amber-100 transition-colors">
                             {j.Jogador?.substring(0, 2).toUpperCase()}
                           </div>
                           <div>
@@ -281,27 +282,23 @@ function PonderacaoContent() {
                         </div>
                       </td>
                       <td className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-600">{j.TIME_FIXED}</td>
-                      {/* Score — screen */}
-                      <td className="px-3 py-2.5 text-center no-print">
+                      {/* Score */}
+                      <td className="px-3 py-2.5 text-center">
                         <div className="flex flex-col items-center gap-1">
                           <span className={`text-sm font-black tabular-nums ${scoreClass}`}>{j._score.toFixed(1)}</span>
-                          <div className="w-10 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                          <div className="score-bar w-10 h-1.5 bg-slate-200 rounded-full overflow-hidden">
                             <div className="h-full rounded-full" style={{ width: `${Math.min(j._score, 100)}%`, backgroundColor: scoreColor }} />
                           </div>
                         </div>
                       </td>
-                      {/* Score — print */}
-                      <td className="px-3 py-2.5 text-center" style={{display:'none'}}>
-                        <span style={{fontWeight:'900', color: scoreColor}}>{j._score.toFixed(1)}</span>
-                      </td>
-                      {/* Métricas — screen */}
+                      {/* Métricas */}
                       {METRICAS_RADAR.map(m => {
                         const val = getValorMetrica(j, m);
                         const percentil = j._percentis?.[m.label] ?? 0;
                         const isTop15 = percentil >= 85;
                         const isTop35 = percentil >= 65 && percentil < 85;
                         return (
-                          <td key={m.label} className="px-2 py-2.5 text-center no-print">
+                          <td key={m.label} className="px-2 py-2.5 text-center">
                             <div className={`tabular-nums text-[10px] ${isTop15 ? 'text-emerald-600 font-black' : isTop35 ? 'text-amber-500 font-black' : 'text-slate-500 font-bold'}`}>
                               {val.toFixed(2)}{m.label.includes('%') ? '%' : ''}
                             </div>
@@ -309,22 +306,6 @@ function PonderacaoContent() {
                               <div className={`text-[7px] font-black ${isTop15 ? 'text-emerald-600' : 'text-amber-500'}`}>
                                 Top {100 - percentil}%
                               </div>
-                            )}
-                          </td>
-                        );
-                      })}
-                      {/* Métricas — print */}
-                      {METRICAS_RADAR.map(m => {
-                        const val = getValorMetrica(j, m);
-                        const percentil = j._percentis?.[m.label] ?? 0;
-                        const isTop15 = percentil >= 85;
-                        const isTop35 = percentil >= 65 && percentil < 85;
-                        const color = isTop15 ? '#059669' : isTop35 ? '#d97706' : '#64748b';
-                        return (
-                          <td key={`p-${m.label}`} className="px-2 py-2.5 text-center" style={{display:'none'}}>
-                            <div style={{fontWeight:'700', color}}>{val.toFixed(2)}{m.label.includes('%') ? '%' : ''}</div>
-                            {(isTop15 || isTop35) && (
-                              <div style={{fontSize:'7px', fontWeight:'900', color}}>Top {100 - percentil}%</div>
                             )}
                           </td>
                         );
@@ -369,12 +350,7 @@ function PonderacaoContent() {
 
       </div>
 
-      <style jsx global>{`
-        @media print {
-          .no-print { display: none !important; }
-          [style*="display:none"] { display: table-cell !important; }
-        }
-      `}</style>
+
     </div>
   );
 }
