@@ -72,18 +72,6 @@ function DistorsaoContent() {
   const [serieB, setSerieB] = useState([]);
   const [loading, setLoading] = useState(true);
   const [mapaCores, setMapaCores] = useState({});
-  const [isPrinting, setIsPrinting] = useState(false);
-
-  useEffect(() => {
-    const handleBeforePrint = () => setIsPrinting(true);
-    const handleAfterPrint = () => setIsPrinting(false);
-    window.addEventListener('beforeprint', handleBeforePrint);
-    window.addEventListener('afterprint', handleAfterPrint);
-    return () => {
-      window.removeEventListener('beforeprint', handleBeforePrint);
-      window.removeEventListener('afterprint', handleAfterPrint);
-    };
-  }, []);
 
   const processarDados = (dados, aba) => {
     return dados.map(jogador => {
@@ -165,8 +153,8 @@ function DistorsaoContent() {
         name: jogador.Jogador,
         text: [primeiroNome],
         textposition: 'top center',
-        textfont: { size: 12, color: isPrinting ? '#000' : '#fff', weight: 'bold' },
-        marker: { size: 16, color: mapaCores[jogador.Jogador], line: { color: isPrinting ? '#000' : '#fff', width: 2 } },
+        textfont: { size: 12, color: '#fff', weight: 'bold' },
+        marker: { size: 16, color: mapaCores[jogador.Jogador], line: { color: '#fff', width: 2 } },
         hovertemplate: `<b>${jogador.Jogador}</b><br>${config.xLabel}: %{x:.2f}<br>${config.yLabel}: %{y:.2f}<extra></extra>`
       });
     });
@@ -181,8 +169,8 @@ function DistorsaoContent() {
         name: `GN: ${jogador.Jogador}`,
         text: [primeiroNome],
         textposition: 'bottom center',
-        textfont: { size: 11, color: isPrinting ? '#000' : '#3b82f6', weight: 'bold' },
-        marker: { size: 14, color: '#3b82f6', symbol: 'diamond', line: { color: isPrinting ? '#000' : '#fff', width: 1.5 } },
+        textfont: { size: 11, color: '#3b82f6', weight: 'bold' },
+        marker: { size: 14, color: '#3b82f6', symbol: 'diamond', line: { color: '#fff', width: 1.5 } },
         hovertemplate: `<b>${jogador.Jogador} (Elenco GN)</b><br>${config.xLabel}: %{x:.2f}<br>${config.yLabel}: %{y:.2f}<extra></extra>`,
         showlegend: false
       });
@@ -202,24 +190,24 @@ function DistorsaoContent() {
       x: [avgX], y: [avgY], mode: 'markers+text', type: 'scatter', name: 'Média Série B',
       text: ['SÉRIE B'], textposition: 'bottom center',
       textfont: { size: 13, color: '#ef4444', weight: 'bold' },
-      marker: { size: 22, color: 'rgba(239, 68, 68, 0.95)', symbol: 'star', line: { color: isPrinting ? '#000' : '#fff', width: 2.5 } },
+      marker: { size: 22, color: 'rgba(239, 68, 68, 0.95)', symbol: 'star', line: { color: '#fff', width: 2.5 } },
       hovertemplate: `<b>Média Série B</b><br>${config.xLabel}: %{x:.2f}<br>${config.yLabel}: %{y:.2f}<extra></extra>`
     });
 
     const layout = {
-      title: { text: config.titulo, font: { size: 24, color: isPrinting ? '#000' : '#fbbf24', family: 'Arial Black' } },
-      xaxis: { title: { text: config.xLabel, font: { size: 14, color: isPrinting ? '#000' : '#fff', weight: 'bold' } }, gridcolor: isPrinting ? '#ccc' : 'rgba(255,255,255,0.1)', tickfont: { size: 12, color: isPrinting ? '#000' : '#fff', weight: 'bold' }, showline: true, linecolor: isPrinting ? '#000' : '#fff' },
-      yaxis: { title: { text: config.yLabel, font: { size: 14, color: isPrinting ? '#000' : '#fff', weight: 'bold' } }, gridcolor: isPrinting ? '#ccc' : 'rgba(255,255,255,0.1)', tickfont: { size: 12, color: isPrinting ? '#000' : '#fff', weight: 'bold' }, showline: true, linecolor: isPrinting ? '#000' : '#fff' },
+      title: { text: config.titulo, font: { size: 24, color: '#fbbf24', family: 'Arial Black' } },
+      xaxis: { title: { text: config.xLabel, font: { size: 14, color: '#fff', weight: 'bold' } }, gridcolor: 'rgba(255,255,255,0.1)', tickfont: { size: 12, color: '#fff', weight: 'bold' }, showline: true, linecolor: '#fff' },
+      yaxis: { title: { text: config.yLabel, font: { size: 14, color: '#fff', weight: 'bold' } }, gridcolor: 'rgba(255,255,255,0.1)', tickfont: { size: 12, color: '#fff', weight: 'bold' }, showline: true, linecolor: '#fff' },
       paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
       margin: { t: 80, b: 100, l: 100, r: 50 }, height: 750, showlegend: true,
-      legend: { font: { size: 12, color: isPrinting ? '#000' : '#fff', weight: 'bold' }, orientation: 'h', y: -0.15, x: 0.5, xanchor: 'center' },
+      legend: { font: { size: 12, color: '#fff', weight: 'bold' }, orientation: 'h', y: -0.15, x: 0.5, xanchor: 'center' },
       hovermode: 'closest'
     };
 
     return { data: plotData, layout };
   };
 
-  if (loading) return <div className="min-h-screen bg-[#08101e] flex items-center justify-center text-amber-500 font-black italic animate-pulse text-2xl">CARREGANDO ANÁLISE...</div>;
+  if (loading) return <div className="min-h-screen bg-[#08101e] flex items-center justify-center text-amber-500 font-black italic animate-pulse text-2xl">CARREGANDO GRÁFICOS...</div>;
 
   return (
     <div className="min-h-screen bg-[#08101e] text-white p-6 font-sans print:bg-white print:text-black print:p-0">
@@ -228,11 +216,11 @@ function DistorsaoContent() {
           @page { size: landscape; margin: 0.5cm; }
           .no-print { display: none !important; }
           body { background: white !important; color: black !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-          .print-container { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important; }
-          .bg-slate-900, .bg-slate-900\/50 { background: white !important; border: 2px solid #000 !important; }
+          .print-container { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important; background: white !important; }
+          .bg-slate-900, .bg-slate-900\/50 { background: white !important; border: 3px solid #000 !important; }
           .text-amber-500 { color: #000 !important; font-weight: 900 !important; }
           .js-plotly-plot .main-svg { background: transparent !important; }
-          .chart-card { break-inside: avoid; page-break-after: always; padding: 1.5cm !important; height: 19cm !important; display: flex !important; flex-direction: column !important; justify-content: center !important; border: 3px solid #000 !important; margin-bottom: 0 !important; }
+          .chart-card { break-inside: avoid; page-break-after: always; padding: 1.5cm !important; height: 19cm !important; display: flex !important; flex-direction: column !important; justify-content: center !important; border: 4px solid #000 !important; margin-bottom: 0 !important; filter: brightness(0.1) contrast(2); }
           .chart-card:last-child { page-break-after: auto; }
         }
       `}</style>
@@ -247,7 +235,7 @@ function DistorsaoContent() {
             </div>
           </div>
           <div className="flex gap-4 no-print">
-            <button onClick={() => window.print()} className="bg-amber-500 hover:bg-amber-600 text-black px-10 py-4 font-black rounded-2xl text-lg shadow-2xl transition-all transform hover:scale-105">PDF</button>
+            <button onClick={() => window.print()} className="bg-amber-500 hover:bg-amber-600 text-black px-10 py-4 font-black rounded-2xl text-lg shadow-2xl">PDF</button>
             <button onClick={() => router.back()} className="bg-slate-800 hover:bg-slate-700 text-white px-10 py-4 font-black rounded-2xl text-lg border-2 border-slate-700">VOLTAR</button>
           </div>
         </header>

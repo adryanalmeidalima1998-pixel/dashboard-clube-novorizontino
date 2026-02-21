@@ -33,18 +33,6 @@ function PlayerProfileContent() {
   const [gremioNovorizontino, setGremioNovorizontino] = useState([]);
   const [serieB, setSerieB] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isPrinting, setIsPrinting] = useState(false);
-
-  useEffect(() => {
-    const handleBeforePrint = () => setIsPrinting(true);
-    const handleAfterPrint = () => setIsPrinting(false);
-    window.addEventListener('beforeprint', handleBeforePrint);
-    window.addEventListener('afterprint', handleAfterPrint);
-    return () => {
-      window.removeEventListener('beforeprint', handleBeforePrint);
-      window.removeEventListener('afterprint', handleAfterPrint);
-    };
-  }, []);
 
   const processarDados = (dados, aba) => {
     return dados.map(jogador => {
@@ -125,8 +113,7 @@ function PlayerProfileContent() {
 
     const data = [{
       type: 'scatterpolar', r: playerVals, theta: labels, fill: 'toself', name: player.Jogador,
-      line: { color: isPrinting ? '#000' : '#fbbf24', width: 3 }, 
-      fillcolor: isPrinting ? 'rgba(0, 0, 0, 0.2)' : 'rgba(251, 191, 36, 0.4)', mode: 'lines'
+      line: { color: '#fbbf24', width: 3 }, fillcolor: 'rgba(251, 191, 36, 0.4)', mode: 'lines'
     }];
 
     if (type === 'media') {
@@ -155,17 +142,25 @@ function PlayerProfileContent() {
 
   const radarLayout = {
     polar: {
-      radialaxis: { visible: true, range: [0, 100], gridcolor: isPrinting ? '#ccc' : 'rgba(255,255,255,0.1)', showticklabels: false },
-      angularaxis: { tickfont: { size: 8, color: isPrinting ? '#000' : '#fff', weight: 'bold' }, gridcolor: isPrinting ? '#ccc' : 'rgba(255,255,255,0.1)', rotation: 90, direction: 'clockwise' },
+      radialaxis: { visible: true, range: [0, 100], gridcolor: 'rgba(255,255,255,0.1)', showticklabels: false },
+      angularaxis: { tickfont: { size: 8, color: '#fff', weight: 'bold' }, gridcolor: 'rgba(255,255,255,0.1)', rotation: 90, direction: 'clockwise' },
       bgcolor: 'rgba(0,0,0,0)'
     },
     showlegend: true, 
-    legend: { orientation: 'h', x: 0.5, y: -0.2, font: { size: 9, color: isPrinting ? '#000' : '#fff' }, xanchor: 'center' },
+    legend: { orientation: 'h', x: 0.5, y: -0.2, font: { size: 9, color: '#fff' }, xanchor: 'center' },
     margin: { l: 60, r: 60, t: 30, b: 30 }, paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)', autosize: true
   };
 
-  if (loading) return <div className="min-h-screen bg-[#08101e] flex items-center justify-center text-amber-500 font-black italic animate-pulse">CARREGANDO...</div>;
-  if (!player) return <div className="min-h-screen bg-[#08101e] flex items-center justify-center text-white">Atleta não encontrado.</div>;
+  const getPerfilTecnico = () => {
+    if (!player) return [];
+    const perfil = [];
+    if (getValorMetrica(player, METRICAS_RADAR[3]) > 2) perfil.push('Driblador Vertical');
+    if (getValorMetrica(player, METRICAS_RADAR[0]) > 0.5) perfil.push('Criador de Chances');
+    if (getValorMetrica(player, METRICAS_RADAR[5]) > 1) perfil.push('Carregador de Bola');
+    if (getValorMetrica(player, METRICAS_RADAR[8]) > 0.15) perfil.push('Finalizador');
+    if (getValorMetrica(player, METRICAS_RADAR[6]) > 0.5) perfil.push('Recuperador Ativo');
+    return perfil.slice(0, 3);
+  };
 
   const getPlayerPhoto = (name) => {
     if (!name) return '/images/players/default.png';
@@ -176,6 +171,8 @@ function PlayerProfileContent() {
     return `/images/players/${cleanName.replace(/\s+/g, '_')}.png`;
   };
 
+  if (loading) return <div className="min-h-screen bg-[#08101e] flex items-center justify-center text-amber-500 font-black italic animate-pulse">CARREGANDO...</div>;
+
   return (
     <div className="min-h-screen bg-[#08101e] text-white p-4 font-sans print:bg-white print:text-black print:p-0">
       <style jsx global>{`
@@ -183,18 +180,19 @@ function PlayerProfileContent() {
           @page { size: landscape; margin: 0.2cm; }
           .no-print { display: none !important; }
           body { background: white !important; color: black !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-          .print-container { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0.2cm !important; transform: scale(0.98); transform-origin: top left; }
-          .bg-slate-900, .bg-slate-900\/50 { background: white !important; border: 2px solid #000 !important; color: black !important; }
-          .text-amber-500, .text-amber-400 { color: black !important; font-weight: 900 !important; }
-          .text-slate-300, .text-slate-400, .text-slate-500 { color: black !important; font-weight: bold !important; }
-          .js-plotly-plot .main-svg { background: transparent !important; }
-          .gridlayer path { stroke: #000 !important; stroke-width: 0.5px !important; }
+          .print-container { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0.2cm !important; transform: scale(0.98); transform-origin: top left; background: white !important; }
+          .bg-slate-900, .bg-slate-900\/50, .bg-gradient-to-b { background: #f8fafc !important; border: 2px solid #000 !important; color: black !important; }
+          .text-white, .text-amber-500, .text-slate-300, .text-slate-400, .text-slate-500 { color: black !important; font-weight: 900 !important; }
+          .text-amber-400 { color: #000 !important; font-weight: 900 !important; }
+          .angularaxis text, .legendtext { fill: black !important; font-weight: bold !important; font-size: 10px !important; }
+          .gridlayer path { stroke: #ccc !important; stroke-width: 0.5px !important; }
           .divide-slate-700, .divide-slate-800, .border-slate-700, .border-slate-800 { border-color: #000 !important; }
+          .radar-chart { filter: brightness(0.1) contrast(2); }
         }
       `}</style>
 
       <div className="max-w-[1550px] mx-auto print-container flex flex-col gap-4">
-        <header className="flex justify-between items-center border-b-2 border-amber-500 pb-2">
+        <header className="flex justify-between items-center border-b-4 border-amber-500 pb-2">
           <div className="flex items-center gap-4">
             <img src="/club/escudonovorizontino.png" alt="Shield" className="h-16 w-auto" />
             <div>
@@ -224,16 +222,27 @@ function PlayerProfileContent() {
                 </div>
               </div>
             </div>
+            
+            <div className="bg-slate-900/50 border border-slate-700 rounded-3xl p-4 shadow-xl flex flex-col gap-3">
+              <h3 className="text-amber-500 font-black text-xs uppercase tracking-widest border-b border-slate-700 pb-1 print:text-black">Perfil Técnico</h3>
+              <div className="flex flex-wrap gap-2">
+                {getPerfilTecnico().map((p, i) => (
+                  <span key={i} className="bg-amber-500/10 text-amber-500 border border-amber-500/30 px-3 py-1 rounded-full text-[10px] font-black uppercase print:text-black print:border-black">{p}</span>
+                ))}
+              </div>
+              <p className="text-[10px] text-slate-400 italic leading-tight print:text-black">Análise baseada em métricas de desempenho por 90 minutos.</p>
+            </div>
+
             <HeatmapComponent player={player} />
           </div>
 
           <div className="col-span-9 grid grid-cols-3 gap-4">
-            {['media', 'gremio', 'serieb'].map((type, i) => (
+            {['media', 'gremio', 'serieb'].map((type) => (
               <div key={type} className="bg-slate-900/50 border border-slate-700 rounded-3xl p-5 flex flex-col items-center shadow-xl">
                 <h3 className="text-amber-500 font-black text-xs uppercase tracking-widest mb-3 print:text-black">
                   {type === 'media' ? 'Vs Média Lista' : type === 'serieb' ? 'Vs Série B' : 'Vs Elenco GN'}
                 </h3>
-                <div className="w-full h-[380px] radar-chart">
+                <div className="w-full h-[420px] radar-chart">
                   <Plot data={getRadarData(type)} layout={radarLayout} config={{ displayModeBar: false, responsive: true }} style={{ width: '100%', height: '100%' }} />
                 </div>
               </div>
@@ -261,13 +270,10 @@ function PlayerProfileContent() {
 
         <footer className="flex justify-between items-center border-t border-slate-800 pt-4 print:border-black no-print">
           <div className="flex gap-4">
-            <button onClick={() => window.print()} className="bg-amber-500 hover:bg-amber-600 text-black font-black px-8 py-3 rounded-2xl text-sm shadow-2xl transition-all transform hover:scale-105 flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" clipRule="evenodd" /></svg>
-              EXPORTAR RELATÓRIO PDF
-            </button>
+            <button onClick={() => window.print()} className="bg-amber-500 hover:bg-amber-600 text-black font-black px-8 py-3 rounded-2xl text-sm shadow-2xl flex items-center gap-2">EXPORTAR PDF</button>
             <button onClick={() => router.back()} className="text-slate-500 hover:text-white text-sm font-black uppercase tracking-widest px-4">Voltar</button>
           </div>
-          <p className="text-xs text-slate-500 font-black italic">Scouting System GN - Dados automatizados e normalizados.</p>
+          <p className="text-xs text-slate-500 font-black italic">Scouting System GN - Dados automatizados.</p>
         </footer>
       </div>
     </div>
