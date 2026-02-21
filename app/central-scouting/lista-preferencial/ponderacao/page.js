@@ -171,8 +171,9 @@ function PonderacaoContent() {
           .table-scroll-wrapper { overflow: visible !important; }
           table { font-size: 7px !important; width: 100% !important; table-layout: fixed; }
           th, td { padding: 2px 4px !important; word-break: break-word; }
-          thead tr { background: #0f172a !important; color: white !important; }
-          th { color: white !important; }
+          thead tr { background-color: #0f172a !important; }
+          thead th { color: white !important; }
+          thead th.bg-amber-500, thead th[class*="bg-amber"] { background-color: #f59e0b !important; color: black !important; }
           .score-bar { display: none !important; }
           .avatar-initial { display: none !important; }
         }
@@ -237,26 +238,25 @@ function PonderacaoContent() {
           <div className="overflow-x-auto table-scroll-wrapper">
             <table className="w-full border-collapse text-[10px]">
               <thead>
-                <tr className="border-b-2 border-slate-900 bg-slate-50">
-                  <th className="px-3 py-3 text-left text-[8px] font-black uppercase tracking-widest text-slate-500 w-8">#</th>
-                  <th className="px-3 py-3 text-left text-[8px] font-black uppercase tracking-widest text-slate-500 min-w-[160px]">Atleta</th>
-                  <th className="px-3 py-3 text-left text-[8px] font-black uppercase tracking-widest text-slate-500 min-w-[90px]">Time</th>
+                <tr className="border-b-2 border-slate-900 bg-slate-900">
+                  <th className="px-3 py-3 text-left text-[8px] font-black uppercase tracking-widest text-slate-300 w-8">#</th>
+                  <th className="px-3 py-3 text-left text-[8px] font-black uppercase tracking-widest text-slate-300 min-w-[160px]">Atleta</th>
+                  <th className="px-3 py-3 text-left text-[8px] font-black uppercase tracking-widest text-slate-300 min-w-[90px]">Time</th>
                   <th
                     onClick={() => handleSort('_score')}
-                    className={`px-3 py-3 text-center text-[8px] font-black uppercase tracking-widest cursor-pointer min-w-[80px] transition-colors ${sortMetrica === '_score' ? 'text-amber-600 bg-amber-50' : 'text-slate-500 hover:bg-slate-100'}`}
+                    className={`px-3 py-3 text-center text-[8px] font-black uppercase tracking-widest cursor-pointer min-w-[80px] transition-colors ${sortMetrica === '_score' ? 'bg-amber-500 text-black' : 'text-slate-300 hover:bg-slate-700'}`}
                   >
-                    Score {sortMetrica === '_score' ? (sortDir === 'desc' ? '↓' : '↑') : ''}
+                    Score {sortMetrica === '_score' ? (sortDir === 'desc' ? '↓' : '↑') : '+'}
                   </th>
                   {METRICAS_RADAR.map(m => (
                     <th
                       key={m.label}
                       onClick={() => handleSort(m.label)}
-                      className={`px-2 py-3 text-center text-[8px] font-black uppercase tracking-widest cursor-pointer min-w-[90px] transition-colors ${sortMetrica === m.label ? 'text-amber-600 bg-amber-50' : 'text-slate-500 hover:bg-slate-100'}`}
+                      className={`px-2 py-3 text-center text-[8px] font-black uppercase tracking-widest cursor-pointer min-w-[90px] transition-colors ${sortMetrica === m.label ? 'bg-amber-500 text-black' : 'text-slate-300 hover:bg-slate-700'}`}
                     >
                       {m.label} {sortMetrica === m.label ? (sortDir === 'desc' ? '↓' : '↑') : ''}
                     </th>
                   ))}
-
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
