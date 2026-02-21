@@ -61,11 +61,19 @@ function PlayerProfileContent() {
         Papa.parse(csv1, {
           header: true, skipEmptyLines: true,
           complete: (results) => {
-            const cleaned = cleanData(results.data);
+            const raw = results.data;
+            console.log('Exemplo de chaves do CSV:', Object.keys(raw[0] || {}));
+            const cleaned = cleanData(raw);
             const dados = processarDados(cleaned, 'LISTA PREFERENCIAL');
             setListaPreferencial(dados);
             const p = dados.find(d => d.ID_ATLETA === id || d.Jogador === decodeURIComponent(id));
-            if (p) setPlayer(p);
+            if (p) {
+              // Forçar mapeamento da coluna C (TIME) caso o nome varie
+              const timeKey = Object.keys(p).find(k => k.toLowerCase() === 'time') || 'TIME';
+              p.TIME_FIXED = p[timeKey] || p['Equipa'] || p['Equipe'] || '-';
+              console.log('Jogador encontrado:', p.Jogador, 'TIME mapeado:', p.TIME_FIXED);
+              setPlayer(p);
+            }
           }
         });
 
@@ -200,7 +208,7 @@ function PlayerProfileContent() {
               <div className="p-4">
                 <h2 className="text-2xl font-black text-black uppercase mb-2 leading-none">{player.Jogador}</h2>
                 <div className="grid grid-cols-2 gap-3">
-                  <div><p className="text-[9px] text-slate-500 uppercase font-black tracking-widest">TIME</p><p className="text-sm font-black truncate">{player['TIME'] || player.TIME || player.Equipa || '-'}</p></div>
+                  <div><p className="text-[9px] text-slate-500 uppercase font-black tracking-widest">TIME</p><p className="text-sm font-black truncate">{player.TIME_FIXED || '-'}</p></div>
                   <div><p className="text-[9px] text-slate-500 uppercase font-black tracking-widest">Pé</p><p className="text-sm font-black">{player.Pé === 'R' ? 'Direito' : 'Esquerdo'}</p></div>
                   <div><p className="text-[9px] text-slate-500 uppercase font-black tracking-widest">Idade</p><p className="text-sm font-black">{player.Idade} anos</p></div>
                   <div><p className="text-[9px] text-slate-500 uppercase font-black tracking-widest">Minutos</p><p className="text-sm font-black">{player['Minutos jogados']}'</p></div>
