@@ -168,10 +168,9 @@ function PlayerProfileContent() {
     });
 
     const ordenado = [...comparacoes].sort((a, b) => b.diff - a.diff);
-    return {
-      fortes: ordenado.slice(0, 3),
-      fracos: ordenado.slice(-3).reverse()
-    };
+    const fortes = ordenado.filter(m => m.diff > 5 && m.percentil >= 55).slice(0, 3);
+    const fracos = [...ordenado].reverse().filter(m => m.diff < -5 && m.percentil <= 45).slice(0, 3);
+    return { fortes, fracos };
   }, [player, listaPreferencial, escalasMetricas]);
 
   const getRadarData = (type) => {
