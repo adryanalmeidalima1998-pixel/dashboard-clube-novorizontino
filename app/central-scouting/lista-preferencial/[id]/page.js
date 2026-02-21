@@ -154,9 +154,12 @@ function PlayerProfileContent() {
   const pontosFortesFragos = useMemo(() => {
     if (!player || listaPreferencial.length === 0) return { fortes: [], fracos: [] };
 
+    // Base de comparação: Série B + Lista Preferencial combinadas
+    const baseComparacao = [...listaPreferencial, ...serieB];
+
     const comparacoes = METRICAS_RADAR.map(m => {
       const valAtleta = getValorMetrica(player, m);
-      const valores = listaPreferencial.map(j => getValorMetrica(j, m)).filter(v => v >= 0);
+      const valores = baseComparacao.map(j => getValorMetrica(j, m)).filter(v => v >= 0);
       const media = valores.reduce((a, b) => a + b, 0) / (valores.length || 1);
       const diff = media > 0 ? ((valAtleta - media) / media) * 100 : 0;
       // percentil: quantos jogadores o atleta supera
