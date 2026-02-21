@@ -13,7 +13,7 @@ function computeZones(player) {
 
   // Pé dominante: CSV tem 'DIREITO' / 'ESQUERDO' na coluna 'Pé dominante'
   const pe = String(player['Pé dominante'] || player['Pé'] || '').toUpperCase();
-  const isRight = pe.includes('DIREITO') || pe === 'R';
+  const isRight = pe.includes('DIREITO') || pe === 'R' || pe === 'RIGHT';
 
   // Extremo invertido: pé direito → ala esquerda (row 0 = topo)
   const wideRow   = isRight ? 0 : 3;
@@ -209,7 +209,7 @@ export default function HeatmapComponent({ player }) {
   const W = 380, H = 240;
 
   const pe      = String(player?.['Pé dominante'] || player?.['Pé'] || '').toUpperCase();
-  const isRight = pe.includes('DIREITO') || pe === 'R';
+  const isRight = pe.includes('DIREITO') || pe === 'R' || pe === 'RIGHT';
 
   const zones = useMemo(() => {
     if (!player) return Array.from({ length: 5 }, () => new Array(4).fill(0));
