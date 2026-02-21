@@ -416,7 +416,7 @@ function PlayerProfileContent() {
                               <span className="text-[9px] font-black text-slate-700 uppercase tracking-tight leading-tight">{item.label}</span>
                               <div className="flex items-center gap-1.5 flex-shrink-0 ml-1">
                                 <span className="text-[9px] font-black text-emerald-700">
-                                  +{Math.round(item.diff)}%
+                                  +{item.percentil}%
                                 </span>
                                 <span className="text-[8px] font-bold text-emerald-700 bg-white border border-emerald-200 rounded px-1">
                                   Top {100 - item.percentil}%
@@ -439,10 +439,10 @@ function PlayerProfileContent() {
                               <span className="text-[9px] font-black text-slate-700 uppercase tracking-tight leading-tight">{item.label}</span>
                               <div className="flex items-center gap-1.5 flex-shrink-0 ml-1">
                                 <span className="text-[9px] font-black text-red-600">
-                                  {Math.round(item.diff)}%
+                                  {item.percentil}%
                                 </span>
                                 <span className="text-[8px] font-bold text-red-600 bg-white border border-red-200 rounded px-1">
-                                  Bot {item.percentil}%
+                                  Bot {100 - item.percentil}%
                                 </span>
                               </div>
                             </div>
