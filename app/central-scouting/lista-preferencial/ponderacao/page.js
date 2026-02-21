@@ -164,19 +164,18 @@ function PonderacaoContent() {
     <div className="min-h-screen bg-white text-black p-4 font-sans print:p-0 overflow-x-hidden">
       <style jsx global>{`
         @media print {
-          @page { size: landscape; margin: 0.2cm; }
+          @page { size: A3 landscape; margin: 0.5cm; }
           .no-print { display: none !important; }
           body { background: white !important; color: black !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-          .print-container { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0.1cm !important; transform: scale(0.88); transform-origin: top left; }
+          .print-container { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important; }
           .table-scroll-wrapper { overflow: visible !important; }
-          table { font-size: 7px !important; width: 100% !important; table-layout: auto; }
-          th, td { padding: 2px 3px !important; word-break: break-word; white-space: nowrap; }
+          table { font-size: 8px !important; width: 100% !important; table-layout: auto; }
+          th, td { padding: 3px 5px !important; word-break: break-word; white-space: nowrap; }
           thead tr { background-color: #0f172a !important; }
           thead th { color: white !important; }
           thead th.bg-amber-500, thead th[class*="bg-amber"] { background-color: #f59e0b !important; color: black !important; }
           .score-bar { display: none !important; }
           .avatar-initial { display: none !important; }
-          .border-2.border-slate-900.rounded-2xl { border-radius: 0 !important; }
         }
       `}</style>
 
