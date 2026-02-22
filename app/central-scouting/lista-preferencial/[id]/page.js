@@ -230,9 +230,17 @@ function PlayerProfileContent() {
   const getPlayerPhoto = (name) => {
     if (!name) return '/images/players/default.png';
     const cleanName = name.trim();
-    if (cleanName === 'Kayke') return '/images/players/Kayke_Ferrari.png';
-    if (cleanName === 'Rodrigo Farofa') return '/images/players/rodrigo_rodrigues.png';
-    if (cleanName === 'Allison Patrick') return '/images/players/Allison.png';
+    // Mapeamentos específicos por nome exato
+    const mapa = {
+      'Kayke': 'Kayke_Ferrari.png',
+      'Rodrigo Farofa': 'rodrigo_rodrigues.png',
+      'Allison Patrick': 'Allison.png',
+      'Santi González': 'santi_gonzález.png',
+      'Sorriso': 'sorriso.png',
+      'Romarinho': 'romarinho.png',
+    };
+    if (mapa[cleanName]) return `/images/players/${mapa[cleanName]}`;
+    // Tenta PascalCase com underscore (padrão antigo) e também lowercase
     return `/images/players/${cleanName.replace(/\s+/g, '_')}.png`;
   };
 
