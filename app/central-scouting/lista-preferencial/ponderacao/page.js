@@ -42,6 +42,17 @@ function processarDados(dados, aba) {
   });
 }
 
+// Série B: valores já vêm por/90 — mapeia direto, sem transformar
+function processarDadosSB(dados) {
+  return dados.map(jogador => {
+    const processado = { ...jogador, aba: 'SERIEB' };
+    METRICAS_RADAR.forEach(m => {
+      if (m.type === 'per90') processado[`${m.key}_per90`] = safeParseFloat(jogador[m.key]);
+    });
+    return processado;
+  });
+}
+
 function calcularScore(jogador, maxes) {
   let total = 0;
   METRICAS_RADAR.forEach(m => {
@@ -75,7 +86,7 @@ function PonderacaoContent() {
         });
         Papa.parse(csv2, {
           header: true, skipEmptyLines: true,
-          complete: (results) => setSerieB(cleanData(results.data))
+          complete: (results) => setSerieB(processarDadosSB(cleanData(results.data)))
         });
         setLoading(false);
       } catch (err) {
