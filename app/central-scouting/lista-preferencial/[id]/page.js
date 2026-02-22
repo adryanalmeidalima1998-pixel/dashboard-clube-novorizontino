@@ -57,6 +57,17 @@ function PlayerProfileContent() {
     });
   };
 
+  // Série B: valores já vêm por/90 — mapeia direto, sem transformar
+  const processarDadosSB = (dados) => {
+    return dados.map(jogador => {
+      const processado = { ...jogador, aba: 'SERIEB' };
+      METRICAS_RADAR.forEach(m => {
+        if (m.type === 'per90') processado[`${m.key}_per90`] = safeParseFloat(jogador[m.key]);
+      });
+      return processado;
+    });
+  };
+
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -92,7 +103,7 @@ function PlayerProfileContent() {
 
         Papa.parse(csv3, {
           header: true, skipEmptyLines: true,
-          complete: (results) => setSerieB(cleanData(results.data))
+          complete: (results) => setSerieB(processarDadosSB(cleanData(results.data)))
         });
 
         setLoading(false);
@@ -192,7 +203,7 @@ function PlayerProfileContent() {
       data.push({ type: 'scatterpolar', r: mediaVals, theta: labels, fill: 'toself', name: 'Média Lista', line: { color: '#ef4444', dash: 'dot', width: 2 }, fillcolor: 'rgba(239, 68, 68, 0.15)', mode: 'lines' });
     } else if (type === 'serieb') {
       const mediaVals = [...METRICAS_RADAR.map(m => {
-        const valores = serieB.map(j => safeParseFloat(j[m.key]));
+        const valores = serieB.map(j => getValorMetrica(j, m));
         return ((valores.reduce((a, b) => a + b, 0) / (valores.length || 1)) / (escalasMetricas[m.label]?.max || 1)) * 100;
       }), 0];
       mediaVals[mediaVals.length-1] = mediaVals[0];
