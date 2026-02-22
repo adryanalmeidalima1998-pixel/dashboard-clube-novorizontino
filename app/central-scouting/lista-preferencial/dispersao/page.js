@@ -81,7 +81,7 @@ const GRAFICOS = [
   },
 ];
 
-// ─── Processar dados: calcula per90 para todas as métricas usadas ───────────
+// ─── Processar dados: calcula per90 para lista preferencial e elenco GN ─────
 function processarDados(dados, aba) {
   return dados.map(jogador => {
     const minutos = safeParseFloat(jogador['Minutos jogados']);
@@ -95,6 +95,18 @@ function processarDados(dados, aba) {
         const val = safeParseFloat(jogador[g.yKey]);
         processado[`${g.yKey}_per90`] = minutos > 0 ? (val / minutos) * 90 : 0;
       }
+    });
+    return processado;
+  });
+}
+
+// ─── Série B: valores já vêm por/90 — mapeia direto, sem transformar ─────────
+function processarDadosSB(dados) {
+  return dados.map(jogador => {
+    const processado = { ...jogador, aba: 'SERIEB' };
+    GRAFICOS.forEach(g => {
+      if (g.xType === 'per90') processado[`${g.xKey}_per90`] = safeParseFloat(jogador[g.xKey]);
+      if (g.yType === 'per90') processado[`${g.yKey}_per90`] = safeParseFloat(jogador[g.yKey]);
     });
     return processado;
   });
@@ -358,10 +370,17 @@ function DispersaoContent() {
           });
         });
 
+        const parseSB = (csv) => new Promise(resolve => {
+          Papa.parse(csv, {
+            header: true, skipEmptyLines: true,
+            complete: r => resolve(processarDadosSB(cleanData(r.data)))
+          });
+        });
+
         const [d1, d2, d3] = await Promise.all([
           parseCSV(c1, 'LISTA'),
           parseCSV(c2, 'GN'),
-          parseCSV(c3, 'SERIEB'),
+          parseSB(c3),
         ]);
 
         // Cor única por jogador da lista preferencial
