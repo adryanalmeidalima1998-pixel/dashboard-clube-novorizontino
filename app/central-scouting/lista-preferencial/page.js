@@ -225,6 +225,21 @@ function ListaPreferencialContent() {
     alert('✅ Template de métricas salvo com sucesso!');
   };
 
+  const getPlayerPhoto = (name) => {
+    if (!name) return '/images/players/default.png';
+    const cleanName = name.trim();
+    const mapa = {
+      'Kayke': 'Kayke_Ferrari.png',
+      'Rodrigo Farofa': 'rodrigo_rodrigues.png',
+      'Allison Patrick': 'Allison.png',
+      'Santi González': 'santi_gonzález.png',
+      'Sorriso': 'sorriso.png',
+      'Romarinho': 'romarinho.png',
+    };
+    if (mapa[cleanName]) return `/images/players/${mapa[cleanName]}`;
+    return `/images/players/${cleanName.replace(/\s+/g, '_')}.png`;
+  };
+
   if (loading) return (
     <div className="min-h-screen bg-[#0a0c10] flex items-center justify-center">
       <div className="flex flex-col items-center gap-4">
@@ -252,7 +267,7 @@ function ListaPreferencialContent() {
               Ponderação
             </button>
             <button
-              onClick={() => router.push('/central-scouting/lista-preferencial/distorsao')}
+              onClick={() => router.push('/central-scouting/lista-preferencial/dispersao')}
               className="px-6 py-3 bg-slate-800 text-white font-black uppercase text-[10px] rounded-xl hover:bg-slate-700 transition-all flex items-center gap-2 border border-slate-700"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M7 12a5 5 0 1110 0A5 5 0 017 12z" /></svg>
@@ -378,7 +393,17 @@ function ListaPreferencialContent() {
                   <tr key={idx} className="hover:bg-brand-yellow/[0.02] transition-colors">
                     <td className="p-6">
                       <div className="flex items-center gap-3 cursor-pointer group" onClick={() => router.push(`/central-scouting/lista-preferencial/${j.ID_ATLETA || j.Jogador}`)}>
-                        <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-500 border border-slate-700 group-hover:border-brand-yellow transition-all">{j.Jogador?.substring(0,2).toUpperCase()}</div>
+                        <div className="w-10 h-10 rounded-xl bg-slate-800 overflow-hidden border border-slate-700 group-hover:border-brand-yellow transition-all flex-shrink-0">
+                          <img
+                            src={getPlayerPhoto(j.Jogador)}
+                            alt={j.Jogador}
+                            className="w-full h-full object-cover object-top"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.parentNode.innerHTML = `<span class="w-full h-full flex items-center justify-center text-[10px] font-black text-slate-500">${(j.Jogador || '??').substring(0,2).toUpperCase()}</span>`;
+                            }}
+                          />
+                        </div>
                         <span className="text-sm font-black uppercase italic tracking-tighter group-hover:text-brand-yellow transition-all">{j.Jogador}</span>
                         <svg className="w-3 h-3 text-slate-600 opacity-0 group-hover:opacity-100 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
                       </div>
