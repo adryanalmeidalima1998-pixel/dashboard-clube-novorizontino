@@ -62,10 +62,8 @@ function ehNumerico(valor) {
 function ListaPreferencialContent() {
   const router = useRouter();
   const [listaPreferencial, setListaPreferencial] = useState([]);
-  const [gremioBravo, setGremiBravo] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterTeam, setFilterTeam] = useState('');
-  const [filterType, setFilterType] = useState('todos');
   const [metricasSelecionadas, setMetricasSelecionadas] = useState([]);
   const [todasMetricas, setTodasMetricas] = useState([]);
   const [categoriaAtiva, setCategoriaAtiva] = useState('ATAQUE');
@@ -73,7 +71,6 @@ function ListaPreferencialContent() {
   const calcularPor90 = (valor, minutosJogados) => {
     const val = safeParseFloat(valor);
     const minutos = safeParseFloat(minutosJogados);
-    
     if (minutos === 0 || minutos === '-' || val === '-') return 0;
     return (val / minutos) * 90;
   };
@@ -91,18 +88,15 @@ function ListaPreferencialContent() {
 
     return dados.map(jogador => {
       const minutosJogados = safeParseFloat(jogador['Minutos jogados']);
-      
       const processado = {
         ...jogador,
         aba: aba,
         minutosJogados: minutosJogados,
       };
-
       metricasReais.forEach(metrica => {
         const chaveCalc = `${metrica}_por_90`;
         processado[chaveCalc] = calcularPor90(jogador[metrica], minutosJogados);
       });
-      
       return processado;
     });
   };
@@ -111,28 +105,24 @@ function ListaPreferencialContent() {
     const loadData = async () => {
       try {
         const urlAba1 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQKQDSwtQvkSq1v9P2TzUDnFsV_i1gRCNXyQ0aT5TewfwNMnouAoICwQKRAmtCUDLHcJXO4DYS0fL_R/pub?output=csv&gid=0&t=' + Date.now();
-        const urlAba2 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQKQDSwtQvkSq1v9P2TzUDnFsV_i1gRCNXyQ0aT5TewfwNMnouAoICwQKRAmtCUDLHcJXO4DYS0fL_R/pub?output=csv&gid=1236859817&t=' + Date.now();
-        
-        let listaProcessada = [];
-        let gremioProcessada = [];
-        let todasMetricasDetectadas = [];
 
         const response1 = await fetch(urlAba1);
         const csvText1 = await response1.text();
-        
+
         Papa.parse(csvText1, {
           header: true,
           skipEmptyLines: true,
           complete: (results) => {
             const dadosLimpos = cleanData(results.data);
-            listaProcessada = processarDados(dadosLimpos, 'LISTA PREFERENCIAL');
-            
+            const listaProcessada = processarDados(dadosLimpos, 'LISTA PREFERENCIAL');
+            let todasMetricasDetectadas = [];
+
             if (listaProcessada.length > 0) {
               todasMetricasDetectadas = Object.keys(listaProcessada[0])
                 .filter(k => k.endsWith('_por_90'))
                 .sort();
             }
-            
+
             setListaPreferencial(listaProcessada);
             setTodasMetricas(todasMetricasDetectadas);
 
@@ -152,19 +142,6 @@ function ListaPreferencialContent() {
           }
         });
 
-        const response2 = await fetch(urlAba2);
-        const csvText2 = await response2.text();
-        
-        Papa.parse(csvText2, {
-          header: true,
-          skipEmptyLines: true,
-          complete: (results) => {
-            const dadosLimpos = cleanData(results.data);
-            gremioProcessada = processarDados(dadosLimpos, 'GRÊMIO NOVORIZONTINO');
-            setGremiBravo(gremioProcessada);
-          }
-        });
-
         setLoading(false);
       } catch (error) {
         console.error('Erro ao carregar dados:', error);
@@ -173,7 +150,7 @@ function ListaPreferencialContent() {
     };
 
     loadData();
-  }, []);
+  }, [];
 
   const metricasPorCategoria = useMemo(() => {
     const grouped = {};
@@ -195,20 +172,12 @@ function ListaPreferencialContent() {
     return grouped;
   }, [todasMetricas]);
 
-  const todosJogadores = useMemo(() => {
-    return [...listaPreferencial, ...gremioBravo];
-  }, [listaPreferencial, gremioBravo]);
-
   const jogadoresFiltrados = useMemo(() => {
-    return todosJogadores.filter(j => {
+    return listaPreferencial.filter(j => {
       const matchTeam = !filterTeam || (j.Time && j.Time.toLowerCase().includes(filterTeam.toLowerCase()));
-      const matchType = 
-        filterType === 'todos' ? true :
-        filterType === 'lista' ? j.aba === 'LISTA PREFERENCIAL' :
-        filterType === 'gremio' ? j.aba === 'GRÊMIO NOVORIZONTINO' : true;
-      return matchTeam && matchType;
+      return matchTeam;
     });
-  }, [todosJogadores, filterTeam, filterType]);
+  }, [listaPreferencial, filterTeam]);
 
   const handleToggleMetrica = (metrica) => {
     if (metricasSelecionadas.includes(metrica)) {
@@ -292,21 +261,6 @@ function ListaPreferencialContent() {
 
         {/* FILTROS */}
         <div className="no-print flex flex-wrap gap-3 items-center">
-          <div className="flex gap-2">
-            {['todos', 'lista', 'gremio'].map(type => (
-              <button
-                key={type}
-                onClick={() => setFilterType(type)}
-                className={`px-4 py-2 rounded-xl font-black uppercase text-[9px] border-2 transition-all ${
-                  filterType === type
-                    ? 'bg-amber-500 text-black border-amber-500'
-                    : 'bg-white border-slate-200 text-slate-600 hover:border-slate-400'
-                }`}
-              >
-                {type === 'todos' ? 'Todos' : type === 'lista' ? 'Lista' : 'Grêmio'}
-              </button>
-            ))}
-          </div>
           <input
             type="text"
             placeholder="FILTRAR POR TIME..."
@@ -335,7 +289,7 @@ function ListaPreferencialContent() {
             </button>
           </div>
           <div className="flex items-center gap-3 ml-auto">
-            <span className="text-[9px] font-black text-slate-400 uppercase">{listaPreferencial.length} na lista · {gremioBravo.length} no elenco GN</span>
+            <span className="text-[9px] font-black text-slate-400 uppercase">{listaPreferencial.length} atletas na lista</span>
           </div>
         </div>
 
@@ -393,8 +347,7 @@ function ListaPreferencialContent() {
         <div className="border-2 border-slate-900 rounded-2xl overflow-hidden shadow-lg">
           <div className="bg-slate-900 text-white font-black text-center py-2 text-[10px] uppercase tracking-widest">
             Lista Preferencial · Métricas por 90 min · {jogadoresFiltrados.length} atletas exibidos
-          </div>
-          <div className="overflow-x-auto table-scroll-wrapper">
+          </div>          <div className="overflow-x-auto table-scroll-wrapper">
             <table className="w-full border-collapse text-[10px]">
               <thead>
                 <tr className="border-b-2 border-slate-900 bg-slate-900">
@@ -409,7 +362,6 @@ function ListaPreferencialContent() {
                       {m.replace('_por_90', '')}
                     </th>
                   ))}
-                  <th className="px-3 py-3 text-center text-[8px] font-black uppercase tracking-widest text-slate-300 min-w-[50px]">Aba</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -452,15 +404,6 @@ function ListaPreferencialContent() {
                         </span>
                       </td>
                     ))}
-                    <td className="px-3 py-2.5 text-center">
-                      <span className={`px-2 py-0.5 rounded text-[8px] font-black ${
-                        j.aba === 'GRÊMIO NOVORIZONTINO'
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-blue-100 text-blue-700'
-                      }`}>
-                        {j.aba === 'GRÊMIO NOVORIZONTINO' ? 'GN' : 'LP'}
-                      </span>
-                    </td>
                   </tr>
                 ))}
               </tbody>
