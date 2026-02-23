@@ -150,7 +150,7 @@ function ListaPreferencialContent() {
     };
 
     loadData();
-  }, [];
+  }, []);
 
   const metricasPorCategoria = useMemo(() => {
     const grouped = {};
