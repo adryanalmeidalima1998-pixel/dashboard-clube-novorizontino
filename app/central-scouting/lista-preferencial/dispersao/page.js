@@ -303,7 +303,7 @@ function GraficoBloco({ config, lista, gn, serieB, mapaCores }) {
   return (
     <div className="grafico-bloco bg-white rounded-2xl border-2 border-slate-200 overflow-hidden">
       {/* Cabeçalho */}
-      <div className="bg-slate-900 px-6 py-3 flex flex-wrap items-center justify-between gap-2">
+      <div className="bloco-header bg-slate-900 px-6 py-3 flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 className="text-white font-black uppercase tracking-wide text-sm">{config.titulo}</h2>
           <p className="text-slate-400 text-[10px] mt-0.5">{config.subtitulo}</p>
@@ -326,10 +326,10 @@ function GraficoBloco({ config, lista, gn, serieB, mapaCores }) {
       </div>
 
       {/* Análise técnica */}
-      <div className="border-t-2 border-amber-400 bg-amber-50 px-6 py-4">
+      <div className="analise-tecnica border-t-2 border-amber-400 bg-amber-50 px-6 py-4">
         <div className="flex items-start gap-3">
           <div className="flex-shrink-0 mt-0.5">
-            <span className="text-[8px] font-black uppercase tracking-widest text-amber-700 bg-amber-200 px-2 py-0.5 rounded">Análise Técnica</span>
+            <span className="analise-label text-[8px] font-black uppercase tracking-widest text-amber-700 bg-amber-200 px-2 py-0.5 rounded">Análise Técnica</span>
           </div>
           <p className="text-[11px] text-slate-700 leading-relaxed">
             {typeof analise === 'string' && analise.split('**').map((part, i) =>
@@ -410,24 +410,132 @@ function DispersaoContent() {
     <div className="min-h-screen bg-white text-black p-4 font-sans print:p-0 overflow-x-hidden">
       <style jsx global>{`
         @media print {
-          @page { size: A3 landscape; margin: 0.5cm; }
+          @page {
+            size: A3 landscape;
+            margin: 0.8cm 0.6cm;
+          }
+
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+
           .no-print { display: none !important; }
-          body { background: white !important; color: black !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-          .print-container { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important; }
-          .bg-amber-500 { background-color: #f59e0b !important; }
-          header { border-bottom: 4px solid #f59e0b !important; padding-bottom: 8px !important; }
-          .grafico-bloco { page-break-after: always; page-break-inside: avoid; border-radius: 0 !important; border: 1px solid #e2e8f0 !important; margin-bottom: 0 !important; }
-          .grafico-bloco:last-child { page-break-after: avoid; }
-          .grafico-bloco .bg-slate-900 { background-color: #0f172a !important; }
-          .grafico-bloco .text-white { color: white !important; }
-          .grafico-bloco .text-slate-400 { color: #94a3b8 !important; }
+
+          body {
+            background: white !important;
+            color: black !important;
+          }
+
+          /* Container principal */
+          .print-container {
+            width: 100% !important;
+            max-width: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            display: block !important;
+          }
+
+          /* Header da página — aparece apenas na primeira página */
+          .print-header {
+            border-bottom: 4px solid #f59e0b !important;
+            padding-bottom: 8px !important;
+            margin-bottom: 12px !important;
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+          }
+
+          .print-header h1 { font-size: 22px !important; }
+          .print-header p  { font-size: 11px !important; }
+
+          .print-badge {
+            background-color: #f59e0b !important;
+            color: #000 !important;
+            padding: 2px 16px !important;
+            font-weight: 900 !important;
+            font-style: italic !important;
+            text-transform: uppercase !important;
+          }
+
+          /* Wrapper dos gráficos: block, sem gap */
+          .graficos-wrapper {
+            display: block !important;
+          }
+
+          /* Cada bloco ocupa uma página */
+          .grafico-bloco {
+            break-after: page !important;
+            page-break-after: always !important;
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+            border-radius: 0 !important;
+            border: 1px solid #e2e8f0 !important;
+            margin: 0 !important;
+            overflow: visible !important;
+            width: 100% !important;
+            display: block !important;
+          }
+
+          .grafico-bloco:last-child {
+            break-after: avoid !important;
+            page-break-after: avoid !important;
+          }
+
+          /* Cabeçalho escuro do bloco */
+          .bloco-header {
+            background-color: #0f172a !important;
+            color: white !important;
+            padding: 8px 16px !important;
+          }
+
+          .bloco-header h2 {
+            color: white !important;
+            font-size: 12px !important;
+            font-weight: 900 !important;
+          }
+
+          .bloco-header p {
+            color: #94a3b8 !important;
+            font-size: 9px !important;
+          }
+
+          /* Plotly chart */
+          .js-plotly-plot,
+          .js-plotly-plot .plot-container,
+          .js-plotly-plot svg {
+            width: 100% !important;
+            max-width: 100% !important;
+          }
+
+          /* Análise técnica */
+          .analise-tecnica {
+            background-color: #fffbeb !important;
+            border-top: 2px solid #fbbf24 !important;
+            padding: 8px 16px !important;
+          }
+
+          .analise-tecnica span,
+          .analise-tecnica p {
+            font-size: 9px !important;
+            color: #374151 !important;
+            line-height: 1.4 !important;
+          }
+
+          .analise-label {
+            background-color: #fde68a !important;
+            color: #92400e !important;
+            font-size: 7px !important;
+            font-weight: 900 !important;
+            padding: 1px 4px !important;
+          }
         }
       `}</style>
 
       <div className="max-w-[1400px] mx-auto print-container flex flex-col gap-4">
 
         {/* HEADER */}
-        <header className="flex justify-between items-center border-b-4 border-amber-500 pb-2">
+        <header className="print-header flex justify-between items-center border-b-4 border-amber-500 pb-2">
           <div className="flex items-center gap-4">
             <img src="/club/escudonovorizontino.png" alt="Shield" className="h-16 w-auto" onError={e => e.target.style.display = 'none'} />
             <div>
@@ -442,7 +550,7 @@ function DispersaoContent() {
             >
               ← VOLTAR
             </button>
-            <div className="bg-amber-500 text-black px-6 py-1 font-black text-xl uppercase italic shadow-md">
+            <div className="print-badge bg-amber-500 text-black px-6 py-1 font-black text-xl uppercase italic shadow-md">
               Análise de Dispersão
             </div>
             <div className="text-slate-600 font-black text-[10px] mt-1 tracking-wider uppercase">
@@ -452,14 +560,14 @@ function DispersaoContent() {
         </header>
 
         {/* Gráficos */}
-        <div className="flex flex-col gap-4">
+        <div className="graficos-wrapper flex flex-col gap-4">
           {GRAFICOS.map(cfg => (
             <GraficoBloco key={cfg.id} config={cfg} lista={lista} gn={gn} serieB={serieB} mapaCores={mapaCores} />
           ))}
         </div>
 
         {/* FOOTER */}
-        <footer className="no-print flex justify-between items-center border-t-2 border-slate-900 pt-3">
+        <footer className="no-print flex justify-between items-center border-t-2 border-slate-900 pt-3 mt-4">
           <div className="flex gap-4">
             <button
               onClick={() => window.print()}
