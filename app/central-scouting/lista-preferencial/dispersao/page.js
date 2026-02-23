@@ -414,8 +414,13 @@ function DispersaoContent() {
           .no-print { display: none !important; }
           body { background: white !important; color: black !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
           .print-container { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important; }
+          .bg-amber-500 { background-color: #f59e0b !important; }
+          header { border-bottom: 4px solid #f59e0b !important; padding-bottom: 8px !important; }
           .grafico-bloco { page-break-after: always; page-break-inside: avoid; border-radius: 0 !important; border: 1px solid #e2e8f0 !important; margin-bottom: 0 !important; }
           .grafico-bloco:last-child { page-break-after: avoid; }
+          .grafico-bloco .bg-slate-900 { background-color: #0f172a !important; }
+          .grafico-bloco .text-white { color: white !important; }
+          .grafico-bloco .text-slate-400 { color: #94a3b8 !important; }
         }
       `}</style>
 
