@@ -1,59 +1,50 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import Papa from 'papaparse';
-import { getRankingByPerfil, getPerfisForPosicao, findSimilarPlayers, getTrend, calculateRating } from '@/app/utils/ratingSystem';
-import { cleanData, safeParseFloat } from '@/app/utils/dataCleaner';
+import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
+import Papa from 'papaparse';
+import { getRankingByPerfil, getPerfisForPosicao, findSimilarPlayers } from '@/app/utils/ratingSystem';
+import { cleanData, safeParseFloat } from '@/app/utils/dataCleaner';
 import { jsPDF } from 'jspdf';
+import 'jspdf-autotable';
 
 const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTx73GpGdTLkIPTmBfkYujRILN3DmPV5FG2dH4-bbELYZJ4STAIYrOSJ7AOPDOTq_tB0ib_xFKHLiHZ/pub?output=csv';
 
-export default function RankingPerfil() {
+function RankingPerfilContent() {
   const router = useRouter();
+
   const [atletas, setAtletas] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  
-  // Filtros principais
+
   const [selectedPerfil, setSelectedPerfil] = useState('');
   const [minMinutos, setMinMinutos] = useState(450);
   const [allPerfis, setAllPerfis] = useState([]);
-
-  // Filtros avançados
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPosicao, setSelectedPosicao] = useState('');
   const [selectedTime, setSelectedTime] = useState('');
   const [selectedPais, setSelectedPais] = useState('');
   const [minIdade, setMinIdade] = useState('');
   const [maxIdade, setMaxIdade] = useState('');
-  
-  // Opções para os filtros
   const [options, setOptions] = useState({ posicoes: [], times: [], paises: [] });
 
-  // Ordenação
   const [sortConfig, setSortConfig] = useState({ key: 'notaPerfil', direction: 'desc' });
-
-  // Modais
   const [comparisonModal, setComparisonModal] = useState({ open: false, player1: null, player2: null });
-  const [comparisonTab, setComparisonTab] = useState('Todos');
   const [similarModal, setSimilarModal] = useState({ open: false, targetPlayer: null, similar: [] });
 
-  // Carregar dados
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const response = await fetch(CSV_URL);
+        const response = await fetch(`${CSV_URL}&t=${Date.now()}`);
         const csvText = await response.text();
-        
+
         Papa.parse(csvText, {
           header: true,
           skipEmptyLines: true,
           complete: (results) => {
             const cleaned = cleanData(results.data);
             setAtletas(cleaned);
-            
+
             const perfisUnicos = new Set();
             const posicoes = new Set();
             const times = new Set();
@@ -68,49 +59,42 @@ export default function RankingPerfil() {
               if (a.Nacionalidade) paises.add(a.Nacionalidade);
             });
 
-            setAllPerfis(Array.from(perfisUnicos).sort());
+            const perfisOrdenados = Array.from(perfisUnicos).sort();
+            setAllPerfis(perfisOrdenados);
             setOptions({
               posicoes: Array.from(posicoes).sort(),
               times: Array.from(times).sort(),
-              paises: Array.from(paises).sort()
+              paises: Array.from(paises).sort(),
             });
-            
-            if (perfisUnicos.size > 0) {
-              setSelectedPerfil(Array.from(perfisUnicos).sort()[0]);
-            }
+
+            if (perfisOrdenados.length > 0) setSelectedPerfil(perfisOrdenados[0]);
             setLoading(false);
           },
-          error: (err) => {
-            setError(`Erro ao carregar CSV: ${err.message}`);
-            setLoading(false);
-          }
         });
       } catch (err) {
-        setError(`Erro ao buscar dados: ${err.message}`);
+        console.error('Erro ao buscar dados:', err);
         setLoading(false);
       }
     };
     fetchData();
   }, []);
 
-  // Processar Ranking com filtros e ordenação
   const processedRanking = useMemo(() => {
     if (atletas.length === 0 || !selectedPerfil) return [];
 
     let ranking = getRankingByPerfil(atletas, selectedPerfil, minMinutos);
 
-    // Aplicar filtros
     ranking = ranking.filter(a => {
       const nomeMatch = a.Jogador.toLowerCase().includes(searchTerm.toLowerCase());
-      const posicaoMatch = !selectedPosicao || a.Posição === selectedPosicao;
+      const posicaoMatch = !selectedPosicao || (a.Posição || '').trim().toUpperCase() === selectedPosicao;
       const timeMatch = !selectedTime || a.Time === selectedTime;
       const paisMatch = !selectedPais || a.Nacionalidade === selectedPais;
-      const idadeMatch = (!minIdade || parseInt(a.Idade) >= parseInt(minIdade)) && (!maxIdade || parseInt(a.Idade) <= parseInt(maxIdade));
-      
+      const idadeMatch =
+        (!minIdade || parseInt(a.Idade) >= parseInt(minIdade)) &&
+        (!maxIdade || parseInt(a.Idade) <= parseInt(maxIdade));
       return nomeMatch && posicaoMatch && timeMatch && paisMatch && idadeMatch;
     });
 
-    // Aplicar ordenação
     ranking.sort((a, b) => {
       const aVal = safeParseFloat(a[sortConfig.key]);
       const bVal = safeParseFloat(b[sortConfig.key]);
@@ -120,235 +104,133 @@ export default function RankingPerfil() {
     return ranking;
   }, [atletas, selectedPerfil, minMinutos, searchTerm, selectedPosicao, selectedTime, selectedPais, minIdade, maxIdade, sortConfig]);
 
-  // Funções auxiliares
+  const getNotaColor = (nota) => {
+    if (nota >= 75) return 'text-emerald-600 font-black';
+    if (nota >= 55) return 'text-amber-600 font-black';
+    return 'text-slate-500 font-black';
+  };
+
+  const getNotaBg = (nota) => {
+    if (nota >= 75) return 'bg-emerald-50 border-emerald-200';
+    if (nota >= 55) return 'bg-amber-50 border-amber-200';
+    return 'bg-slate-50 border-slate-200';
+  };
+
   const calcularSimilaridade = (p1, p2) => {
-    const metricas = Object.keys(p1).filter(k => !['Jogador', 'Time', 'Posição', 'Idade', 'Nacionalidade', 'Minutos jogados', 'notaPerfil'].includes(k));
-    
+    const metricas = Object.keys(p1).filter(
+      k => !['Jogador', 'Time', 'Posição', 'Idade', 'Nacionalidade', 'Minutos jogados', 'notaPerfil'].includes(k)
+    );
     let diferenca = 0;
     metricas.forEach(m => {
-      const v1 = safeParseFloat(p1[m]);
-      const v2 = safeParseFloat(p2[m]);
-      diferenca += Math.abs(v1 - v2);
+      diferenca += Math.abs(safeParseFloat(p1[m]) - safeParseFloat(p2[m]));
     });
-    
-    const media = diferenca / metricas.length;
-    const similaridade = Math.max(0, 100 - (media * 2));
-    
-    return Math.round(Math.min(100, similaridade));
+    return Math.round(Math.min(100, Math.max(0, 100 - (diferenca / (metricas.length || 1)) * 2)));
   };
 
-  // Exportar PDF do Ranking
+  const handleSort = (key) => {
+    setSortConfig(prev =>
+      prev.key === key
+        ? { key, direction: prev.direction === 'desc' ? 'asc' : 'desc' }
+        : { key, direction: 'desc' }
+    );
+  };
+
+  const sortIcon = (key) => {
+    if (sortConfig.key !== key) return <span className="text-slate-500 ml-1">⇅</span>;
+    return sortConfig.direction === 'desc'
+      ? <span className="text-amber-500 ml-1">↓</span>
+      : <span className="text-amber-500 ml-1">↑</span>;
+  };
+
   const exportPDF = () => {
-    const doc = new jsPDF('p', 'mm', 'a4');
-    const pageWidth = doc.internal.pageSize.getWidth();
-    
-    // Header
+    const doc = new jsPDF('l', 'mm', 'a4');
     doc.setFillColor(10, 12, 16);
-    doc.rect(0, 0, pageWidth, 30, 'F');
-    
+    doc.rect(0, 0, 297, 30, 'F');
     doc.setTextColor(251, 191, 36);
-    doc.setFontSize(20);
-    doc.setFont(undefined, 'bold');
-    doc.text('RANKING DE PERFIL', 20, 20);
-    
-    doc.setTextColor(100, 116, 139);
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text('RANKING DE PERFIL', 14, 14);
+    doc.setTextColor(150, 150, 150);
     doc.setFontSize(9);
-    doc.setFont(undefined, 'normal');
-    doc.text(`Perfil: ${selectedPerfil.toUpperCase()}`, 20, 28);
-    
-    let yPos = 45;
-    
-    // TOP 3
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(12);
-    doc.setFont(undefined, 'bold');
-    doc.text('TOP 3 ATLETAS', 20, yPos);
-    yPos += 10;
-    
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(10);
-    doc.setFont(undefined, 'normal');
-    
-    processedRanking.slice(0, 3).forEach((atleta, idx) => {
-      doc.text(`${idx + 1}. ${atleta.Jogador} | ${atleta.Time}`, 20, yPos);
-      yPos += 5;
-      doc.setFontSize(8);
-      doc.text(`${atleta.Posição} - Nota: ${atleta.notaPerfil}`, 25, yPos);
-      yPos += 6;
-      doc.setFontSize(10);
-    });
-    
-    yPos += 5;
-    
-    // Tabela
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(11);
-    doc.setFont(undefined, 'bold');
-    doc.text('RANKING COMPLETO', 20, yPos);
-    yPos += 8;
-    
-    const tableData = processedRanking.map(a => [
-      processedRanking.indexOf(a) + 1,
-      a.Jogador,
-      a.Time,
-      a.Posição,
-      a.notaPerfil
-    ]);
-    
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Perfil: ${selectedPerfil.toUpperCase()} · Mín. ${minMinutos}min · ${processedRanking.length} atletas · ${new Date().toLocaleDateString('pt-BR')}`, 14, 23);
+
     doc.autoTable({
-      startY: yPos,
-      head: [['Pos', 'Atleta', 'Time', 'Pos', 'Nota']],
-      body: tableData,
+      startY: 36,
+      head: [['#', 'Atleta', 'Clube', 'Posição', 'Idade', 'Min.', 'Nota']],
+      body: processedRanking.map((a, idx) => [
+        `#${idx + 1}`, a.Jogador, a.Time || '-', a.Posição || '-', a.Idade || '-', a['Minutos jogados'] || '-', a.notaPerfil,
+      ]),
       theme: 'grid',
-      headStyles: { fillColor: [251, 191, 36], textColor: [10, 12, 16], fontStyle: 'bold' },
-      bodyStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0] }
+      headStyles: { fillColor: [251, 191, 36], textColor: [10, 12, 16], fontStyle: 'bold', fontSize: 8 },
+      bodyStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontSize: 8 },
+      columnStyles: { 6: { halign: 'center', fontStyle: 'bold' } },
     });
-    
-    doc.save(`ranking-${selectedPerfil}.pdf`);
+    doc.save(`ranking-${selectedPerfil.replace(/\s+/g, '-')}.pdf`);
   };
 
-  // Exportar PDF da Comparação
-  
-  const exportComparisonPDF = async () => {
+  const exportComparisonPDF = () => {
     try {
-      const { player1: selectedPlayer1, player2: selectedPlayer2 } = comparisonModal;
-      if (!selectedPlayer1 || !selectedPlayer2) {
-        alert('Selecione dois atletas para comparar')
-        return
-      }
-
-      const { jsPDF } = await import('jspdf')
-      const doc = new jsPDF()
-      
-      // Cores
-      const amarelo = [251, 191, 36]
-      const preto = [10, 12, 16]
-      const branco = [255, 255, 255]
-      const cinza = [100, 116, 139]
-
-      // Cabeçalho
-      doc.setFillColor(...amarelo)
-      doc.rect(10, 10, 190, 25, 'F')
-      doc.setTextColor(...preto)
-      doc.setFontSize(20)
-      doc.setFont('helvetica', 'bold')
-      doc.text('COMPARAÇÃO DE ATLETAS', 15, 28)
-
-      // Info dos atletas
-      doc.setTextColor(...preto)
-      doc.setFontSize(10)
-      doc.setFont('helvetica', 'normal')
-      doc.text(`${selectedPlayer1.Jogador} (${selectedPlayer1.Posição})`, 15, 45)
-      doc.text(`${selectedPlayer2.Jogador} (${selectedPlayer2.Posição})`, 15, 52)
-
-      // Tabela de métricas
-      let yPos = 65
-      const colWidth = 60
-      const rowHeight = 8
-
-      // Cabeçalho da tabela
-      doc.setFillColor(...preto)
-      doc.setTextColor(...branco)
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(9)
-      
-      doc.rect(10, yPos - 5, colWidth, rowHeight, 'F')
-      doc.text('MÉTRICA', 12, yPos)
-      
-      doc.rect(10 + colWidth, yPos - 5, colWidth, rowHeight, 'F')
-      doc.text(selectedPlayer1.Jogador.substring(0, 15), 12 + colWidth, yPos)
-      
-      doc.rect(10 + colWidth * 2, yPos - 5, colWidth, rowHeight, 'F')
-      doc.text(selectedPlayer2.Jogador.substring(0, 15), 12 + colWidth * 2, yPos)
-
-      yPos += rowHeight + 2
-
-      // Linhas de dados
-      doc.setTextColor(...preto)
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(8)
-
-      const metricas = Object.keys(selectedPlayer1).filter(k => 
-        !['Jogador', 'Posição', 'Time', 'Idade', 'Altura', 'Nacionalidade', 'Minutos jogados'].includes(k)
-      )
-
-      metricas.forEach((metrica) => {
-        const val1 = safeParseFloat(selectedPlayer1[metrica])
-        const val2 = safeParseFloat(selectedPlayer2[metrica])
-        
-        // Determinar o vencedor
-        const isPositive = !['Falta', 'Erro', 'Cartão', 'Bola perdida'].some(w => metrica.toLowerCase().includes(w.toLowerCase()))
-        const player1Wins = isPositive ? val1 > val2 : val1 < val2
-
-        // Linha de métrica
-        doc.setFillColor(240, 240, 240)
-        doc.rect(10, yPos, colWidth, rowHeight, 'F')
-        doc.setTextColor(...preto)
-        doc.text(metrica.substring(0, 20), 12, yPos + 5)
-
-        // Valor Player 1
-        doc.setFillColor(...(player1Wins ? [220, 220, 100] : [255, 255, 255]))
-        doc.rect(10 + colWidth, yPos, colWidth, rowHeight, 'F')
-        doc.setTextColor(...preto)
-        const displayVal1 = val1 === 0 ? '-' : val1.toFixed(2)
-        doc.text(displayVal1, 12 + colWidth, yPos + 5)
-
-        // Valor Player 2
-        doc.setFillColor(...(!player1Wins && val2 > 0 ? [220, 220, 100] : [255, 255, 255]))
-        doc.rect(10 + colWidth * 2, yPos, colWidth, rowHeight, 'F')
-        doc.setTextColor(...preto)
-        const displayVal2 = val2 === 0 ? '-' : val2.toFixed(2)
-        doc.text(displayVal2, 12 + colWidth * 2, yPos + 5)
-
-        yPos += rowHeight
-
-        // Quebra de página se necessário
-        if (yPos > 270) {
-          doc.addPage()
-          yPos = 20
-        }
-      })
-
-      // Rodapé
-      doc.setTextColor(...cinza)
-      doc.setFontSize(8)
-      doc.text(`Relatório gerado em ${new Date().toLocaleDateString('pt-BR')}`, 15, doc.internal.pageSize.getHeight() - 10)
-
-      // Salvar
-      doc.save(`comparacao-${selectedPlayer1.Jogador}-vs-${selectedPlayer2.Jogador}.pdf`)
+      const { player1, player2 } = comparisonModal;
+      if (!player1 || !player2) return;
+      const doc = new jsPDF('p', 'mm', 'a4');
+      doc.setFillColor(251, 191, 36);
+      doc.rect(10, 10, 190, 20, 'F');
+      doc.setTextColor(10, 12, 16);
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('COMPARAÇÃO DE ATLETAS', 15, 24);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`${player1.Jogador} (${player1.Posição})  vs  ${player2.Jogador} (${player2.Posição})`, 15, 40);
+      doc.text(`Similaridade: ${calcularSimilaridade(player1, player2)}%`, 15, 48);
+      const metricas = Object.keys(player1).filter(k => !['Jogador', 'Time', 'Posição', 'Idade', 'Nacionalidade', 'Minutos jogados', 'notaPerfil'].includes(k));
+      doc.autoTable({
+        startY: 55,
+        head: [['Métrica', player1.Jogador.substring(0, 20), player2.Jogador.substring(0, 20)]],
+        body: metricas.map(m => {
+          const v1 = safeParseFloat(player1[m]);
+          const v2 = safeParseFloat(player2[m]);
+          return [m, v1 === 0 ? '-' : v1.toString(), v2 === 0 ? '-' : v2.toString()];
+        }),
+        theme: 'striped',
+        headStyles: { fillColor: [10, 12, 16], textColor: [251, 191, 36], fontStyle: 'bold', fontSize: 8 },
+        bodyStyles: { fontSize: 8 },
+      });
+      doc.save(`comparacao-${player1.Jogador}-vs-${player2.Jogador}.pdf`);
     } catch (error) {
-      console.error('Erro ao gerar PDF:', error)
-      alert('Erro ao gerar PDF. Verifique o console.')
+      console.error('Erro ao gerar PDF:', error);
+      alert('Erro ao gerar PDF. Verifique o console.');
     }
-  }
-;
-
-
-  // Categorizar métricas por tipo
-  const categorizarMetricas = (metricas) => {
-    const categorias = {
-      'Todos': metricas,
-      'Ataque': metricas.filter(m => ['Gol', 'Finalização', 'Chute', 'Chance', 'xG', 'Assistência', 'Passe chave', 'Cruzamento', 'Drible'].some(k => m.toLowerCase().includes(k.toLowerCase()))),
-      'Defesa': metricas.filter(m => ['Falta', 'Cartão', 'Interceptação', 'Duelo', 'Bloqueio', 'Erro'].some(k => m.toLowerCase().includes(k.toLowerCase()))),
-      'Construção': metricas.filter(m => ['Passe', 'Precisão', 'Bola', 'Progresso', 'Terço'].some(k => m.toLowerCase().includes(k.toLowerCase()))),
-      'Físico': metricas.filter(m => ['Altura', 'Velocidade', 'Distância', 'Sprint', 'Aceleração'].some(k => m.toLowerCase().includes(k.toLowerCase())))
-    };
-    return categorias;
   };
 
-
-    if (loading) return (
+  if (loading) return (
     <div className="min-h-screen bg-white flex items-center justify-center text-amber-600 font-black italic animate-pulse text-2xl uppercase">
-      Processando Inteligência...
+      Processando Ranking de Perfil...
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-white text-black p-4 font-sans">
-      <div className="max-w-[1600px] mx-auto flex flex-col gap-4">
+    <div className="min-h-screen bg-white text-black p-4 font-sans print:p-0 overflow-x-hidden">
+      <style jsx global>{`
+        @media print {
+          @page { size: A3 landscape; margin: 0.5cm; }
+          .no-print { display: none !important; }
+          body { background: white !important; color: black !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          .print-container { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important; }
+          .table-scroll-wrapper { overflow: visible !important; }
+          table { font-size: 8px !important; width: 100% !important; table-layout: auto; }
+          th, td { padding: 3px 5px !important; word-break: break-word; white-space: nowrap; }
+          thead tr { background-color: #0f172a !important; }
+          thead th { color: white !important; }
+          .avatar-initial { display: none !important; }
+        }
+      `}</style>
+
+      <div className="max-w-[1800px] mx-auto print-container flex flex-col gap-4">
 
         {/* HEADER */}
-        <header className="flex justify-between items-center border-b-4 border-amber-500 pb-3">
+        <header className="flex justify-between items-center border-b-4 border-amber-500 pb-2">
           <div className="flex items-center gap-4">
             <img src="/club/escudonovorizontino.png" alt="Shield" className="h-16 w-auto" />
             <div>
@@ -359,7 +241,7 @@ export default function RankingPerfil() {
           <div className="text-right flex flex-col items-end gap-2">
             <button
               onClick={() => router.push('/central-scouting')}
-              className="bg-slate-200 text-slate-800 px-3 py-1 rounded-md text-xs font-bold hover:bg-slate-300 transition-colors"
+              className="no-print bg-slate-200 text-slate-800 px-3 py-1 rounded-md text-xs font-bold hover:bg-slate-300 transition-colors"
             >
               ← VOLTAR
             </button>
@@ -373,111 +255,184 @@ export default function RankingPerfil() {
         </header>
 
         {/* FILTROS */}
-        <div className="border-2 border-slate-200 rounded-2xl p-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="md:col-span-2">
-              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-2">Buscar Atleta</label>
+        <div className="no-print flex flex-wrap gap-3 items-end">
+
+          <div className="flex flex-col gap-1">
+            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Buscar atleta</span>
+            <input
+              type="text"
+              placeholder="NOME DO JOGADOR..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="border-2 border-slate-200 rounded-xl px-4 py-2 text-[10px] font-black outline-none focus:border-amber-500 w-52"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Perfil técnico</span>
+            <select
+              value={selectedPerfil}
+              onChange={e => setSelectedPerfil(e.target.value)}
+              className="border-2 border-slate-200 hover:border-amber-500 rounded-xl px-4 py-2 text-[10px] font-black uppercase outline-none focus:border-amber-500 cursor-pointer transition-all"
+            >
+              {allPerfis.map(p => <option key={p} value={p}>{p.toUpperCase()}</option>)}
+            </select>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Posição</span>
+            <select
+              value={selectedPosicao}
+              onChange={e => setSelectedPosicao(e.target.value)}
+              className="border-2 border-slate-200 hover:border-amber-500 rounded-xl px-4 py-2 text-[10px] font-black uppercase outline-none focus:border-amber-500 cursor-pointer transition-all"
+            >
+              <option value="">TODAS</option>
+              {options.posicoes.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Clube</span>
+            <select
+              value={selectedTime}
+              onChange={e => setSelectedTime(e.target.value)}
+              className="border-2 border-slate-200 hover:border-amber-500 rounded-xl px-4 py-2 text-[10px] font-black uppercase outline-none focus:border-amber-500 cursor-pointer transition-all"
+            >
+              <option value="">TODOS</option>
+              {options.times.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
+            </select>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">País</span>
+            <select
+              value={selectedPais}
+              onChange={e => setSelectedPais(e.target.value)}
+              className="border-2 border-slate-200 hover:border-amber-500 rounded-xl px-4 py-2 text-[10px] font-black uppercase outline-none focus:border-amber-500 cursor-pointer transition-all"
+            >
+              <option value="">TODOS</option>
+              {options.paises.map(p => <option key={p} value={p}>{p.toUpperCase()}</option>)}
+            </select>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Idade</span>
+            <div className="flex gap-1">
               <input
-                type="text"
-                placeholder="NOME DO JOGADOR..."
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                className="w-full border-2 border-slate-200 rounded-xl p-3 text-[10px] font-black uppercase outline-none focus:border-amber-500 placeholder:text-slate-300 transition-all"
+                type="number"
+                value={minIdade}
+                onChange={e => setMinIdade(e.target.value)}
+                placeholder="Mín"
+                className="border-2 border-slate-200 rounded-xl px-3 py-2 text-[10px] font-black outline-none focus:border-amber-500 w-16"
+              />
+              <input
+                type="number"
+                value={maxIdade}
+                onChange={e => setMaxIdade(e.target.value)}
+                placeholder="Máx"
+                className="border-2 border-slate-200 rounded-xl px-3 py-2 text-[10px] font-black outline-none focus:border-amber-500 w-16"
               />
             </div>
-            <div>
-              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-2">Perfil Técnico</label>
-              <select value={selectedPerfil} onChange={e => setSelectedPerfil(e.target.value)}
-                className="w-full border-2 border-slate-200 rounded-xl p-3 text-[10px] font-black uppercase outline-none focus:border-amber-500 cursor-pointer">
-                {allPerfis.map(p => <option key={p} value={p}>{p.toUpperCase()}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-2">
-                Minutos mín.: <span className="text-amber-600">{minMinutos}min</span>
-              </label>
-              <input type="range" min="0" max="3000" step="90" value={minMinutos}
-                onChange={e => setMinMinutos(parseInt(e.target.value))}
-                className="w-full accent-amber-500 mt-2" />
-            </div>
-            <div>
-              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-2">Posição</label>
-              <select value={selectedPosicao} onChange={e => setSelectedPosicao(e.target.value)}
-                className="w-full border-2 border-slate-200 rounded-xl p-3 text-[10px] font-black uppercase outline-none focus:border-amber-500 cursor-pointer">
-                <option value="">TODAS AS POSIÇÕES</option>
-                {options.posicoes.map(p => <option key={p} value={p}>{p}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-2">Clube</label>
-              <select value={selectedTime} onChange={e => setSelectedTime(e.target.value)}
-                className="w-full border-2 border-slate-200 rounded-xl p-3 text-[10px] font-black uppercase outline-none focus:border-amber-500 cursor-pointer">
-                <option value="">TODOS OS CLUBES</option>
-                {options.times.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-2">País</label>
-              <select value={selectedPais} onChange={e => setSelectedPais(e.target.value)}
-                className="w-full border-2 border-slate-200 rounded-xl p-3 text-[10px] font-black uppercase outline-none focus:border-amber-500 cursor-pointer">
-                <option value="">TODOS OS PAÍSES</option>
-                {options.paises.map(p => <option key={p} value={p}>{p.toUpperCase()}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-2">Idade Mín</label>
-              <input type="number" value={minIdade} onChange={e => setMinIdade(e.target.value)} placeholder="Ex: 20"
-                className="w-full border-2 border-slate-200 rounded-xl p-3 text-[10px] font-black uppercase outline-none focus:border-amber-500 placeholder:text-slate-300 transition-all" />
-            </div>
-            <div>
-              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-2">Idade Máx</label>
-              <input type="number" value={maxIdade} onChange={e => setMaxIdade(e.target.value)} placeholder="Ex: 30"
-                className="w-full border-2 border-slate-200 rounded-xl p-3 text-[10px] font-black uppercase outline-none focus:border-amber-500 placeholder:text-slate-300 transition-all" />
-            </div>
+          </div>
+
+          <div className="flex flex-col gap-1 min-w-[170px]">
+            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">
+              Minutos mín.: <span className="text-amber-600">{minMinutos}min</span>
+            </span>
+            <input
+              type="range"
+              min="0" max="3000" step="90"
+              value={minMinutos}
+              onChange={e => setMinMinutos(parseInt(e.target.value))}
+              className="w-full accent-amber-500 mt-1"
+            />
+          </div>
+
+          <div className="flex items-center gap-2 ml-auto">
+            <span className="text-[9px] font-black text-slate-400 uppercase">{processedRanking.length} atletas no ranking</span>
           </div>
         </div>
 
-        {/* TABELA DE RANKING */}
+        {/* TABELA */}
         <div className="border-2 border-slate-900 rounded-2xl overflow-hidden shadow-lg">
           <div className="bg-slate-900 text-white font-black text-center py-2 text-[10px] uppercase tracking-widest">
-            Ranking · Perfil: {selectedPerfil} · {processedRanking.length} atletas · Clique em ⚔️ para comparar
+            Ranking de Perfil · {selectedPerfil} · {processedRanking.length} atletas exibidos
           </div>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto table-scroll-wrapper">
             <table className="w-full border-collapse text-[10px]">
               <thead>
                 <tr className="border-b-2 border-slate-900 bg-slate-900">
-                  <th className="px-4 py-3 text-left text-[8px] font-black uppercase tracking-widest text-slate-300 cursor-pointer hover:bg-slate-700 transition-colors" onClick={() => setSortConfig({ key: 'Jogador', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' })}>Atleta</th>
-                  <th className="px-4 py-3 text-left text-[8px] font-black uppercase tracking-widest text-slate-300 cursor-pointer hover:bg-slate-700 transition-colors" onClick={() => setSortConfig({ key: 'Time', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' })}>Time</th>
-                  <th className="px-4 py-3 text-left text-[8px] font-black uppercase tracking-widest text-slate-300 cursor-pointer hover:bg-slate-700 transition-colors" onClick={() => setSortConfig({ key: 'Posição', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' })}>Pos</th>
-                  <th className="px-4 py-3 text-center text-[8px] font-black uppercase tracking-widest text-slate-300 cursor-pointer hover:bg-slate-700 transition-colors" onClick={() => setSortConfig({ key: 'Idade', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' })}>Idade</th>
-                  <th className="px-4 py-3 text-center text-[8px] font-black uppercase tracking-widest text-slate-300 cursor-pointer hover:bg-slate-700 transition-colors" onClick={() => setSortConfig({ key: 'Minutos jogados', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' })}>Min</th>
-                  <th className="px-4 py-3 text-center text-[8px] font-black uppercase tracking-widest bg-amber-500 text-black cursor-pointer" onClick={() => setSortConfig({ key: 'notaPerfil', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' })}>
-                    Nota {sortConfig.key === 'notaPerfil' ? (sortConfig.direction === 'desc' ? '↓' : '↑') : ''}
+                  <th className="px-3 py-3 text-left text-[8px] font-black uppercase tracking-widest text-slate-300 w-8">#</th>
+                  <th className="px-3 py-3 text-left text-[8px] font-black uppercase tracking-widest text-slate-300 min-w-[160px] cursor-pointer hover:bg-slate-700 transition-colors select-none" onClick={() => handleSort('Jogador')}>
+                    Atleta {sortIcon('Jogador')}
                   </th>
-                  <th className="px-4 py-3 text-center text-[8px] font-black uppercase tracking-widest text-slate-300">Ações</th>
+                  <th className="px-3 py-3 text-left text-[8px] font-black uppercase tracking-widest text-slate-300 min-w-[100px] cursor-pointer hover:bg-slate-700 transition-colors select-none" onClick={() => handleSort('Time')}>
+                    Time {sortIcon('Time')}
+                  </th>
+                  <th className="px-3 py-3 text-center text-[8px] font-black uppercase tracking-widest text-slate-300 min-w-[60px] cursor-pointer hover:bg-slate-700 transition-colors select-none" onClick={() => handleSort('Posição')}>
+                    Pos {sortIcon('Posição')}
+                  </th>
+                  <th className="px-3 py-3 text-center text-[8px] font-black uppercase tracking-widest text-slate-300 min-w-[50px] cursor-pointer hover:bg-slate-700 transition-colors select-none" onClick={() => handleSort('Idade')}>
+                    Idade {sortIcon('Idade')}
+                  </th>
+                  <th className="px-3 py-3 text-center text-[8px] font-black uppercase tracking-widest text-slate-300 min-w-[55px] cursor-pointer hover:bg-slate-700 transition-colors select-none" onClick={() => handleSort('Minutos jogados')}>
+                    Min {sortIcon('Minutos jogados')}
+                  </th>
+                  <th className="px-3 py-3 text-center text-[8px] font-black uppercase tracking-widest bg-amber-500 text-black min-w-[70px] cursor-pointer select-none" onClick={() => handleSort('notaPerfil')}>
+                    Nota {sortIcon('notaPerfil')}
+                  </th>
+                  <th className="px-3 py-3 text-center text-[8px] font-black uppercase tracking-widest text-slate-300 no-print">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {processedRanking.map((atleta, idx) => (
-                  <tr key={atleta.Jogador} className="hover:bg-amber-50/60 transition-colors cursor-pointer group">
-                    <td className="px-4 py-2.5 text-[10px] font-black uppercase italic group-hover:text-amber-600 transition-colors">
-                      <span className="text-slate-400 font-black mr-1">#{idx + 1}</span> {atleta.Jogador}
+                  <tr key={`${atleta.Jogador}-${idx}`} className="hover:bg-amber-50/60 transition-colors group">
+                    <td className="px-3 py-2.5 text-[9px] font-black text-slate-400">#{idx + 1}</td>
+
+                    <td className="px-3 py-2.5">
+                      <div className="flex items-center gap-2">
+                        <div className="avatar-initial no-print w-7 h-7 rounded-lg bg-slate-100 overflow-hidden flex-shrink-0 group-hover:bg-amber-100 transition-colors flex items-center justify-center">
+                          <span className="text-[8px] font-black text-slate-500">
+                            {(atleta.Jogador || '??').substring(0, 2).toUpperCase()}
+                          </span>
+                        </div>
+                        <div>
+                          <div className="font-black uppercase italic tracking-tight text-[10px] group-hover:text-amber-600 transition-colors">
+                            {atleta.Jogador}
+                          </div>
+                          <div className="text-[8px] text-slate-400 font-bold">{atleta.Idade} anos · {atleta.Nacionalidade}</div>
+                        </div>
+                      </div>
                     </td>
-                    <td className="px-4 py-2.5 text-[9px] font-black uppercase text-slate-600">{atleta.Time}</td>
-                    <td className="px-4 py-2.5">
+
+                    <td className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-600">{atleta.Time}</td>
+
+                    <td className="px-3 py-2.5 text-center">
                       <span className="px-2 py-0.5 bg-slate-100 rounded text-[8px] font-black text-slate-600">{atleta.Posição}</span>
                     </td>
-                    <td className="px-4 py-2.5 text-center text-[9px] font-black">{atleta.Idade}</td>
-                    <td className="px-4 py-2.5 text-center text-[9px] font-black tabular-nums">{atleta['Minutos jogados']}</td>
-                    <td className="px-4 py-2.5 text-center">
-                      <span className="text-sm font-black tabular-nums text-amber-600">{atleta.notaPerfil}</span>
+
+                    <td className="px-3 py-2.5 text-center text-[9px] font-black">{atleta.Idade}</td>
+
+                    <td className="px-3 py-2.5 text-center text-[9px] font-black tabular-nums">{atleta['Minutos jogados']}</td>
+
+                    <td className="px-3 py-2.5 text-center">
+                      <span className={`inline-flex items-center justify-center w-12 h-8 rounded-lg border text-sm tabular-nums ${getNotaBg(atleta.notaPerfil)} ${getNotaColor(atleta.notaPerfil)}`}>
+                        {atleta.notaPerfil}
+                      </span>
                     </td>
-                    <td className="px-4 py-2.5 text-center">
-                      <div className="flex gap-2 justify-center">
-                        <button onClick={() => setComparisonModal({ open: true, player1: atleta, player2: null })}
-                          className="p-1.5 border border-slate-200 hover:border-amber-500 rounded-lg transition-all text-sm" title="Comparar">⚔️</button>
-                        <button onClick={() => setSimilarModal({ open: true, targetPlayer: atleta, similar: findSimilarPlayers(atleta, processedRanking, 5) })}
-                          className="p-1.5 border border-slate-200 hover:border-amber-500 rounded-lg transition-all text-sm" title="Similares">🔍</button>
+
+                    <td className="px-3 py-2.5 text-center no-print">
+                      <div className="flex gap-1.5 justify-center">
+                        <button
+                          onClick={() => setComparisonModal({ open: true, player1: atleta, player2: null })}
+                          className="p-1.5 border-2 border-slate-200 hover:border-amber-500 rounded-lg transition-all text-sm"
+                          title="Comparar"
+                        >⚔️</button>
+                        <button
+                          onClick={() => setSimilarModal({ open: true, targetPlayer: atleta, similar: findSimilarPlayers(atleta, processedRanking) })}
+                          className="p-1.5 border-2 border-slate-200 hover:border-amber-500 rounded-lg transition-all text-sm"
+                          title="Similares"
+                        >🔍</button>
                       </div>
                     </td>
                   </tr>
@@ -487,8 +442,14 @@ export default function RankingPerfil() {
           </div>
         </div>
 
+        {processedRanking.length === 0 && (
+          <div className="border-2 border-slate-200 rounded-2xl p-8 text-center">
+            <p className="text-slate-500 font-bold text-sm">Nenhum atleta encontrado com os filtros selecionados.</p>
+          </div>
+        )}
+
         {/* FOOTER */}
-        <footer className="flex justify-between items-center border-t-2 border-slate-900 pt-3">
+        <footer className="no-print flex justify-between items-center border-t-2 border-slate-900 pt-3">
           <div className="flex gap-4">
             <button
               onClick={exportPDF}
@@ -500,6 +461,12 @@ export default function RankingPerfil() {
               EXPORTAR PDF
             </button>
             <button
+              onClick={() => window.print()}
+              className="border-2 border-slate-200 hover:border-amber-500 text-slate-700 hover:text-black font-black px-6 py-3 rounded-2xl text-sm transition-all"
+            >
+              🖨️ Imprimir
+            </button>
+            <button
               onClick={() => router.push('/central-scouting')}
               className="text-slate-500 hover:text-black text-sm font-black uppercase tracking-widest px-4 transition-colors"
             >
@@ -508,117 +475,173 @@ export default function RankingPerfil() {
           </div>
           <p className="text-[10px] text-slate-500 font-black italic tracking-tight uppercase">© Scouting System GN</p>
         </footer>
+      </div>
 
-        {/* MODAL DE COMPARAÇÃO */}
-        {comparisonModal.open && comparisonModal.player1 && (
-          <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-            <div className="bg-white border-2 border-slate-900 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl">
-              <div className="flex justify-between items-center mb-4 pb-3 border-b-4 border-amber-500">
-                <h2 className="text-xl font-black uppercase tracking-tighter text-black">Comparação Técnica</h2>
-                <button onClick={() => setComparisonModal({ open: false, player1: null, player2: null })}
-                  className="text-slate-400 hover:text-black transition text-2xl font-black">✕</button>
-              </div>
+      {/* MODAL COMPARAÇÃO */}
+      {comparisonModal.open && comparisonModal.player1 && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white border-2 border-slate-900 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl">
+            <div className="flex justify-between items-center mb-4 pb-3 border-b-4 border-amber-500">
+              <h2 className="text-xl font-black uppercase tracking-tighter text-black">Comparação Técnica</h2>
+              <button onClick={() => setComparisonModal({ open: false, player1: null, player2: null })} className="text-slate-400 hover:text-black transition text-2xl font-black">✕</button>
+            </div>
 
-              {comparisonModal.player2 && (
-                <div className="border-2 border-amber-500 rounded-xl p-4 mb-4 bg-amber-50">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Percentil de Similaridade</p>
-                      <p className="text-3xl font-black text-amber-600">{calcularSimilaridade(comparisonModal.player1, comparisonModal.player2)}%</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Estilos de Jogo</p>
-                      <p className="text-lg font-black text-black">
-                        {calcularSimilaridade(comparisonModal.player1, comparisonModal.player2) > 75 ? 'Muito Similares' : calcularSimilaridade(comparisonModal.player1, comparisonModal.player2) > 50 ? 'Similares' : 'Diferentes'}
-                      </p>
-                    </div>
+            {comparisonModal.player2 && (
+              <div className="border-2 border-amber-500 rounded-xl p-4 mb-4 bg-amber-50">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Índice de Similaridade</p>
+                    <p className="text-3xl font-black text-amber-600">{calcularSimilaridade(comparisonModal.player1, comparisonModal.player2)}%</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Estilos de Jogo</p>
+                    <p className="text-lg font-black text-black">
+                      {calcularSimilaridade(comparisonModal.player1, comparisonModal.player2) > 75 ? 'Muito Similares' :
+                       calcularSimilaridade(comparisonModal.player1, comparisonModal.player2) > 50 ? 'Similares' : 'Diferentes'}
+                    </p>
                   </div>
                 </div>
-              )}
+              </div>
+            )}
 
-              <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="border-2 border-slate-200 rounded-xl p-4">
+                <h3 className="text-base font-black uppercase italic text-amber-600 mb-1">{comparisonModal.player1.Jogador}</h3>
+                <p className="text-[10px] font-bold text-slate-500 uppercase">{comparisonModal.player1.Time} · {comparisonModal.player1.Posição}</p>
+                <p className="text-[9px] text-slate-400">Idade: {comparisonModal.player1.Idade} | Min: {comparisonModal.player1['Minutos jogados']} | Nota: {comparisonModal.player1.notaPerfil}</p>
+              </div>
+              {comparisonModal.player2 ? (
                 <div className="border-2 border-slate-200 rounded-xl p-4">
-                  <h3 className="text-base font-black uppercase italic text-amber-600 mb-1">{comparisonModal.player1.Jogador}</h3>
-                  <p className="text-[10px] font-bold text-slate-500 uppercase">{comparisonModal.player1.Time} · {comparisonModal.player1.Posição}</p>
-                  <p className="text-[9px] text-slate-400">Idade: {comparisonModal.player1.Idade} | Min: {comparisonModal.player1['Minutos jogados']}</p>
-                </div>
-                {comparisonModal.player2 && (
-                  <div className="border-2 border-slate-200 rounded-xl p-4">
-                    <h3 className="text-base font-black uppercase italic text-amber-600 mb-1">{comparisonModal.player2.Jogador}</h3>
-                    <p className="text-[10px] font-bold text-slate-500 uppercase">{comparisonModal.player2.Time} · {comparisonModal.player2.Posição}</p>
-                    <p className="text-[9px] text-slate-400">Idade: {comparisonModal.player2.Idade} | Min: {comparisonModal.player2['Minutos jogados']}</p>
-                  </div>
-                )}
-              </div>
-
-              {!comparisonModal.player2 ? (
-                <div className="mb-4">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3">Selecione um segundo atleta para comparar</p>
-                  <div className="space-y-1.5 max-h-[300px] overflow-y-auto">
-                    {processedRanking.filter(p => p.Jogador !== comparisonModal.player1.Jogador).map(p => (
-                      <button key={p.Jogador} onClick={() => setComparisonModal({ ...comparisonModal, player2: p })}
-                        className="w-full p-3 border-2 border-slate-200 hover:border-amber-500 rounded-xl text-left transition-all text-[10px] font-black uppercase text-slate-700 hover:text-amber-600">
-                        {p.Jogador} <span className="text-slate-400">({p.notaPerfil})</span>
-                      </button>
-                    ))}
-                  </div>
+                  <h3 className="text-base font-black uppercase italic text-amber-600 mb-1">{comparisonModal.player2.Jogador}</h3>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase">{comparisonModal.player2.Time} · {comparisonModal.player2.Posição}</p>
+                  <p className="text-[9px] text-slate-400">Idade: {comparisonModal.player2.Idade} | Min: {comparisonModal.player2['Minutos jogados']} | Nota: {comparisonModal.player2.notaPerfil}</p>
                 </div>
               ) : (
-                <>
-                  <div className="mb-4 border-2 border-slate-900 rounded-2xl overflow-hidden">
-                    <div className="bg-slate-900 text-white text-center py-1.5 text-[9px] font-black uppercase tracking-widest">Métricas comparadas</div>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-[10px] border-collapse">
-                        <thead>
-                          <tr className="border-b-2 border-slate-200 bg-slate-50">
-                            <th className="px-4 py-2 text-left text-[8px] font-black uppercase tracking-widest text-slate-500">Métrica</th>
-                            <th className="px-4 py-2 text-center text-[8px] font-black uppercase tracking-widest text-amber-600">{comparisonModal.player1.Jogador}</th>
-                            <th className="px-4 py-2 text-center text-[8px] font-black uppercase tracking-widest text-amber-600">{comparisonModal.player2.Jogador}</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                          {Object.keys(comparisonModal.player1)
-                            .filter(k => !['Jogador', 'Time', 'Posição', 'Idade', 'Nacionalidade', 'Minutos jogados', 'notaPerfil'].includes(k))
-                            .map(metric => {
-                              const val1 = safeParseFloat(comparisonModal.player1[metric]);
-                              const val2 = safeParseFloat(comparisonModal.player2[metric]);
-                              const menorEhMelhor = ['Faltas', 'Erros', 'Cartão', 'Bolas perdidas'].some(m => metric.toLowerCase().includes(m.toLowerCase()));
-                              const p1Vence = menorEhMelhor ? val1 < val2 : val1 > val2;
-                              return (
-                                <tr key={metric} className="hover:bg-amber-50/50 transition-colors">
-                                  <td className="px-4 py-2 text-[9px] font-bold text-slate-600">{metric}</td>
-                                  <td className={`px-4 py-2 text-center font-black tabular-nums ${p1Vence && val1 !== val2 ? 'text-emerald-600' : 'text-slate-500'}`}>
-                                    {p1Vence && val1 !== val2 ? '● ' : ''}{val1}
-                                  </td>
-                                  <td className={`px-4 py-2 text-center font-black tabular-nums ${!p1Vence && val1 !== val2 ? 'text-emerald-600' : 'text-slate-500'}`}>
-                                    {!p1Vence && val1 !== val2 ? '● ' : ''}{val2}
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                  <div className="flex gap-3 justify-end">
-                    <button onClick={exportComparisonPDF} className="bg-slate-900 hover:bg-black text-white font-black px-6 py-2.5 rounded-xl text-[10px] uppercase tracking-widest transition-all">
-                      📄 Exportar PDF
-                    </button>
-                    <button onClick={() => setComparisonModal({ ...comparisonModal, player2: null })}
-                      className="border-2 border-slate-200 hover:border-slate-400 text-slate-600 font-black px-6 py-2.5 rounded-xl text-[10px] uppercase tracking-widest transition-all">
-                      Trocar Atleta
-                    </button>
-                    <button onClick={() => setComparisonModal({ open: false, player1: null, player2: null })}
-                      className="border-2 border-slate-200 hover:border-slate-400 text-slate-600 font-black px-6 py-2.5 rounded-xl text-[10px] uppercase tracking-widest transition-all">
-                      Fechar
-                    </button>
-                  </div>
-                </>
+                <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 flex items-center justify-center">
+                  <p className="text-[10px] text-slate-400 font-black uppercase">Selecione um 2º atleta abaixo ↓</p>
+                </div>
               )}
             </div>
+
+            {!comparisonModal.player2 ? (
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3">Selecione o segundo atleta para comparar</p>
+                <div className="space-y-1.5 max-h-[300px] overflow-y-auto">
+                  {processedRanking.filter(p => p.Jogador !== comparisonModal.player1.Jogador).map(p => (
+                    <button
+                      key={p.Jogador}
+                      onClick={() => setComparisonModal({ ...comparisonModal, player2: p })}
+                      className="w-full p-3 border-2 border-slate-200 hover:border-amber-500 rounded-xl text-left transition-all text-[10px] font-black uppercase text-slate-700 hover:text-amber-600 flex justify-between items-center"
+                    >
+                      <span>{p.Jogador} <span className="text-slate-400 font-normal">· {p.Time} · {p.Posição}</span></span>
+                      <span className="text-amber-600">{p.notaPerfil}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="mb-4 border-2 border-slate-900 rounded-2xl overflow-hidden">
+                  <div className="bg-slate-900 text-white text-center py-1.5 text-[9px] font-black uppercase tracking-widest">
+                    Métricas comparadas · verde = superior
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-[10px] border-collapse">
+                      <thead>
+                        <tr className="border-b-2 border-slate-200 bg-slate-50">
+                          <th className="px-4 py-2 text-left text-[8px] font-black uppercase tracking-widest text-slate-500">Métrica</th>
+                          <th className="px-4 py-2 text-center text-[8px] font-black uppercase tracking-widest text-amber-600">{comparisonModal.player1.Jogador}</th>
+                          <th className="px-4 py-2 text-center text-[8px] font-black uppercase tracking-widest text-amber-600">{comparisonModal.player2.Jogador}</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {Object.keys(comparisonModal.player1)
+                          .filter(k => !['Jogador', 'Time', 'Posição', 'Idade', 'Nacionalidade', 'Minutos jogados', 'notaPerfil'].includes(k))
+                          .map(metric => {
+                            const val1 = safeParseFloat(comparisonModal.player1[metric]);
+                            const val2 = safeParseFloat(comparisonModal.player2[metric]);
+                            const menorEhMelhor = ['Faltas', 'Erros', 'Cartão', 'Bolas perdidas'].some(m => metric.toLowerCase().includes(m.toLowerCase()));
+                            const p1Vence = menorEhMelhor ? val1 < val2 : val1 > val2;
+                            return (
+                              <tr key={metric} className="hover:bg-amber-50/50 transition-colors">
+                                <td className="px-4 py-2 text-[9px] font-bold text-slate-600">{metric}</td>
+                                <td className={`px-4 py-2 text-center font-black tabular-nums ${p1Vence && val1 !== val2 ? 'text-emerald-600' : 'text-slate-500'}`}>
+                                  {p1Vence && val1 !== val2 ? '● ' : ''}{val1}
+                                </td>
+                                <td className={`px-4 py-2 text-center font-black tabular-nums ${!p1Vence && val1 !== val2 ? 'text-emerald-600' : 'text-slate-500'}`}>
+                                  {!p1Vence && val1 !== val2 ? '● ' : ''}{val2}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                <div className="flex gap-3 justify-end">
+                  <button onClick={exportComparisonPDF} className="bg-slate-900 hover:bg-black text-white font-black px-6 py-2.5 rounded-xl text-[10px] uppercase tracking-widest transition-all">📄 Exportar PDF</button>
+                  <button onClick={() => setComparisonModal({ ...comparisonModal, player2: null })} className="border-2 border-slate-200 hover:border-slate-400 text-slate-600 font-black px-6 py-2.5 rounded-xl text-[10px] uppercase tracking-widest transition-all">Trocar Atleta</button>
+                  <button onClick={() => setComparisonModal({ open: false, player1: null, player2: null })} className="border-2 border-slate-200 hover:border-slate-400 text-slate-600 font-black px-6 py-2.5 rounded-xl text-[10px] uppercase tracking-widest transition-all">Fechar</button>
+                </div>
+              </>
+            )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* MODAL SIMILARES */}
+      {similarModal.open && similarModal.targetPlayer && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white border-2 border-slate-900 rounded-2xl max-w-xl w-full max-h-[80vh] overflow-y-auto p-6 shadow-2xl">
+            <div className="flex justify-between items-center mb-4 pb-3 border-b-4 border-amber-500">
+              <div>
+                <h2 className="text-xl font-black uppercase tracking-tighter text-black">Atletas Similares</h2>
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">
+                  Perfil próximo a: {similarModal.targetPlayer.Jogador}
+                </p>
+              </div>
+              <button onClick={() => setSimilarModal({ open: false, targetPlayer: null, similar: [] })} className="text-slate-400 hover:text-black transition text-2xl font-black">✕</button>
+            </div>
+
+            {similarModal.similar.length === 0 ? (
+              <p className="text-slate-500 font-bold text-sm text-center py-6">Nenhum atleta similar encontrado.</p>
+            ) : (
+              <div className="space-y-2">
+                {similarModal.similar.map((p, idx) => (
+                  <div key={p.Jogador} className="flex items-center justify-between p-3 border-2 border-slate-100 hover:border-amber-200 rounded-xl transition-all">
+                    <div className="flex items-center gap-3">
+                      <span className="text-[9px] font-black text-slate-400 w-5">#{idx + 1}</span>
+                      <div>
+                        <div className="font-black uppercase italic tracking-tight text-[10px] text-black">{p.Jogador}</div>
+                        <div className="text-[8px] text-slate-400 font-bold">{p.Time} · {p.Posição} · {p.Idade} anos</div>
+                      </div>
+                    </div>
+                    <span className="px-3 py-1 bg-amber-50 border border-amber-200 rounded-lg text-[10px] font-black text-amber-600">
+                      {p.notaPerfil || '-'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="mt-4 flex justify-end">
+              <button onClick={() => setSimilarModal({ open: false, targetPlayer: null, similar: [] })} className="border-2 border-slate-200 hover:border-slate-400 text-slate-600 font-black px-6 py-2.5 rounded-xl text-[10px] uppercase tracking-widest transition-all">Fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+export default function RankingPerfil() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-white flex items-center justify-center text-amber-600 font-black italic animate-pulse text-2xl uppercase">
+        Carregando...
+      </div>
+    }>
+      <RankingPerfilContent />
+    </Suspense>
   );
 }
