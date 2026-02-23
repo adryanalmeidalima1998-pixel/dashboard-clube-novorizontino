@@ -54,67 +54,70 @@ export default function CentralScouting() {
   ]
 
   return (
-    <div className="min-h-screen bg-[#0a0c10] text-white p-4 md:p-8 font-sans">
-      <div className="max-w-[1400px] mx-auto">
-        
+    <div className="min-h-screen bg-white text-black p-4 font-sans">
+      <div className="max-w-[1400px] mx-auto flex flex-col gap-6">
+
         {/* HEADER */}
-        <div className="flex items-center gap-6 mb-16">
-          <button onClick={() => router.push('/')} className="p-4 bg-slate-900/80 hover:bg-brand-yellow/20 rounded-2xl border border-slate-800 transition-all group">
-            <svg className="w-6 h-6 text-slate-500 group-hover:text-brand-yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-          </button>
-          <div>
-            <h1 className="text-4xl md:text-6xl font-black italic tracking-tighter uppercase leading-none bg-gradient-to-r from-white via-white to-slate-500 bg-clip-text text-transparent">
-              Central de <span className="text-brand-yellow">Scouting</span>
-            </h1>
-            <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.3em] mt-3 ml-1">Inteligência de Mercado & Análise de Perfil</p>
+        <header className="flex justify-between items-center border-b-4 border-amber-500 pb-3">
+          <div className="flex items-center gap-4">
+            <img src="/club/escudonovorizontino.png" alt="Shield" className="h-16 w-auto" />
+            <div>
+              <h1 className="text-3xl font-black tracking-tighter text-black uppercase leading-none">Grêmio Novorizontino</h1>
+              <p className="text-base font-bold tracking-widest text-slate-600 uppercase">Departamento de Scouting</p>
+            </div>
           </div>
-        </div>
+          <div className="text-right flex flex-col items-end gap-2">
+            <button
+              onClick={() => router.push('/')}
+              className="bg-slate-200 text-slate-800 px-3 py-1 rounded-md text-xs font-bold hover:bg-slate-300 transition-colors"
+            >
+              ← VOLTAR
+            </button>
+            <div className="bg-amber-500 text-black px-6 py-1 font-black text-xl uppercase italic shadow-md">
+              Central de Scouting
+            </div>
+            <div className="text-slate-600 font-black text-[10px] mt-1 tracking-wider uppercase">
+              Inteligência de Mercado & Análise de Perfil
+            </div>
+          </div>
+        </header>
 
         {/* GRID DE FERRAMENTAS */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {ferramentas.map((item) => (
             <button
               key={item.id}
               onClick={() => router.push(item.rota)}
-              className="group relative bg-slate-900/40 backdrop-blur-xl p-10 rounded-[3rem] border border-slate-800/50 text-left hover:border-brand-yellow/50 transition-all duration-500 overflow-hidden"
+              className="group border-2 border-slate-200 hover:border-amber-500 bg-white p-8 rounded-2xl text-left transition-all duration-200 shadow-sm hover:shadow-md"
             >
-              {/* Efeito de Glow no Hover */}
-              <div className="absolute -right-20 -top-20 w-64 h-64 bg-brand-yellow/5 rounded-full blur-[80px] group-hover:bg-brand-yellow/10 transition-all duration-700"></div>
-              
-              <div className="relative z-10">
-                <div className="w-16 h-16 bg-slate-950 rounded-2xl flex items-center justify-center border border-slate-800 mb-8 group-hover:scale-110 group-hover:border-brand-yellow/30 transition-all duration-500 text-brand-yellow">
-                  {item.icon}
-                </div>
-                
-                <h2 className="text-2xl font-black italic uppercase tracking-tighter mb-4 group-hover:text-brand-yellow transition-colors">
-                  {item.titulo}
-                </h2>
-                
-                <p className="text-slate-500 text-sm leading-relaxed font-medium group-hover:text-slate-300 transition-colors">
-                  {item.descricao}
-                </p>
-                
-                <div className="mt-10 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-brand-yellow opacity-0 group-hover:opacity-100 transition-all translate-x-[-10px] group-hover:translate-x-0">
-                  Acessar Ferramenta
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                  </svg>
-                </div>
+              <div className="w-14 h-14 bg-slate-100 group-hover:bg-amber-500 rounded-xl flex items-center justify-center mb-6 transition-all duration-200 text-slate-500 group-hover:text-black">
+                {item.icon}
+              </div>
+              <h2 className="text-lg font-black uppercase tracking-tighter mb-2 text-black group-hover:text-amber-600 transition-colors">
+                {item.titulo}
+              </h2>
+              <p className="text-slate-500 text-xs leading-relaxed font-medium group-hover:text-slate-700 transition-colors">
+                {item.descricao}
+              </p>
+              <div className="mt-6 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-amber-600 opacity-0 group-hover:opacity-100 transition-all">
+                Acessar
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                </svg>
               </div>
             </button>
           ))}
         </div>
 
-        {/* FOOTER INFO */}
-        <div className="mt-20 p-8 bg-slate-950/50 rounded-[2.5rem] border border-slate-900 flex flex-col md:flex-row items-center justify-between gap-8">
-          <div className="flex items-center gap-4">
-            <div className="w-2 h-2 bg-brand-yellow rounded-full animate-pulse"></div>
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Motor de Percentis Ativo (Laterais v1.0)</span>
+        {/* FOOTER */}
+        <footer className="flex justify-between items-center border-t-2 border-slate-900 pt-3 mt-4">
+          <div className="flex items-center gap-3">
+            <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
+            <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">Motor de Percentis Ativo (Laterais v1.0)</span>
           </div>
-          <div className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Última atualização: 19 de fevereiro</div>
-        </div>
+          <p className="text-[10px] text-slate-500 font-black italic tracking-tight uppercase">© Scouting System GN</p>
+        </footer>
+
       </div>
     </div>
   )
