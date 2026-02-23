@@ -386,7 +386,11 @@ function RankingPerfilContent() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {processedRanking.map((atleta, idx) => (
-                  <tr key={`${atleta.Jogador}-${idx}`} className="hover:bg-amber-50/60 transition-colors group">
+                  <tr
+                    key={`${atleta.Jogador}-${idx}`}
+                    onClick={() => router.push(`/central-scouting/ranking/${encodeURIComponent(atleta.ID_ATLETA || atleta.Jogador)}`)}
+                    className="hover:bg-amber-50/60 transition-colors group cursor-pointer"
+                  >
                     <td className="px-3 py-2.5 text-[9px] font-black text-slate-400">#{idx + 1}</td>
 
                     <td className="px-3 py-2.5">
@@ -421,15 +425,15 @@ function RankingPerfilContent() {
                       </span>
                     </td>
 
-                    <td className="px-3 py-2.5 text-center no-print">
+                    <td className="px-3 py-2.5 text-center no-print" onClick={e => e.stopPropagation()}>
                       <div className="flex gap-1.5 justify-center">
                         <button
-                          onClick={() => setComparisonModal({ open: true, player1: atleta, player2: null })}
+                          onClick={e => { e.stopPropagation(); setComparisonModal({ open: true, player1: atleta, player2: null }); }}
                           className="p-1.5 border-2 border-slate-200 hover:border-amber-500 rounded-lg transition-all text-sm"
                           title="Comparar"
                         >⚔️</button>
                         <button
-                          onClick={() => setSimilarModal({ open: true, targetPlayer: atleta, similar: findSimilarPlayers(atleta, processedRanking) })}
+                          onClick={e => { e.stopPropagation(); setSimilarModal({ open: true, targetPlayer: atleta, similar: findSimilarPlayers(atleta, processedRanking) }); }}
                           className="p-1.5 border-2 border-slate-200 hover:border-amber-500 rounded-lg transition-all text-sm"
                           title="Similares"
                         >🔍</button>
