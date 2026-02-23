@@ -103,49 +103,69 @@ export default function RadarPerfil() {
 
   const cores = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444']
 
-  if (carregando) return <div className="min-h-screen bg-[#0a0c10] flex items-center justify-center text-emerald-500 font-black italic uppercase tracking-widest">Gerando Assinaturas...</div>
+  if (carregando) return (
+    <div className="min-h-screen bg-white flex items-center justify-center text-amber-600 font-black italic animate-pulse text-2xl uppercase">
+      Gerando Assinaturas...
+    </div>
+  )
 
   return (
-    <div className="min-h-screen bg-[#0a0c10] text-white p-4 md:p-8 font-sans">
-      <div className="max-w-[1400px] mx-auto">
-        
-        {/* HEADER */}
-        <div className="flex items-center gap-6 mb-12">
-          <button onClick={() => router.push('/central-scouting')} className="p-4 bg-slate-900/80 hover:bg-emerald-500/20 rounded-2xl border border-slate-800 transition-all group">
-            <svg className="w-6 h-6 text-slate-500 group-hover:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-          </button>
-          <div>
-            <h1 className="text-4xl font-black italic uppercase tracking-tighter leading-none">Radar de <span className="text-emerald-500">Perfil</span></h1>
-            <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest mt-2">Assinatura Tática 0-100 (4 Eixos)</p>
-          </div>
-        </div>
+    <div className="min-h-screen bg-white text-black p-4 font-sans">
+      <div className="max-w-[1400px] mx-auto flex flex-col gap-6">
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          
+        {/* HEADER */}
+        <header className="flex justify-between items-center border-b-4 border-amber-500 pb-3">
+          <div className="flex items-center gap-4">
+            <img src="/club/escudonovorizontino.png" alt="Shield" className="h-16 w-auto" />
+            <div>
+              <h1 className="text-3xl font-black tracking-tighter text-black uppercase leading-none">Grêmio Novorizontino</h1>
+              <p className="text-base font-bold tracking-widest text-slate-600 uppercase">Departamento de Scouting</p>
+            </div>
+          </div>
+          <div className="text-right flex flex-col items-end gap-2">
+            <button
+              onClick={() => router.push('/central-scouting')}
+              className="bg-slate-200 text-slate-800 px-3 py-1 rounded-md text-xs font-bold hover:bg-slate-300 transition-colors"
+            >
+              ← VOLTAR
+            </button>
+            <div className="bg-amber-500 text-black px-6 py-1 font-black text-xl uppercase italic shadow-md">
+              Radar de Perfil
+            </div>
+            <div className="text-slate-600 font-black text-[10px] mt-1 tracking-wider uppercase">
+              Assinatura Tática 0–100 (4 Eixos)
+            </div>
+          </div>
+        </header>
+
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+
           {/* SELEÇÃO DE ATLETAS */}
-          <div className="lg:col-span-1 space-y-6">
-            <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Filtros</h3>
-              <input type="text" placeholder="BUSCAR..." value={busca} onChange={e => setBusca(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black uppercase outline-none mb-3" />
-              <select value={filtroTime} onChange={e => setFiltroTime(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black uppercase outline-none">
+          <div className="lg:col-span-1 space-y-4">
+            <div className="border-2 border-slate-200 p-5 rounded-2xl">
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3">Filtros</h3>
+              <input type="text" placeholder="BUSCAR..." value={busca} onChange={e => setBusca(e.target.value)}
+                className="w-full border-2 border-slate-200 rounded-xl p-3 text-[10px] font-black uppercase outline-none focus:border-amber-500 mb-3" />
+              <select value={filtroTime} onChange={e => setFiltroTime(e.target.value)}
+                className="w-full border-2 border-slate-200 rounded-xl p-3 text-[10px] font-black uppercase outline-none focus:border-amber-500">
                 {times.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
               </select>
             </div>
 
-            <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Atletas ({listaFiltrada.length})</h3>
-              <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+            <div className="border-2 border-slate-200 p-5 rounded-2xl">
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3">Atletas ({listaFiltrada.length}) <span className="text-slate-400 font-normal normal-case">— até 3</span></h3>
+              <div className="space-y-1.5 max-h-[420px] overflow-y-auto pr-1">
                 {listaFiltrada.map(j => (
-                  <button 
+                  <button
                     key={j.Jogador}
                     onClick={() => {
                       if (jogadoresSelecionados.includes(j.Jogador)) setJogadoresSelecionados(jogadoresSelecionados.filter(x => x !== j.Jogador))
                       else if (jogadoresSelecionados.length < 3) setJogadoresSelecionados([...jogadoresSelecionados, j.Jogador])
                     }}
-                    className={`w-full p-4 rounded-2xl text-left transition-all border ${jogadoresSelecionados.includes(j.Jogador) ? 'bg-emerald-500 border-emerald-500 text-slate-950' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-700'}`}
+                    className={`w-full p-3 rounded-xl text-left transition-all border-2 ${jogadoresSelecionados.includes(j.Jogador) ? 'bg-amber-500 border-amber-500 text-black' : 'border-slate-200 text-slate-600 hover:border-amber-400'}`}
                   >
-                    <div className="font-black italic uppercase text-[11px] tracking-tighter">{j.Jogador}</div>
-                    <div className="text-[8px] font-bold uppercase tracking-widest opacity-60 mt-1">{j.Time || j.Equipe}</div>
+                    <div className="font-black uppercase text-[10px] tracking-tighter">{j.Jogador}</div>
+                    <div className="text-[8px] font-bold uppercase tracking-widest opacity-60 mt-0.5">{j.Time || j.Equipe}</div>
                   </button>
                 ))}
               </div>
@@ -153,40 +173,37 @@ export default function RadarPerfil() {
           </div>
 
           {/* RADAR CHART */}
-          <div className="lg:col-span-3 bg-slate-900/40 rounded-[3rem] p-10 border border-slate-800/50 shadow-2xl flex flex-col items-center justify-center min-h-[600px]">
+          <div className="lg:col-span-3 border-2 border-slate-200 rounded-2xl p-8 flex flex-col items-center justify-center min-h-[600px]">
             {jogadoresSelecionados.length > 0 ? (
               <ResponsiveContainer width="100%" height={500}>
                 <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
-                  <PolarGrid stroke="#1e293b" />
-                  <PolarAngleAxis dataKey="subject" tick={{ fill: '#64748b', fontSize: 10, fontWeight: 900 }} />
+                  <PolarGrid stroke="#e2e8f0" />
+                  <PolarAngleAxis dataKey="subject" tick={{ fill: '#475569', fontSize: 10, fontWeight: 900 }} />
                   <PolarRadiusAxis angle={90} domain={[0, 100]} tick={false} axisLine={false} />
                   {jogadoresSelecionados.map((nome, idx) => (
-                    <Radar
-                      key={nome}
-                      name={nome}
-                      dataKey={nome}
-                      stroke={cores[idx]}
-                      fill={cores[idx]}
-                      fillOpacity={0.3}
-                      strokeWidth={3}
-                    />
+                    <Radar key={nome} name={nome} dataKey={nome} stroke={cores[idx]} fill={cores[idx]} fillOpacity={0.25} strokeWidth={2.5} />
                   ))}
-                  <Legend wrapperStyle={{ paddingTop: '40px', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase' }} />
+                  <Legend wrapperStyle={{ paddingTop: '30px', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', color: '#0f172a' }} />
                 </RadarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="text-slate-600 font-black italic uppercase tracking-widest">Selecione até 3 atletas para comparar</div>
+              <div className="text-slate-400 font-black uppercase tracking-widest text-sm">Selecione até 3 atletas para comparar</div>
             )}
           </div>
         </div>
 
+        {/* FOOTER */}
+        <footer className="flex justify-between items-center border-t-2 border-slate-900 pt-3">
+          <button
+            onClick={() => router.push('/central-scouting')}
+            className="text-slate-500 hover:text-black text-sm font-black uppercase tracking-widest px-4 transition-colors"
+          >
+            Voltar
+          </button>
+          <p className="text-[10px] text-slate-500 font-black italic tracking-tight uppercase">© Scouting System GN</p>
+        </footer>
+
       </div>
-      <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #0a0c10; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #10b981; }
-      `}</style>
     </div>
   )
 }
