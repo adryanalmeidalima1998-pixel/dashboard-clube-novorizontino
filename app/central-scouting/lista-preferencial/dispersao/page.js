@@ -401,75 +401,81 @@ function DispersaoContent() {
   }, []);
 
   if (loading) return (
-    <div className="min-h-screen bg-white flex items-center justify-center">
-      <div className="text-center">
-        <div className="w-12 h-12 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin mx-auto mb-4"></div>
-        <p className="text-slate-500 font-black uppercase tracking-widest text-[10px] animate-pulse">Carregando análises de dispersão...</p>
-      </div>
+    <div className="min-h-screen bg-white flex items-center justify-center text-amber-600 font-black italic animate-pulse text-2xl uppercase">
+      Carregando Análise de Dispersão...
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans print:bg-white">
+    <div className="min-h-screen bg-white text-black p-4 font-sans print:p-0 overflow-x-hidden">
       <style jsx global>{`
         @media print {
-          @page { size: A4 landscape; margin: 0.6cm; }
-          body { background: white !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          @page { size: A3 landscape; margin: 0.5cm; }
           .no-print { display: none !important; }
+          body { background: white !important; color: black !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          .print-container { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important; }
           .grafico-bloco { page-break-after: always; page-break-inside: avoid; border-radius: 0 !important; border: 1px solid #e2e8f0 !important; margin-bottom: 0 !important; }
           .grafico-bloco:last-child { page-break-after: avoid; }
-          .print-header { display: flex !important; }
-          .main-header { display: none !important; }
         }
-        .print-header { display: none; }
       `}</style>
 
-      {/* Header tela */}
-      <header className="main-header bg-white border-b-4 border-amber-500 px-8 py-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
-        <div className="flex items-center gap-4">
-          <img src="/club/escudonovorizontino.png" alt="GN" className="h-12 w-auto" onError={e => e.target.style.display = 'none'} />
-          <div>
-            <h1 className="text-xl font-black tracking-tighter text-black uppercase leading-none">Grêmio Novorizontino</h1>
-            <p className="text-xs font-bold tracking-widest text-slate-500 uppercase">Análise de Correlação e Dispersão — {lista.length} atletas</p>
+      <div className="max-w-[1400px] mx-auto print-container flex flex-col gap-4">
+
+        {/* HEADER */}
+        <header className="flex justify-between items-center border-b-4 border-amber-500 pb-2">
+          <div className="flex items-center gap-4">
+            <img src="/club/escudonovorizontino.png" alt="Shield" className="h-16 w-auto" onError={e => e.target.style.display = 'none'} />
+            <div>
+              <h1 className="text-3xl font-black tracking-tighter text-black uppercase leading-none">Grêmio Novorizontino</h1>
+              <p className="text-base font-bold tracking-widest text-slate-600 uppercase">Departamento de Scouting</p>
+            </div>
           </div>
-        </div>
-        <div className="flex gap-3">
-          <button
-            onClick={() => window.print()}
-            className="bg-slate-900 hover:bg-black text-white font-black px-6 py-2.5 rounded-xl text-[11px] uppercase tracking-widest flex items-center gap-2 transition-all"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
-            Gerar PDF
-          </button>
-          <button
-            onClick={() => router.push('/central-scouting/lista-preferencial')}
-            className="border-2 border-slate-200 hover:border-slate-900 text-slate-600 hover:text-black font-black px-6 py-2.5 rounded-xl text-[11px] uppercase tracking-widest transition-all"
-          >
-            Voltar
-          </button>
-        </div>
-      </header>
+          <div className="text-right flex flex-col items-end gap-2">
+            <button
+              onClick={() => router.push('/central-scouting/lista-preferencial')}
+              className="no-print bg-slate-200 text-slate-800 px-3 py-1 rounded-md text-xs font-bold hover:bg-slate-300 transition-colors"
+            >
+              ← VOLTAR
+            </button>
+            <div className="bg-amber-500 text-black px-6 py-1 font-black text-xl uppercase italic shadow-md">
+              Análise de Dispersão
+            </div>
+            <div className="text-slate-600 font-black text-[10px] mt-1 tracking-wider uppercase">
+              DATA: {new Date().toLocaleDateString('pt-BR')} · {lista.length} ATLETAS
+            </div>
+          </div>
+        </header>
 
-      {/* Header print */}
-      <div className="print-header px-2 pb-2 border-b-4 border-amber-500 justify-between items-center mb-3">
-        <div>
-          <p className="text-base font-black uppercase tracking-tighter leading-tight">Grêmio Novorizontino</p>
-          <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Departamento de Scouting</p>
+        {/* Gráficos */}
+        <div className="flex flex-col gap-4">
+          {GRAFICOS.map(cfg => (
+            <GraficoBloco key={cfg.id} config={cfg} lista={lista} gn={gn} serieB={serieB} mapaCores={mapaCores} />
+          ))}
         </div>
-        <div className="bg-amber-500 text-black px-4 py-1 font-black text-sm uppercase italic">Análise de Dispersão</div>
-        <p className="text-[9px] font-bold text-slate-500 uppercase">DATA: {new Date().toLocaleDateString('pt-BR')} · {lista.length} ATLETAS</p>
+
+        {/* FOOTER */}
+        <footer className="no-print flex justify-between items-center border-t-2 border-slate-900 pt-3">
+          <div className="flex gap-4">
+            <button
+              onClick={() => window.print()}
+              className="bg-slate-900 hover:bg-black text-white font-black px-8 py-3 rounded-2xl text-sm shadow-xl transition-all transform hover:scale-105 active:scale-95 flex items-center gap-3"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+              </svg>
+              EXPORTAR PDF
+            </button>
+            <button
+              onClick={() => router.push('/central-scouting/lista-preferencial')}
+              className="text-slate-500 hover:text-black text-sm font-black uppercase tracking-widest px-4 transition-colors"
+            >
+              Voltar
+            </button>
+          </div>
+          <p className="text-[10px] text-slate-500 font-black italic tracking-tight uppercase">© Scouting System GN</p>
+        </footer>
+
       </div>
-
-      {/* Gráficos */}
-      <main className="max-w-[1400px] mx-auto p-6 print:p-0 print:max-w-none space-y-6 print:space-y-0">
-        {GRAFICOS.map(cfg => (
-          <GraficoBloco key={cfg.id} config={cfg} lista={lista} gn={gn} serieB={serieB} mapaCores={mapaCores} />
-        ))}
-      </main>
-
-      <footer className="no-print text-center py-6 text-[9px] font-black text-slate-400 uppercase tracking-widest border-t border-slate-200 mt-6">
-        © {new Date().getFullYear()} Grêmio Novorizontino · Departamento de Análise e Scouting
-      </footer>
     </div>
   );
 }
