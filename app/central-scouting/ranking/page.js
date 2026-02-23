@@ -338,126 +338,146 @@ export default function RankingPerfil() {
 
 
     if (loading) return (
-    <div className="min-h-screen bg-[#0a0c10] flex items-center justify-center">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-yellow mx-auto mb-4"></div>
-        <p className="text-white text-lg font-black uppercase tracking-widest italic">Processando Inteligência...</p>
-      </div>
+    <div className="min-h-screen bg-white flex items-center justify-center text-amber-600 font-black italic animate-pulse text-2xl uppercase">
+      Processando Inteligência...
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-[#0a0c10] text-white p-4 md:p-8 font-sans">
-      <div className="max-w-[1600px] mx-auto">
-        
+    <div className="min-h-screen bg-white text-black p-4 font-sans">
+      <div className="max-w-[1600px] mx-auto flex flex-col gap-4">
+
         {/* HEADER */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-16">
-          <div className="flex items-center gap-6">
-            <button onClick={() => router.push('/central-scouting')} className="p-4 bg-slate-900/80 hover:bg-brand-yellow/20 rounded-2xl border border-slate-800 transition-all group">
-              <svg className="w-6 h-6 text-slate-500 group-hover:text-brand-yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-            </button>
+        <header className="flex justify-between items-center border-b-4 border-amber-500 pb-3">
+          <div className="flex items-center gap-4">
+            <img src="/club/escudonovorizontino.png" alt="Shield" className="h-16 w-auto" />
             <div>
-              <h1 className="text-4xl md:text-6xl font-black italic tracking-tighter uppercase leading-none bg-gradient-to-r from-white via-white to-slate-500 bg-clip-text text-transparent">
-                Ranking de <span className="text-brand-yellow">Perfil</span>
-              </h1>
-              <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.3em] mt-3 ml-1">Inteligência Avançada de Scouting</p>
+              <h1 className="text-3xl font-black tracking-tighter text-black uppercase leading-none">Grêmio Novorizontino</h1>
+              <p className="text-base font-bold tracking-widest text-slate-600 uppercase">Departamento de Scouting</p>
             </div>
           </div>
-          <button onClick={exportPDF} className="px-8 py-4 bg-brand-yellow text-slate-950 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-yellow/80 transition-all shadow-lg hover:shadow-brand-yellow/20">
-            📄 Exportar PDF
-          </button>
-        </div>
+          <div className="text-right flex flex-col items-end gap-2">
+            <button
+              onClick={() => router.push('/central-scouting')}
+              className="bg-slate-200 text-slate-800 px-3 py-1 rounded-md text-xs font-bold hover:bg-slate-300 transition-colors"
+            >
+              ← VOLTAR
+            </button>
+            <div className="bg-amber-500 text-black px-6 py-1 font-black text-xl uppercase italic shadow-md">
+              Ranking de Perfil
+            </div>
+            <div className="text-slate-600 font-black text-[10px] mt-1 tracking-wider uppercase">
+              DATA: {new Date().toLocaleDateString('pt-BR')} · {processedRanking.length} ATLETAS
+            </div>
+          </div>
+        </header>
 
         {/* FILTROS */}
-        <div className="bg-slate-900/40 backdrop-blur-xl p-10 rounded-[3rem] border border-slate-800/50 mb-12 shadow-2xl">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div className="border-2 border-slate-200 rounded-2xl p-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="md:col-span-2">
-              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-4">Buscar Atleta</label>
-              <input 
-                type="text" 
-                placeholder="NOME DO JOGADOR..." 
+              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-2">Buscar Atleta</label>
+              <input
+                type="text"
+                placeholder="NOME DO JOGADOR..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-[11px] font-black uppercase outline-none focus:border-brand-yellow/50 text-white placeholder:text-slate-700 transition-all"
+                className="w-full border-2 border-slate-200 rounded-xl p-3 text-[10px] font-black uppercase outline-none focus:border-amber-500 placeholder:text-slate-300 transition-all"
               />
             </div>
             <div>
-              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-4">Perfil Técnico</label>
-              <select value={selectedPerfil} onChange={e => setSelectedPerfil(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-[11px] font-black uppercase outline-none focus:border-brand-yellow/50 text-white appearance-none cursor-pointer">
+              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-2">Perfil Técnico</label>
+              <select value={selectedPerfil} onChange={e => setSelectedPerfil(e.target.value)}
+                className="w-full border-2 border-slate-200 rounded-xl p-3 text-[10px] font-black uppercase outline-none focus:border-amber-500 cursor-pointer">
                 {allPerfis.map(p => <option key={p} value={p}>{p.toUpperCase()}</option>)}
               </select>
             </div>
             <div>
-              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-4">Minutos: <span className="text-brand-yellow">{minMinutos}min</span></label>
-              <input type="range" min="0" max="3000" step="90" value={minMinutos} onChange={e => setMinMinutos(parseInt(e.target.value))} className="w-full accent-brand-yellow mt-3" />
+              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-2">
+                Minutos mín.: <span className="text-amber-600">{minMinutos}min</span>
+              </label>
+              <input type="range" min="0" max="3000" step="90" value={minMinutos}
+                onChange={e => setMinMinutos(parseInt(e.target.value))}
+                className="w-full accent-amber-500 mt-2" />
             </div>
-
             <div>
-              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-4">Posição</label>
-              <select value={selectedPosicao} onChange={e => setSelectedPosicao(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-[11px] font-black uppercase outline-none focus:border-brand-yellow/50 text-white appearance-none cursor-pointer">
+              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-2">Posição</label>
+              <select value={selectedPosicao} onChange={e => setSelectedPosicao(e.target.value)}
+                className="w-full border-2 border-slate-200 rounded-xl p-3 text-[10px] font-black uppercase outline-none focus:border-amber-500 cursor-pointer">
                 <option value="">TODAS AS POSIÇÕES</option>
                 {options.posicoes.map(p => <option key={p} value={p}>{p}</option>)}
               </select>
             </div>
             <div>
-              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-4">Clube</label>
-              <select value={selectedTime} onChange={e => setSelectedTime(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-[11px] font-black uppercase outline-none focus:border-brand-yellow/50 text-white appearance-none cursor-pointer">
+              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-2">Clube</label>
+              <select value={selectedTime} onChange={e => setSelectedTime(e.target.value)}
+                className="w-full border-2 border-slate-200 rounded-xl p-3 text-[10px] font-black uppercase outline-none focus:border-amber-500 cursor-pointer">
                 <option value="">TODOS OS CLUBES</option>
                 {options.times.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
               </select>
             </div>
             <div>
-              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-4">País</label>
-              <select value={selectedPais} onChange={e => setSelectedPais(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-[11px] font-black uppercase outline-none focus:border-brand-yellow/50 text-white appearance-none cursor-pointer">
+              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-2">País</label>
+              <select value={selectedPais} onChange={e => setSelectedPais(e.target.value)}
+                className="w-full border-2 border-slate-200 rounded-xl p-3 text-[10px] font-black uppercase outline-none focus:border-amber-500 cursor-pointer">
                 <option value="">TODOS OS PAÍSES</option>
                 {options.paises.map(p => <option key={p} value={p}>{p.toUpperCase()}</option>)}
               </select>
             </div>
             <div>
-              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-4">Idade Mín</label>
-              <input type="number" value={minIdade} onChange={e => setMinIdade(e.target.value)} placeholder="Ex: 20" className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-[11px] font-black uppercase outline-none focus:border-brand-yellow/50 text-white placeholder:text-slate-700 transition-all" />
+              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-2">Idade Mín</label>
+              <input type="number" value={minIdade} onChange={e => setMinIdade(e.target.value)} placeholder="Ex: 20"
+                className="w-full border-2 border-slate-200 rounded-xl p-3 text-[10px] font-black uppercase outline-none focus:border-amber-500 placeholder:text-slate-300 transition-all" />
             </div>
             <div>
-              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-4">Idade Máx</label>
-              <input type="number" value={maxIdade} onChange={e => setMaxIdade(e.target.value)} placeholder="Ex: 30" className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-[11px] font-black uppercase outline-none focus:border-brand-yellow/50 text-white placeholder:text-slate-700 transition-all" />
+              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-2">Idade Máx</label>
+              <input type="number" value={maxIdade} onChange={e => setMaxIdade(e.target.value)} placeholder="Ex: 30"
+                className="w-full border-2 border-slate-200 rounded-xl p-3 text-[10px] font-black uppercase outline-none focus:border-amber-500 placeholder:text-slate-300 transition-all" />
             </div>
           </div>
         </div>
 
         {/* TABELA DE RANKING */}
-        <div className="bg-slate-900/40 backdrop-blur-xl rounded-[3rem] border border-slate-800/50 overflow-hidden shadow-2xl">
+        <div className="border-2 border-slate-900 rounded-2xl overflow-hidden shadow-lg">
+          <div className="bg-slate-900 text-white font-black text-center py-2 text-[10px] uppercase tracking-widest">
+            Ranking · Perfil: {selectedPerfil} · {processedRanking.length} atletas · Clique em ⚔️ para comparar
+          </div>
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gradient-to-r from-slate-950 to-slate-900 border-b border-slate-800">
-                <tr>
-                  <th className="px-6 py-4 text-left text-[10px] font-black text-brand-yellow uppercase tracking-widest cursor-pointer hover:bg-slate-800/50" onClick={() => setSortConfig({ key: 'Jogador', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' })}>Atleta</th>
-                  <th className="px-6 py-4 text-left text-[10px] font-black text-brand-yellow uppercase tracking-widest cursor-pointer hover:bg-slate-800/50" onClick={() => setSortConfig({ key: 'Time', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' })}>Time</th>
-                  <th className="px-6 py-4 text-left text-[10px] font-black text-brand-yellow uppercase tracking-widest cursor-pointer hover:bg-slate-800/50" onClick={() => setSortConfig({ key: 'Posição', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' })}>Posição</th>
-                  <th className="px-6 py-4 text-left text-[10px] font-black text-brand-yellow uppercase tracking-widest cursor-pointer hover:bg-slate-800/50" onClick={() => setSortConfig({ key: 'Idade', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' })}>Idade</th>
-                  <th className="px-6 py-4 text-left text-[10px] font-black text-brand-yellow uppercase tracking-widest cursor-pointer hover:bg-slate-800/50" onClick={() => setSortConfig({ key: 'Minutos jogados', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' })}>Minutos</th>
-                  <th className="px-6 py-4 text-right text-[10px] font-black text-brand-yellow uppercase tracking-widest cursor-pointer hover:bg-slate-800/50" onClick={() => setSortConfig({ key: 'notaPerfil', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' })}>Nota</th>
-                  <th className="px-6 py-4 text-center text-[10px] font-black text-brand-yellow uppercase tracking-widest">Ações</th>
+            <table className="w-full border-collapse text-[10px]">
+              <thead>
+                <tr className="border-b-2 border-slate-900 bg-slate-900">
+                  <th className="px-4 py-3 text-left text-[8px] font-black uppercase tracking-widest text-slate-300 cursor-pointer hover:bg-slate-700 transition-colors" onClick={() => setSortConfig({ key: 'Jogador', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' })}>Atleta</th>
+                  <th className="px-4 py-3 text-left text-[8px] font-black uppercase tracking-widest text-slate-300 cursor-pointer hover:bg-slate-700 transition-colors" onClick={() => setSortConfig({ key: 'Time', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' })}>Time</th>
+                  <th className="px-4 py-3 text-left text-[8px] font-black uppercase tracking-widest text-slate-300 cursor-pointer hover:bg-slate-700 transition-colors" onClick={() => setSortConfig({ key: 'Posição', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' })}>Pos</th>
+                  <th className="px-4 py-3 text-center text-[8px] font-black uppercase tracking-widest text-slate-300 cursor-pointer hover:bg-slate-700 transition-colors" onClick={() => setSortConfig({ key: 'Idade', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' })}>Idade</th>
+                  <th className="px-4 py-3 text-center text-[8px] font-black uppercase tracking-widest text-slate-300 cursor-pointer hover:bg-slate-700 transition-colors" onClick={() => setSortConfig({ key: 'Minutos jogados', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' })}>Min</th>
+                  <th className="px-4 py-3 text-center text-[8px] font-black uppercase tracking-widest bg-amber-500 text-black cursor-pointer" onClick={() => setSortConfig({ key: 'notaPerfil', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' })}>
+                    Nota {sortConfig.key === 'notaPerfil' ? (sortConfig.direction === 'desc' ? '↓' : '↑') : ''}
+                  </th>
+                  <th className="px-4 py-3 text-center text-[8px] font-black uppercase tracking-widest text-slate-300">Ações</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800">
+              <tbody className="divide-y divide-slate-100">
                 {processedRanking.map((atleta, idx) => (
-                  <tr key={atleta.Jogador} className="hover:bg-slate-800/30 transition-colors">
-                    <td className="px-6 py-4 text-[11px] font-black text-white">{idx + 1}. {atleta.Jogador}</td>
-                    <td className="px-6 py-4 text-[11px] text-slate-400">{atleta.Time}</td>
-                    <td className="px-6 py-4 text-[11px] text-slate-400">{atleta.Posição}</td>
-                    <td className="px-6 py-4 text-[11px] text-slate-400">{atleta.Idade}</td>
-                    <td className="px-6 py-4 text-[11px] text-slate-400">{atleta['Minutos jogados']}</td>
-                    <td className="px-6 py-4 text-right">
-                      <span className="px-3 py-1 bg-brand-yellow/20 border border-brand-yellow/50 rounded-lg text-[11px] font-black text-brand-yellow">
-                        {atleta.notaPerfil}
-                      </span>
+                  <tr key={atleta.Jogador} className="hover:bg-amber-50/60 transition-colors cursor-pointer group">
+                    <td className="px-4 py-2.5 text-[10px] font-black uppercase italic group-hover:text-amber-600 transition-colors">
+                      <span className="text-slate-400 font-black mr-1">#{idx + 1}</span> {atleta.Jogador}
                     </td>
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-4 py-2.5 text-[9px] font-black uppercase text-slate-600">{atleta.Time}</td>
+                    <td className="px-4 py-2.5">
+                      <span className="px-2 py-0.5 bg-slate-100 rounded text-[8px] font-black text-slate-600">{atleta.Posição}</span>
+                    </td>
+                    <td className="px-4 py-2.5 text-center text-[9px] font-black">{atleta.Idade}</td>
+                    <td className="px-4 py-2.5 text-center text-[9px] font-black tabular-nums">{atleta['Minutos jogados']}</td>
+                    <td className="px-4 py-2.5 text-center">
+                      <span className="text-sm font-black tabular-nums text-amber-600">{atleta.notaPerfil}</span>
+                    </td>
+                    <td className="px-4 py-2.5 text-center">
                       <div className="flex gap-2 justify-center">
-                        <button onClick={() => setComparisonModal({ open: true, player1: atleta, player2: null })} className="p-2 bg-slate-800 hover:bg-brand-yellow/20 rounded-lg transition-all text-sm" title="Comparar">⚔️</button>
-                        <button onClick={() => setSimilarModal({ open: true, targetPlayer: atleta, similar: findSimilarPlayers(atleta, processedRanking, 5) })} className="p-2 bg-slate-800 hover:bg-brand-yellow/20 rounded-lg transition-all text-sm" title="Similares">🔍</button>
+                        <button onClick={() => setComparisonModal({ open: true, player1: atleta, player2: null })}
+                          className="p-1.5 border border-slate-200 hover:border-amber-500 rounded-lg transition-all text-sm" title="Comparar">⚔️</button>
+                        <button onClick={() => setSimilarModal({ open: true, targetPlayer: atleta, similar: findSimilarPlayers(atleta, processedRanking, 5) })}
+                          className="p-1.5 border border-slate-200 hover:border-amber-500 rounded-lg transition-all text-sm" title="Similares">🔍</button>
                       </div>
                     </td>
                   </tr>
@@ -467,107 +487,129 @@ export default function RankingPerfil() {
           </div>
         </div>
 
+        {/* FOOTER */}
+        <footer className="flex justify-between items-center border-t-2 border-slate-900 pt-3">
+          <div className="flex gap-4">
+            <button
+              onClick={exportPDF}
+              className="bg-slate-900 hover:bg-black text-white font-black px-8 py-3 rounded-2xl text-sm shadow-xl transition-all transform hover:scale-105 active:scale-95 flex items-center gap-3"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+              </svg>
+              EXPORTAR PDF
+            </button>
+            <button
+              onClick={() => router.push('/central-scouting')}
+              className="text-slate-500 hover:text-black text-sm font-black uppercase tracking-widest px-4 transition-colors"
+            >
+              Voltar
+            </button>
+          </div>
+          <p className="text-[10px] text-slate-500 font-black italic tracking-tight uppercase">© Scouting System GN</p>
+        </footer>
+
         {/* MODAL DE COMPARAÇÃO */}
         {comparisonModal.open && comparisonModal.player1 && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-slate-900/95 border border-brand-yellow/30 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6">
-              <div className="flex justify-between items-center mb-6 pb-4 border-b border-brand-yellow/20">
-                <h2 className="text-2xl font-black italic text-brand-yellow">COMPARAÇÃO TÉCNICA</h2>
-                <button onClick={() => setComparisonModal({ open: false, player1: null, player2: null })} className="text-white hover:text-brand-yellow transition text-2xl">✕</button>
+          <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+            <div className="bg-white border-2 border-slate-900 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl">
+              <div className="flex justify-between items-center mb-4 pb-3 border-b-4 border-amber-500">
+                <h2 className="text-xl font-black uppercase tracking-tighter text-black">Comparação Técnica</h2>
+                <button onClick={() => setComparisonModal({ open: false, player1: null, player2: null })}
+                  className="text-slate-400 hover:text-black transition text-2xl font-black">✕</button>
               </div>
-              
-              {/* Similaridade */}
+
               {comparisonModal.player2 && (
-                <div className="bg-slate-800/50 border border-brand-yellow/20 rounded-lg p-4 mb-6">
+                <div className="border-2 border-amber-500 rounded-xl p-4 mb-4 bg-amber-50">
                   <div className="flex justify-between items-center">
                     <div>
-                      <p className="text-sm text-slate-400">Percentil de Similaridade</p>
-                      <p className="text-3xl font-bold text-brand-yellow">{calcularSimilaridade(comparisonModal.player1, comparisonModal.player2)}%</p>
+                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Percentil de Similaridade</p>
+                      <p className="text-3xl font-black text-amber-600">{calcularSimilaridade(comparisonModal.player1, comparisonModal.player2)}%</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm text-slate-400">Estilos de Jogo</p>
-                      <p className="text-lg font-bold text-white">
+                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Estilos de Jogo</p>
+                      <p className="text-lg font-black text-black">
                         {calcularSimilaridade(comparisonModal.player1, comparisonModal.player2) > 75 ? 'Muito Similares' : calcularSimilaridade(comparisonModal.player1, comparisonModal.player2) > 50 ? 'Similares' : 'Diferentes'}
                       </p>
                     </div>
                   </div>
                 </div>
               )}
-              
-              {/* Atletas Info */}
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="bg-slate-800/50 border border-brand-yellow/20 rounded-lg p-4">
-                  <h3 className="text-lg font-bold text-brand-yellow mb-2">{comparisonModal.player1.Jogador}</h3>
-                  <p className="text-sm text-slate-400">{comparisonModal.player1.Time} • {comparisonModal.player1.Posição}</p>
-                  <p className="text-xs text-slate-500">Idade: {comparisonModal.player1.Idade} | Minutos: {comparisonModal.player1['Minutos jogados']}</p>
+
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="border-2 border-slate-200 rounded-xl p-4">
+                  <h3 className="text-base font-black uppercase italic text-amber-600 mb-1">{comparisonModal.player1.Jogador}</h3>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase">{comparisonModal.player1.Time} · {comparisonModal.player1.Posição}</p>
+                  <p className="text-[9px] text-slate-400">Idade: {comparisonModal.player1.Idade} | Min: {comparisonModal.player1['Minutos jogados']}</p>
                 </div>
                 {comparisonModal.player2 && (
-                  <div className="bg-slate-800/50 border border-brand-yellow/20 rounded-lg p-4">
-                    <h3 className="text-lg font-bold text-brand-yellow mb-2">{comparisonModal.player2.Jogador}</h3>
-                    <p className="text-sm text-slate-400">{comparisonModal.player2.Time} • {comparisonModal.player2.Posição}</p>
-                    <p className="text-xs text-slate-500">Idade: {comparisonModal.player2.Idade} | Minutos: {comparisonModal.player2['Minutos jogados']}</p>
+                  <div className="border-2 border-slate-200 rounded-xl p-4">
+                    <h3 className="text-base font-black uppercase italic text-amber-600 mb-1">{comparisonModal.player2.Jogador}</h3>
+                    <p className="text-[10px] font-bold text-slate-500 uppercase">{comparisonModal.player2.Time} · {comparisonModal.player2.Posição}</p>
+                    <p className="text-[9px] text-slate-400">Idade: {comparisonModal.player2.Idade} | Min: {comparisonModal.player2['Minutos jogados']}</p>
                   </div>
                 )}
               </div>
-              
-              {/* Seletor de segundo atleta */}
+
               {!comparisonModal.player2 ? (
-                <div className="mb-6">
-                  <p className="text-slate-400 mb-4 font-black uppercase">Selecione um segundo atleta para comparar</p>
-                  <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                <div className="mb-4">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3">Selecione um segundo atleta para comparar</p>
+                  <div className="space-y-1.5 max-h-[300px] overflow-y-auto">
                     {processedRanking.filter(p => p.Jogador !== comparisonModal.player1.Jogador).map(p => (
-                      <button key={p.Jogador} onClick={() => setComparisonModal({ ...comparisonModal, player2: p })} className="w-full p-3 bg-slate-900 border border-slate-700 rounded-lg text-left hover:border-brand-yellow transition-all text-sm font-black uppercase text-slate-300 hover:text-brand-yellow">
-                        {p.Jogador} ({p.notaPerfil})
+                      <button key={p.Jogador} onClick={() => setComparisonModal({ ...comparisonModal, player2: p })}
+                        className="w-full p-3 border-2 border-slate-200 hover:border-amber-500 rounded-xl text-left transition-all text-[10px] font-black uppercase text-slate-700 hover:text-amber-600">
+                        {p.Jogador} <span className="text-slate-400">({p.notaPerfil})</span>
                       </button>
                     ))}
                   </div>
                 </div>
               ) : (
                 <>
-                  {/* Tabela de Métricas */}
-                  <div className="mb-6 overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="bg-slate-800 border-b border-brand-yellow/20">
-                          <th className="px-4 py-2 text-left text-brand-yellow font-bold">Métrica</th>
-                          <th className="px-4 py-2 text-center text-brand-yellow font-bold">{comparisonModal.player1.Jogador}</th>
-                          <th className="px-4 py-2 text-center text-brand-yellow font-bold">{comparisonModal.player2.Jogador}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {Object.keys(comparisonModal.player1)
-                          .filter(k => !['Jogador', 'Time', 'Posição', 'Idade', 'Nacionalidade', 'Minutos jogados', 'notaPerfil'].includes(k))
-                          .map(metric => {
-                            const val1 = safeParseFloat(comparisonModal.player1[metric]);
-                            const val2 = safeParseFloat(comparisonModal.player2[metric]);
-                            const menorEhMelhor = ['Faltas', 'Erros', 'Cartão', 'Bolas perdidas'].some(m => metric.toLowerCase().includes(m.toLowerCase()));
-                            const p1Vence = menorEhMelhor ? val1 < val2 : val1 > val2;
-                            
-                            return (
-                              <tr key={metric} className="border-b border-slate-700 hover:bg-slate-800/50">
-                                <td className="px-4 py-2 text-white">{metric}</td>
-                                <td className={`px-4 py-2 text-center font-bold ${p1Vence && val1 !== val2 ? 'text-green-400' : 'text-slate-300'}`}>
-                                  {val1 !== val2 && p1Vence ? '● ' : ''}{val1}
-                                </td>
-                                <td className={`px-4 py-2 text-center font-bold ${!p1Vence && val1 !== val2 ? 'text-green-400' : 'text-slate-300'}`}>
-                                  {val1 !== val2 && !p1Vence ? '● ' : ''}{val2}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                      </tbody>
-                    </table>
+                  <div className="mb-4 border-2 border-slate-900 rounded-2xl overflow-hidden">
+                    <div className="bg-slate-900 text-white text-center py-1.5 text-[9px] font-black uppercase tracking-widest">Métricas comparadas</div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-[10px] border-collapse">
+                        <thead>
+                          <tr className="border-b-2 border-slate-200 bg-slate-50">
+                            <th className="px-4 py-2 text-left text-[8px] font-black uppercase tracking-widest text-slate-500">Métrica</th>
+                            <th className="px-4 py-2 text-center text-[8px] font-black uppercase tracking-widest text-amber-600">{comparisonModal.player1.Jogador}</th>
+                            <th className="px-4 py-2 text-center text-[8px] font-black uppercase tracking-widest text-amber-600">{comparisonModal.player2.Jogador}</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {Object.keys(comparisonModal.player1)
+                            .filter(k => !['Jogador', 'Time', 'Posição', 'Idade', 'Nacionalidade', 'Minutos jogados', 'notaPerfil'].includes(k))
+                            .map(metric => {
+                              const val1 = safeParseFloat(comparisonModal.player1[metric]);
+                              const val2 = safeParseFloat(comparisonModal.player2[metric]);
+                              const menorEhMelhor = ['Faltas', 'Erros', 'Cartão', 'Bolas perdidas'].some(m => metric.toLowerCase().includes(m.toLowerCase()));
+                              const p1Vence = menorEhMelhor ? val1 < val2 : val1 > val2;
+                              return (
+                                <tr key={metric} className="hover:bg-amber-50/50 transition-colors">
+                                  <td className="px-4 py-2 text-[9px] font-bold text-slate-600">{metric}</td>
+                                  <td className={`px-4 py-2 text-center font-black tabular-nums ${p1Vence && val1 !== val2 ? 'text-emerald-600' : 'text-slate-500'}`}>
+                                    {p1Vence && val1 !== val2 ? '● ' : ''}{val1}
+                                  </td>
+                                  <td className={`px-4 py-2 text-center font-black tabular-nums ${!p1Vence && val1 !== val2 ? 'text-emerald-600' : 'text-slate-500'}`}>
+                                    {!p1Vence && val1 !== val2 ? '● ' : ''}{val2}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
-                  
-                  {/* Botões */}
                   <div className="flex gap-3 justify-end">
-                    <button onClick={exportComparisonPDF} className="px-6 py-2 bg-brand-yellow text-black font-bold rounded-lg hover:bg-yellow-400 transition">
+                    <button onClick={exportComparisonPDF} className="bg-slate-900 hover:bg-black text-white font-black px-6 py-2.5 rounded-xl text-[10px] uppercase tracking-widest transition-all">
                       📄 Exportar PDF
                     </button>
-                    <button onClick={() => setComparisonModal({ ...comparisonModal, player2: null })} className="px-6 py-2 bg-slate-700 text-white font-bold rounded-lg hover:bg-slate-600 transition">
+                    <button onClick={() => setComparisonModal({ ...comparisonModal, player2: null })}
+                      className="border-2 border-slate-200 hover:border-slate-400 text-slate-600 font-black px-6 py-2.5 rounded-xl text-[10px] uppercase tracking-widest transition-all">
                       Trocar Atleta
                     </button>
-                    <button onClick={() => setComparisonModal({ open: false, player1: null, player2: null })} className="px-6 py-2 bg-slate-700 text-white font-bold rounded-lg hover:bg-slate-600 transition">
+                    <button onClick={() => setComparisonModal({ open: false, player1: null, player2: null })}
+                      className="border-2 border-slate-200 hover:border-slate-400 text-slate-600 font-black px-6 py-2.5 rounded-xl text-[10px] uppercase tracking-widest transition-all">
                       Fechar
                     </button>
                   </div>
