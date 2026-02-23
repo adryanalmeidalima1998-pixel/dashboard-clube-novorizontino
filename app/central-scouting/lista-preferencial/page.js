@@ -300,6 +300,14 @@ function ListaPreferencialContent() {
               <div className="flex items-center gap-3">
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-700">Métricas exibidas</span>
                 <span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded text-[9px] font-black">{metricasSelecionadas.length}/8</span>
+                {metricasSelecionadas.length > 0 && (
+                  <button
+                    onClick={() => setMetricasSelecionadas([])}
+                    className="px-2 py-0.5 border border-slate-300 hover:border-red-400 hover:text-red-500 text-slate-400 rounded text-[9px] font-black uppercase tracking-widest transition-all"
+                  >
+                    ✕ Desmarcar tudo
+                  </button>
+                )}
               </div>
               <div className="flex gap-1.5 flex-wrap">
                 {Object.keys(CATEGORIAS_METRICAS).map(cat => (
