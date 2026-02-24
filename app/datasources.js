@@ -1,7 +1,8 @@
 /**
  * ═══════════════════════════════════════════════════════════════
  *  DATASOURCES — Grêmio Novorizontino Dashboard
- *  Planilha centralizada. Para trocar a fonte, edite só aqui.
+ *  Planilha centralizada com todas as abas do dashboard.
+ *  Para trocar a fonte de dados, altere apenas este arquivo.
  * ═══════════════════════════════════════════════════════════════
  */
 
@@ -18,12 +19,18 @@ const GIDS = {
   ELENCO:               1499961831,
 }
 
+/**
+ * Retorna a URL completa de uma aba, com cache-busting opcional.
+ * @param {keyof typeof GIDS} aba
+ * @param {boolean} bustCache  - adiciona timestamp para forçar dados frescos
+ */
 export function sheetUrl(aba, bustCache = true) {
   const gid = GIDS[aba]
   const ts  = bustCache ? `&t=${Date.now()}` : ''
   return `${BASE_URL}&gid=${gid}${ts}`
 }
 
+// URLs pré-montadas para uso direto (sem cache-busting, ex: constantes de módulo)
 export const URLS = {
   AGENDA:               `${BASE_URL}&gid=${GIDS.AGENDA}`,
   ELENCO:               `${BASE_URL}&gid=${GIDS.ELENCO}`,
