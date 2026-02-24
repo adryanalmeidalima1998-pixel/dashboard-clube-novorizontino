@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import Papa from 'papaparse';
+import { sheetUrl } from '../../datasources';
 import { cleanData, safeParseFloat } from '@/app/utils/dataCleaner';
 
 // Colunas fixas que NUNCA são métricas
@@ -104,7 +105,7 @@ function ListaPreferencialContent() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const urlAba1 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQKQDSwtQvkSq1v9P2TzUDnFsV_i1gRCNXyQ0aT5TewfwNMnouAoICwQKRAmtCUDLHcJXO4DYS0fL_R/pub?output=csv&gid=0&t=' + Date.now();
+        const urlAba1 = sheetUrl('LISTA_PREFERENCIAL');
 
         const response1 = await fetch(urlAba1);
         const csvText1 = await response1.text();

@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Papa from 'papaparse';
+import { sheetUrl } from '../../../datasources';
 import { cleanData, safeParseFloat } from '@/app/utils/dataCleaner';
 import dynamic from 'next/dynamic';
 import HeatmapComponent from '@/app/components/HeatmapComponent';
@@ -71,8 +72,8 @@ function PlayerProfileContent() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const urlAba1 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQKQDSwtQvkSq1v9P2TzUDnFsV_i1gRCNXyQ0aT5TewfwNMnouAoICwQKRAmtCUDLHcJXO4DYS0fL_R/pub?output=csv&gid=0';
-        const urlAba2 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQKQDSwtQvkSq1v9P2TzUDnFsV_i1gRCNXyQ0aT5TewfwNMnouAoICwQKRAmtCUDLHcJXO4DYS0fL_R/pub?output=csv&gid=1236859817';
+        const urlAba1 = sheetUrl('LISTA_PREFERENCIAL');
+        const urlAba2 = sheetUrl('GREMIO_NOVORIZONTINO', false);
         const urlSerieB = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQbSUvDghD3MPKBNEYz1cxeLgCmftwt5AoqkVmai6xCrA7W8fIy77Y2RlTmqR5w1A6a-MRPlV67pVYA/pub?output=csv';
 
         const [res1, res2, res3] = await Promise.all([fetch(urlAba1), fetch(urlAba2), fetch(urlSerieB)]);

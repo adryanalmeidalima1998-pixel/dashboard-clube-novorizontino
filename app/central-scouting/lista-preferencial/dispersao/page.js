@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import Papa from 'papaparse';
+import { sheetUrl } from '../../../datasources';
 import { cleanData, safeParseFloat } from '@/app/utils/dataCleaner';
 import dynamic from 'next/dynamic';
 
@@ -356,8 +357,8 @@ function DispersaoContent() {
   useEffect(() => {
     const load = async () => {
       try {
-        const urlLista  = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQKQDSwtQvkSq1v9P2TzUDnFsV_i1gRCNXyQ0aT5TewfwNMnouAoICwQKRAmtCUDLHcJXO4DYS0fL_R/pub?output=csv&gid=0&t=' + Date.now();
-        const urlGN     = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQKQDSwtQvkSq1v9P2TzUDnFsV_i1gRCNXyQ0aT5TewfwNMnouAoICwQKRAmtCUDLHcJXO4DYS0fL_R/pub?output=csv&gid=1236859817';
+        const urlLista  = sheetUrl('LISTA_PREFERENCIAL');
+        const urlGN     = sheetUrl('GREMIO_NOVORIZONTINO', false);
         const urlSerieB = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQbSUvDghD3MPKBNEYz1cxeLgCmftwt5AoqkVmai6xCrA7W8fIy77Y2RlTmqR5w1A6a-MRPlV67pVYA/pub?output=csv';
 
         const [r1, r2, r3] = await Promise.all([fetch(urlLista), fetch(urlGN), fetch(urlSerieB)]);

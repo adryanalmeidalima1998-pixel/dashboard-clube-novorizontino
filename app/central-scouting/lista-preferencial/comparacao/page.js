@@ -3,8 +3,9 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Papa from 'papaparse';
-import { EXTREMOS_PLAYERS } from '@/app/utils/extremosData';
+import { findPlayersByIds } from '@/app/utils/extremosData';
 import { cleanData, safeParseFloat } from '@/app/utils/dataCleaner';
+import { sheetUrl } from '@/app/datasources';
 import jsPDF from 'jspdf';
 
 function ComparacaoContent() {
@@ -32,30 +33,24 @@ function ComparacaoContent() {
       }
 
       const playerIds = playersParam.split(',');
-      const loadedPlayers = [];
 
-      for (const id of playerIds) {
-        const config = EXTREMOS_PLAYERS.find(p => p.id === id);
-        if (config) {
-          try {
-            const response = await fetch(config.url);
-            const csvText = await response.text();
-            Papa.parse(csvText, {
-              header: true,
-              skipEmptyLines: true,
-              complete: (results) => {
-                const cleaned = cleanData(results.data);
-                loadedPlayers.push({ ...config, ...cleaned[0] });
-              }
-            });
-          } catch (error) {
-            console.error(`Erro ao carregar ${id}:`, error);
+      try {
+        const response = await fetch(sheetUrl('LISTA_PREFERENCIAL'));
+        const csvText = await response.text();
+        Papa.parse(csvText, {
+          header: true,
+          skipEmptyLines: true,
+          complete: (results) => {
+            const cleaned = cleanData(results.data);
+            const found = findPlayersByIds(cleaned, playerIds);
+            setPlayers(found);
+            setLoading(false);
           }
-        }
+        });
+      } catch (error) {
+        console.error('Erro ao carregar jogadores:', error);
+        setLoading(false);
       }
-
-      setPlayers(loadedPlayers);
-      setLoading(false);
     };
 
     loadPlayers();

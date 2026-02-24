@@ -6,6 +6,7 @@ import Papa from 'papaparse';
 import { cleanData, safeParseFloat } from '@/app/utils/dataCleaner';
 import dynamic from 'next/dynamic';
 import HeatmapComponent from '@/app/components/HeatmapComponent';
+import { sheetUrl } from '@/app/datasources';
 import { calcularPerfilSugerido } from '@/app/utils/perfilAnalyzer';
 import { gerarTextoAnalise } from '@/app/utils/textGenerator';
 import { PERFIL_DESCRICOES } from '@/app/utils/perfilWeights';
@@ -20,10 +21,10 @@ const Plot = dynamic(() => import('react-plotly.js'), {
 });
 
 // CSV do Ranking de Perfil (mesmo da página de lista)
-const CSV_RANKING = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTx73GpGdTLkIPTmBfkYujRILN3DmPV5FG2dH4-bbELYZJ4STAIYrOSJ7AOPDOTq_tB0ib_xFKHLiHZ/pub?output=csv';
+const CSV_RANKING = sheetUrl('RANKING_PERFIL', false);
 
 // CSV do elenco do Grêmio Novorizontino (aba 2 da lista preferencial)
-const CSV_GREMIO = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQKQDSwtQvkSq1v9P2TzUDnFsV_i1gRCNXyQ0aT5TewfwNMnouAoICwQKRAmtCUDLHcJXO4DYS0fL_R/pub?output=csv&gid=1236859817';
+const CSV_GREMIO = sheetUrl('GREMIO_NOVORIZONTINO', false);
 
 // CSV da Série B (benchmark)
 const CSV_SERIEB = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQbSUvDghD3MPKBNEYz1cxeLgCmftwt5AoqkVmai6xCrA7W8fIy77Y2RlTmqR5w1A6a-MRPlV67pVYA/pub?output=csv';

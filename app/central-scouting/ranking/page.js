@@ -8,7 +8,9 @@ import { cleanData, safeParseFloat } from '@/app/utils/dataCleaner';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 
-const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTx73GpGdTLkIPTmBfkYujRILN3DmPV5FG2dH4-bbELYZJ4STAIYrOSJ7AOPDOTq_tB0ib_xFKHLiHZ/pub?output=csv';
+import { sheetUrl } from '@/app/datasources';
+
+const CSV_URL = sheetUrl('RANKING_PERFIL', false);
 
 function RankingPerfilContent() {
   const router = useRouter();

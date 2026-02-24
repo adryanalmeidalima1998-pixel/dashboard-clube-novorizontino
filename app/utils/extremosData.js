@@ -1,3 +1,8 @@
+/**
+ * Gera um ID slug a partir do nome do jogador.
+ * Ex: "Dada Belmonte" → "dada-belmonte"
+ * Usado para identificar jogadores na URL de forma consistente.
+ */
 export function slugifyPlayer(name) {
   if (!name) return '';
   return name
@@ -9,6 +14,10 @@ export function slugifyPlayer(name) {
     .replace(/\s+/g, '-');
 }
 
+/**
+ * Dado um array de jogadores (rows da planilha LISTA_PREFERENCIAL),
+ * retorna os que correspondem à lista de IDs solicitados.
+ */
 export function findPlayersByIds(allPlayers, ids) {
   return ids.map(id => {
     const match = allPlayers.find(p => {

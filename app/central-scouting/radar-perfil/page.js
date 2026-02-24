@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import Papa from 'papaparse'
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Legend } from 'recharts'
 
-const SCOUTING_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQlQGKcj7Dv6ziVn4MU-zs6PAJc5WFyjwr0aks9xNdG4rgRw4iwRNFws7lDGXtjNoQHGypQJ4ssSlqM/pub?output=csv";
+import { sheetUrl } from '../../datasources';
+const SCOUTING_CSV_URL = sheetUrl('RANKING_PERFIL', false);
 
 export default function RadarPerfil() {
   const router = useRouter()
