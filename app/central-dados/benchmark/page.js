@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import Papa from 'papaparse'
 import { cleanData, normalizeTeamName, safeParseFloat } from '../../utils/dataCleaner'
 
-const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSVC0eenchMDxK3wsOTXjq9kQiy3aHTFl0X1o5vwJZR7RiZzg1Irxxe_SL2IDrqb3c1i7ZL2ugpBJkN/pub?output=csv";
+import { sheetUrl } from '../../datasources'
+const CSV_URL = sheetUrl('CENTRAL_DADOS', false)
 
 export default function BenchmarkPage() {
   const router = useRouter()
