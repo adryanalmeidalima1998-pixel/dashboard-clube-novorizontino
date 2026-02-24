@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Papa from 'papaparse'
+import { sheetUrl } from '../datasources'
 import { jsPDF } from 'jspdf'
 import 'jspdf-autotable'
 import { cleanData, safeParseFloat } from '../utils/dataCleaner'
@@ -36,7 +37,7 @@ export default function CentralDados() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vSVC0eenchMDxK3wsOTXjq9kQiy3aHTFl0X1o5vwJZR7RiZzg1Irxxe_SL2IDrqb3c1i7ZL2ugpBJkN/pub?output=csv')
+        const response = await fetch(sheetUrl('CENTRAL_DADOS'))
         const csv = await response.text()
         
         Papa.parse(csv, {
