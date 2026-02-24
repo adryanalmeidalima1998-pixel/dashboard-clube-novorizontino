@@ -6,7 +6,8 @@ import { getLogo, DEFAULT_LOGO } from '../logos'
 import { cleanData, normalizeTeamName } from '../utils/dataCleaner'
 import Papa from 'papaparse'
 
-const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRTx9m5RGrJDNka8hpPUh2k1iTTSSs6lDOyDqNoDFOjBJDG7xCsIcEhdEutK2lKGmc5LgCmcsFcGZBY/pub?output=csv";
+import { sheetUrl } from '../datasources'
+const CSV_URL = sheetUrl('AGENDA', false)
 
 export default function AgendaPage() {
   const router = useRouter()
