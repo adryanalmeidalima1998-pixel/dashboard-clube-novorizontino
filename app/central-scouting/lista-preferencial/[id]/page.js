@@ -58,12 +58,19 @@ function PlayerProfileContent() {
     });
   };
 
-  // Série B: valores já vêm por/90 — mapeia direto, sem transformar
+  // Série B: detecta automaticamente se os dados são totais ou já por/90
+  // Se tiver 'Minutos jogados' com valor > 0, converte igual às outras abas
+  // Caso contrário, usa o valor direto (já está por/90)
   const processarDadosSB = (dados) => {
     return dados.map(jogador => {
+      const minutos = safeParseFloat(jogador['Minutos jogados']);
       const processado = { ...jogador, aba: 'SERIEB' };
       METRICAS_RADAR.forEach(m => {
-        if (m.type === 'per90') processado[`${m.key}_per90`] = safeParseFloat(jogador[m.key]);
+        if (m.type === 'per90') {
+          const val = safeParseFloat(jogador[m.key]);
+          // Se tiver minutos registrados, calcula per/90. Senão, assume que já é per/90
+          processado[`${m.key}_per90`] = (minutos > 0) ? (val / minutos) * 90 : val;
+        }
       });
       return processado;
     });
@@ -74,7 +81,7 @@ function PlayerProfileContent() {
       try {
         const urlAba1 = sheetUrl('LISTA_PREFERENCIAL');
         const urlAba2 = sheetUrl('GREMIO_NOVORIZONTINO', false);
-        const urlSerieB = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQbSUvDghD3MPKBNEYz1cxeLgCmftwt5AoqkVmai6xCrA7W8fIy77Y2RlTmqR5w1A6a-MRPlV67pVYA/pub?output=csv';
+        const urlSerieB = sheetUrl('SERIE_B', false);
 
         const [res1, res2, res3] = await Promise.all([fetch(urlAba1), fetch(urlAba2), fetch(urlSerieB)]);
         const [csv1, csv2, csv3] = await Promise.all([res1.text(), res2.text(), res3.text()]);
@@ -153,14 +160,19 @@ function PlayerProfileContent() {
   };
 
   const escalasMetricas = useMemo(() => {
-    const todos = [...listaPreferencial, ...gremioNovorizontino, ...serieB];
+    // Usa apenas Lista Preferencial + Série B para a escala de referência
+    // IMPORTANTE: usa percentil 95 em vez de Math.max para evitar que outliers achatem os gráficos
+    const todos = [...listaPreferencial, ...serieB];
     const escalas = {};
     METRICAS_RADAR.forEach(m => {
-      const valores = todos.map(j => getValorMetrica(j, m)).filter(v => v >= 0);
-      escalas[m.label] = { max: Math.max(...valores, 0.1) };
+      const valores = todos.map(j => getValorMetrica(j, m)).filter(v => isFinite(v) && v >= 0).sort((a, b) => a - b);
+      if (valores.length === 0) { escalas[m.label] = { max: 1 }; return; }
+      const p95idx = Math.floor(valores.length * 0.95);
+      const p95 = valores[Math.min(p95idx, valores.length - 1)];
+      escalas[m.label] = { max: Math.max(p95, 0.01) };
     });
     return escalas;
-  }, [listaPreferencial, gremioNovorizontino, serieB]);
+  }, [listaPreferencial, serieB]);
 
   // ── Calcula pontos fortes e fracos comparando atleta com média da lista ──
   const pontosFortesFragos = useMemo(() => {
@@ -210,8 +222,20 @@ function PlayerProfileContent() {
       mediaVals[mediaVals.length-1] = mediaVals[0];
       data.push({ type: 'scatterpolar', r: mediaVals, theta: labels, fill: 'toself', name: 'Média Série B', line: { color: '#3b82f6', dash: 'dot', width: 2 }, fillcolor: 'rgba(59, 130, 246, 0.15)', mode: 'lines' });
     } else {
+      // VS ELENCO GN: filtra apenas jogadores da MESMA posição que o atleta analisado
+      const posicaoAtleta = (player['POSIÇÃO'] || player['Posição'] || player['posicao'] || '').toUpperCase().trim();
+      
+      const mesmaPosicao = gremioNovorizontino.filter(p => {
+        const pos = (p['POSIÇÃO'] || p['Posição'] || p['posicao'] || '').toUpperCase().trim();
+        if (!pos || !posicaoAtleta) return false;
+        return pos === posicaoAtleta || pos.includes(posicaoAtleta) || posicaoAtleta.includes(pos);
+      });
+      
+      // Se não achar ninguém da mesma posição, usa os 3 primeiros como fallback
+      const candidatos = mesmaPosicao.length > 0 ? mesmaPosicao.slice(0, 3) : gremioNovorizontino.slice(0, 3);
+      
       const cores = ['#3b82f6', '#10b981', '#8b5cf6'];
-      gremioNovorizontino.slice(0, 3).forEach((p, i) => {
+      candidatos.forEach((p, i) => {
         const gVals = [...METRICAS_RADAR.map(m => (getValorMetrica(p, m) / (escalasMetricas[m.label]?.max || 1)) * 100), (getValorMetrica(p, METRICAS_RADAR[0]) / (escalasMetricas[METRICAS_RADAR[0].label]?.max || 1)) * 100];
         data.push({ type: 'scatterpolar', r: gVals, theta: labels, name: p.Jogador, line: { color: cores[i], width: 2 }, mode: 'lines' });
       });
