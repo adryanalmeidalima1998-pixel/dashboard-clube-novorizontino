@@ -3,256 +3,653 @@
 import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import Papa from 'papaparse';
-import { sheetUrl, URLS } from '../../../datasources';
+import { sheetUrl } from '../../../datasources';
 import { cleanData, safeParseFloat } from '@/app/utils/dataCleaner';
 import dynamic from 'next/dynamic';
 
-const Plot = dynamic(() => import('react-plotly.js'), { 
-  ssr: false, 
-  loading: () => <div className="h-64 flex items-center justify-center text-slate-500 font-bold italic animate-pulse text-2xl">CARREGANDO GRÁFICOS...</div> 
+const Plot = dynamic(() => import('react-plotly.js'), {
+  ssr: false,
+  loading: () => (
+    <div className="h-[500px] flex items-center justify-center text-slate-400 font-bold italic animate-pulse">
+      Carregando gráfico...
+    </div>
+  ),
 });
 
+// Cor única por jogador da lista preferencial
 const CORES_JOGADORES = [
   '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8',
   '#F7DC6F', '#BB8FCE', '#85C1E2', '#F8B88B', '#A9DFBF',
   '#F5B7B1', '#D7BDE2', '#A3E4D7', '#F9E79F', '#ABEBC6'
 ];
 
-const GRAFICOS_CORRELACAO = [
-  { 
+import { getMetricsByPosicao, normalizePosicao, POSITION_METRICS } from '@/app/utils/positionMetrics';
+
+// GRAFICOS estático (fallback para posição sem configuração)
+const GRAFICOS_FALLBACK = [
+  {
+    id: 'criacao-finalizacao',
     titulo: 'Criação vs Finalização',
+    subtitulo: 'Passes chave por 90 min  ×  xG por 90 min',
     xLabel: 'Passes Chave/90',
     yLabel: 'xG/90',
     xKey: 'Passes chave',
-    yKey: 'Xg',
+    yKey: 'xG',
     xType: 'per90',
-    yType: 'per90'
+    yType: 'per90',
   },
-  { 
+  {
+    id: 'progressao-perigo',
     titulo: 'Progressão vs Perigo',
+    subtitulo: 'Passes progressivos precisos %  ×  Entradas no terço final carregando',
     xLabel: 'Passes Progressivos %',
     yLabel: 'Entradas 1/3 Final (C)/90',
     xKey: 'Passes progressivos precisos,%',
     yKey: 'Entradas no terço final carregando a bola',
     xType: 'raw',
-    yType: 'per90'
+    yType: 'per90',
   },
-  { 
-    titulo: 'Chances Criadas vs Assistências Esperadas',
+  {
+    id: 'chances-xa',
+    titulo: 'Chances Criadas vs xA',
+    subtitulo: 'Chances com sucesso por 90  ×  xA por 90',
     xLabel: 'Chances com Sucesso/90',
     yLabel: 'xA/90',
     xKey: 'Chances com sucesso',
     yKey: 'xA',
     xType: 'per90',
-    yType: 'per90'
+    yType: 'per90',
   },
-  { 
-    titulo: 'Recuperações de Bola vs Desafios Vencidos',
+  {
+    id: 'recuperacoes-desafios',
+    titulo: 'Recuperações vs Desafios',
+    subtitulo: 'Recuperações no campo adversário/90  ×  Desafios vencidos/90',
     xLabel: 'Recuperações Campo Adv/90',
-    yLabel: 'Desafios Ganhos/90',
+    yLabel: 'Desafios Vencidos/90',
     xKey: 'Bolas recuperadas no campo do adversário',
     yKey: 'Desafios vencidos',
     xType: 'per90',
-    yType: 'per90'
+    yType: 'per90',
   },
-  { 
+  {
+    id: 'drible-eficiencia',
     titulo: 'Volume vs Eficiência de Dribles',
+    subtitulo: 'Dribles tentados/90  ×  Dribles bem-sucedidos/90',
     xLabel: 'Dribles/90',
     yLabel: 'Dribles Certos/90',
     xKey: 'Dribles',
     yKey: 'Dribles bem sucedidos',
     xType: 'per90',
-    yType: 'per90'
-  }
+    yType: 'per90',
+  },
 ];
-
-function DistorsaoContent() {
-  const router = useRouter();
-  const [listaPreferencial, setListaPreferencial] = useState([]);
-  const [gremioNovorizontino, setGremioNovorizontino] = useState([]);
-  const [serieB, setSerieB] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [mapaCores, setMapaCores] = useState({});
-
-  const processarDados = (dados, aba) => {
-    return dados.map(jogador => {
-      const minutos = safeParseFloat(jogador['Minutos jogados']);
-      const processado = { ...jogador, aba };
-      GRAFICOS_CORRELACAO.forEach(g => {
-        if (g.xType === 'per90') {
-          const val = safeParseFloat(jogador[g.xKey]);
-          processado[`${g.xKey}_per90`] = minutos > 0 ? (val / minutos) * 90 : 0;
-        }
-        if (g.yType === 'per90') {
-          const val = safeParseFloat(jogador[g.yKey]);
-          processado[`${g.yKey}_per90`] = minutos > 0 ? (val / minutos) * 90 : 0;
-        }
-      });
-      return processado;
-    });
-  };
-
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const urlAba1 = sheetUrl('LISTA_PREFERENCIAL');
-        const urlAba2 = sheetUrl('GREMIO_NOVORIZONTINO', false);
-        const urlSerieB = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQbSUvDghD3MPKBNEYz1cxeLgCmftwt5AoqkVmai6xCrA7W8fIy77Y2RlTmqR5w1A6a-MRPlV67pVYA/pub?output=csv';
-
-        const [res1, res2, res3] = await Promise.all([fetch(urlAba1), fetch(urlAba2), fetch(urlSerieB)]);
-        const [csv1, csv2, csv3] = await Promise.all([res1.text(), res2.text(), res3.text()]);
-
-        Papa.parse(csv1, {
-          header: true, skipEmptyLines: true,
-          complete: (results) => {
-            const dados = processarDados(cleanData(results.data), 'LISTA PREFERENCIAL');
-            setListaPreferencial(dados);
-            const cores = {};
-            dados.forEach((j, idx) => { cores[j.Jogador] = CORES_JOGADORES[idx % CORES_JOGADORES.length]; });
-            setMapaCores(cores);
-          }
-        });
-
-        Papa.parse(csv2, {
-          header: true, skipEmptyLines: true,
-          complete: (results) => setGremioNovorizontino(processarDados(cleanData(results.data), 'GRÊMIO NOVORIZONTINO'))
-        });
-
-        Papa.parse(csv3, {
-          header: true, skipEmptyLines: true,
-          complete: (results) => setSerieB(cleanData(results.data))
-        });
-
-        setLoading(false);
-      } catch (error) {
-        console.error('Erro:', error);
-        setLoading(false);
+// ─── Processar dados: pré-calcula per90 para todas as colunas numéricas ──────
+function processarDados(dados, aba) {
+  return dados.map(jogador => {
+    const minutos = safeParseFloat(jogador['Minutos jogados']);
+    const processado = { ...jogador, aba };
+    Object.keys(jogador).forEach(key => {
+      const rawVal = safeParseFloat(jogador[key]);
+      if (!isNaN(rawVal)) {
+        processado[`${key}_per90`] = minutos > 0 ? (rawVal / minutos) * 90 : 0;
       }
-    };
-    loadData();
-  }, []);
+    });
+    return processado;
+  });
+}
 
-  const getValorMetrica = (jogador, key, type) => {
-    if (!jogador) return 0;
-    if (type === 'per90') {
-      if (jogador.aba === undefined) return safeParseFloat(jogador[key]);
-      return safeParseFloat(jogador[`${key}_per90`]);
-    }
-    return safeParseFloat(jogador[key]);
+// ─── Série B: valores já vêm por/90 — mapeia direto, sem transformar ─────────
+function processarDadosSB(dados) {
+  return dados.map(jogador => {
+    const processado = { ...jogador, aba: 'SERIEB' };
+    Object.keys(jogador).forEach(key => {
+      processado[`${key}_per90`] = safeParseFloat(jogador[key]);
+    });
+    return processado;
+  });
+}
+
+function getVal(jogador, key, type) {
+  if (!jogador) return 0;
+  if (type === 'per90') {
+    if (jogador.aba === undefined) return safeParseFloat(jogador[key]);
+    return safeParseFloat(jogador[`${key}_per90`]);
+  }
+  return safeParseFloat(jogador[key]);
+}
+
+// ─── Análise técnica automática ──────────────────────────────────────────────
+function gerarAnalise(lista, gn, serieB, config) {
+  if (lista.length === 0) return 'Dados insuficientes para gerar análise.';
+
+  const bold = (s) => `**${s}**`;
+  const { xLabel, yLabel, xKey, yKey, xType, yType, id } = config;
+
+  const mediaListaX = lista.reduce((s, j) => s + getVal(j, xKey, xType), 0) / lista.length;
+  const mediaListaY = lista.reduce((s, j) => s + getVal(j, yKey, yType), 0) / lista.length;
+  const mediaSBX = serieB.length > 0 ? serieB.reduce((s, j) => s + getVal(j, xKey, xType), 0) / serieB.length : mediaListaX;
+  const mediaSBY = serieB.length > 0 ? serieB.reduce((s, j) => s + getVal(j, yKey, yType), 0) / serieB.length : mediaListaY;
+
+  const sorted = (arr, k, t) => [...arr].sort((a, b) => getVal(b, k, t) - getVal(a, k, t));
+  const liderX = sorted(lista, xKey, xType)[0];
+  const liderY = sorted(lista, yKey, yType)[0];
+  const completos = lista.filter(j => getVal(j, xKey, xType) >= mediaListaX && getVal(j, yKey, yType) >= mediaListaY);
+  const nomesCompletos = completos.map(j => j.Jogador?.split(' ')[0]).filter(Boolean);
+  const gnAbaixo = gn.filter(j => getVal(j, xKey, xType) < mediaListaX && getVal(j, yKey, yType) < mediaListaY);
+  const diffXpct = mediaSBX > 0 ? ((mediaListaX - mediaSBX) / mediaSBX * 100) : 0;
+
+  if (id === 'criacao-finalizacao') {
+    let txt = `O gráfico cruza a capacidade de ${bold('criação de jogadas')} (passes chave/90) com o ${bold('potencial de finalização')} (xG/90), revelando quais atletas acumulam influência direta tanto na construção quanto no desfecho das jogadas ofensivas. `;
+    txt += `A média da lista em passes chave é ${bold(mediaListaX.toFixed(2))}/90 — ${Math.abs(diffXpct).toFixed(0)}% ${diffXpct >= 0 ? 'acima' : 'abaixo'} da Série B (${mediaSBX.toFixed(2)}) — enquanto em xG a lista registra ${bold(mediaListaY.toFixed(2))}/90 frente a ${mediaSBY.toFixed(2)} da divisão. `;
+    if (liderX) txt += `${bold(liderX.Jogador)} destaca-se como o principal criador (${bold(getVal(liderX, xKey, xType).toFixed(2))} passes chave/90)`;
+    if (liderY && liderY.Jogador !== liderX?.Jogador) txt += `, enquanto ${bold(liderY.Jogador)} lidera em xG com ${bold(getVal(liderY, yKey, yType).toFixed(2))}/90. `;
+    else txt += '. ';
+    if (nomesCompletos.length > 0) txt += `${bold(nomesCompletos.join(', '))} ${nomesCompletos.length > 1 ? 'se posicionam' : 'se posiciona'} no quadrante de alta performance nos dois eixos — perfil ideal para um extremo completo ofensivamente. `;
+    else txt += `Nenhum atleta supera a média da lista simultaneamente em criação e xG — os perfis tendem a ser especializados em uma das dimensões. `;
+    if (gnAbaixo.length > 0) txt += `Do elenco GN, ${bold(gnAbaixo.map(j => j.Jogador?.split(' ')[0]).join(', '))} ficam abaixo da média nos dois eixos, reforçando a demanda por reforço com maior participação direta nas finalizações.`;
+    return txt;
+  }
+
+  if (id === 'progressao-perigo') {
+    let txt = `Este gráfico avalia a ${bold('qualidade de progressão com bola')} (% passes progressivos precisos) em relação à ${bold('frequência de penetração no terço final')} carregando a bola/90 — dois indicadores da capacidade de avançar o jogo e criar desequilíbrio posicional. `;
+    txt += `A lista registra média de ${bold(mediaListaX.toFixed(2)+'%')} em passes progressivos precisos e ${bold(mediaListaY.toFixed(2))} entradas no terço final/90. `;
+    if (liderX) txt += `${bold(liderX.Jogador)} lidera em progressão (${bold(getVal(liderX, xKey, xType).toFixed(2)+'%')})`;
+    if (liderY && liderY.Jogador !== liderX?.Jogador) txt += `, enquanto ${bold(liderY.Jogador)} é o que mais penetra no terço final (${bold(getVal(liderY, yKey, yType).toFixed(2))}/90). `;
+    else txt += '. ';
+    if (nomesCompletos.length > 0) txt += `${bold(nomesCompletos.join(', '))} combina${nomesCompletos.length > 1 ? 'm' : ''} progressão eficaz com presença frequente no terço ofensivo. `;
+    else txt += `Nenhum atleta combina os dois atributos acima da média simultaneamente. `;
+    if (gnAbaixo.length > 0) txt += `Do elenco GN, ${bold(gnAbaixo.map(j => j.Jogador?.split(' ')[0]).join(', '))} ficam abaixo da média nos dois eixos.`;
+    return txt;
+  }
+
+  if (id === 'chances-xa') {
+    let txt = `O gráfico cruza ${bold('chances criadas com sucesso')} (por 90) com o ${bold('xA')} (assistências esperadas/90), medindo quais atletas são mais efetivos tanto em converter chances em perigo real quanto em gerar assists de qualidade. `;
+    txt += `A lista apresenta média de ${bold(mediaListaX.toFixed(2))} chances com sucesso/90 e ${bold(mediaListaY.toFixed(2))} xA/90. `;
+    if (liderX) txt += `${bold(liderX.Jogador)} lidera em chances com sucesso (${bold(getVal(liderX, xKey, xType).toFixed(2))}/90)`;
+    if (liderY && liderY.Jogador !== liderX?.Jogador) txt += `, enquanto ${bold(liderY.Jogador)} lidera em xA com ${bold(getVal(liderY, yKey, yType).toFixed(2))}/90. `;
+    else txt += '. ';
+    if (nomesCompletos.length > 0) txt += `${bold(nomesCompletos.join(', '))} ${nomesCompletos.length > 1 ? 'estão' : 'está'} acima da média nos dois eixos — perfil de criador completo. `;
+    else txt += `Nenhum atleta da lista supera a média em chances e xA simultaneamente. `;
+    if (gnAbaixo.length > 0) txt += `${bold(gnAbaixo.map(j => j.Jogador?.split(' ')[0]).join(', '))} do elenco GN ficam abaixo da média da lista nos dois indicadores.`;
+    return txt;
+  }
+
+  if (id === 'recuperacoes-desafios') {
+    let txt = `O gráfico avalia a ${bold('intensidade defensiva')} dos atletas, combinando recuperações no campo adversário/90 com desafios ganhos/90 — indicadores de pressão alta e capacidade de reconquistar a bola em zonas avançadas. `;
+    txt += `A lista apresenta média de ${bold(mediaListaX.toFixed(2))} recuperações campo adv./90 e ${bold(mediaListaY.toFixed(2))} desafios ganhos/90. `;
+    if (liderX) txt += `${bold(liderX.Jogador)} lidera em recuperações no campo adversário (${bold(getVal(liderX, xKey, xType).toFixed(2))}/90)`;
+    if (liderY && liderY.Jogador !== liderX?.Jogador) txt += `, enquanto ${bold(liderY.Jogador)} vence mais desafios (${bold(getVal(liderY, yKey, yType).toFixed(2))}/90). `;
+    else txt += '. ';
+    if (nomesCompletos.length > 0) txt += `${bold(nomesCompletos.join(', '))} combina${nomesCompletos.length > 1 ? 'm' : ''} alta recuperação e volume de desafios ganhos — perfil com contribuição defensiva relevante. `;
+    else txt += `Nenhum atleta supera a média da lista nos dois eixos defensivos simultaneamente. `;
+    if (gnAbaixo.length > 0) txt += `Do elenco GN, ${bold(gnAbaixo.map(j => j.Jogador?.split(' ')[0]).join(', '))} ficam abaixo da média nesses indicadores.`;
+    return txt;
+  }
+
+  if (id === 'drible-eficiencia') {
+    let txt = `Este gráfico avalia o ${bold('volume de dribles tentados')} (por 90) em relação à ${bold('eficiência nos dribles')} (bem-sucedidos/90), separando os atletas de alto volume com baixo aproveitamento dos que têm alta taxa de conversão. `;
+    txt += `A lista apresenta média de ${bold(mediaListaX.toFixed(2))} dribles tentados/90 e ${bold(mediaListaY.toFixed(2))} dribles certos/90. `;
+    if (liderX) txt += `${bold(liderX.Jogador)} tenta mais dribles (${bold(getVal(liderX, xKey, xType).toFixed(2))}/90)`;
+    if (liderY && liderY.Jogador !== liderX?.Jogador) txt += `, enquanto ${bold(liderY.Jogador)} é o mais eficiente (${bold(getVal(liderY, yKey, yType).toFixed(2))} dribles certos/90). `;
+    else txt += '. ';
+    if (nomesCompletos.length > 0) txt += `${bold(nomesCompletos.join(', '))} combina${nomesCompletos.length > 1 ? 'm' : ''} alto volume com alta eficiência — o perfil driblador mais completo da lista. `;
+    else txt += `Nenhum atleta supera a média da lista em volume e eficiência de drible simultaneamente. `;
+    if (gnAbaixo.length > 0) txt += `Do elenco GN, ${bold(gnAbaixo.map(j => j.Jogador?.split(' ')[0]).join(', '))} ficam abaixo da média da lista nos dois eixos, indicando lacuna no desequilíbrio individual.`;
+    return txt;
+  }
+
+  return 'Análise não disponível para este gráfico.';
+}
+
+// ─── Componente de cada gráfico ──────────────────────────────────────────────
+function GraficoBloco({ config, lista, gn, serieB, mapaCores }) {
+  const analise = useMemo(
+    () => gerarAnalise(lista, gn, serieB, config),
+    [lista, gn, serieB]
+  );
+
+  const mediaX = lista.length > 0 ? lista.reduce((s, j) => s + getVal(j, config.xKey, config.xType), 0) / lista.length : 0;
+  const mediaY = lista.length > 0 ? lista.reduce((s, j) => s + getVal(j, config.yKey, config.yType), 0) / lista.length : 0;
+  const mediaSBX = serieB.length > 0 ? serieB.reduce((s, j) => s + getVal(j, config.xKey, config.xType), 0) / serieB.length : 0;
+  const mediaSBY = serieB.length > 0 ? serieB.reduce((s, j) => s + getVal(j, config.yKey, config.yType), 0) / serieB.length : 0;
+
+  // Um trace por jogador da lista (cor única)
+  const tracesLista = lista.map(j => ({
+    type: 'scatter',
+    mode: 'markers+text',
+    name: j.Jogador,
+    x: [getVal(j, config.xKey, config.xType)],
+    y: [getVal(j, config.yKey, config.yType)],
+    text: [j.Jogador?.split(' ')[0] || ''],
+    textposition: 'top center',
+    textfont: { size: 11, color: '#1e293b', family: 'Arial Black' },
+    marker: {
+      size: 14,
+      color: mapaCores[j.Jogador] || '#94a3b8',
+      line: { color: '#000', width: 1.5 },
+    },
+    hovertemplate: `<b>${j.Jogador}</b><br>${config.xLabel}: %{x:.2f}<br>${config.yLabel}: %{y:.2f}<extra></extra>`,
+  }));
+
+  // Elenco GN — diamantes azuis, sem legenda individual
+  const tracesGN = gn.map(j => ({
+    type: 'scatter',
+    mode: 'markers+text',
+    name: `GN: ${j.Jogador}`,
+    showlegend: false,
+    x: [getVal(j, config.xKey, config.xType)],
+    y: [getVal(j, config.yKey, config.yType)],
+    text: [j.Jogador?.split(' ')[0] || ''],
+    textposition: 'bottom center',
+    textfont: { size: 10, color: '#1e40af' },
+    marker: { size: 13, symbol: 'diamond', color: '#3b82f6', line: { color: '#000', width: 1.5 } },
+    hovertemplate: `<b>${j.Jogador} (GN)</b><br>${config.xLabel}: %{x:.2f}<br>${config.yLabel}: %{y:.2f}<extra></extra>`,
+  }));
+
+  // Legenda GN (trace fantasma)
+  const traceGNLegenda = {
+    type: 'scatter', mode: 'markers', name: 'Elenco GN',
+    x: [null], y: [null],
+    marker: { size: 13, symbol: 'diamond', color: '#3b82f6', line: { color: '#000', width: 1.5 } },
+    showlegend: true,
   };
 
-  const criarGraficoCorrelacao = (config) => {
-    const plotData = [];
+  // Média Série B — estrela vermelha
+  const traceSB = serieB.length > 0 ? {
+    type: 'scatter', mode: 'markers+text', name: 'Média Série B',
+    x: [mediaSBX], y: [mediaSBY],
+    text: ['SÉRIE B'],
+    textposition: 'top center',
+    textfont: { size: 11, color: '#ef4444', family: 'Arial Black' },
+    marker: { size: 22, symbol: 'star', color: '#ef4444', line: { color: '#fff', width: 2 } },
+    hovertemplate: `<b>Média Série B</b><br>${config.xLabel}: %{x:.2f}<br>${config.yLabel}: %{y:.2f}<extra></extra>`,
+  } : null;
 
-    listaPreferencial.forEach(jogador => {
-      const primeiroNome = jogador.Jogador.split(' ')[0];
-      plotData.push({
-        x: [getValorMetrica(jogador, config.xKey, config.xType)],
-        y: [getValorMetrica(jogador, config.yKey, config.yType)],
-        mode: 'markers+text',
-        type: 'scatter',
-        name: jogador.Jogador,
-        text: [primeiroNome],
-        textposition: 'top center',
-        textfont: { size: 12, color: '#000', weight: 'bold' },
-        marker: { size: 16, color: mapaCores[jogador.Jogador], line: { color: '#000', width: 1.5 } },
-        hovertemplate: `<b>${jogador.Jogador}</b><br>${config.xLabel}: %{x:.2f}<br>${config.yLabel}: %{y:.2f}<extra></extra>`
-      });
-    });
+  const traces = [...tracesLista, ...tracesGN, traceGNLegenda, ...(traceSB ? [traceSB] : [])];
 
-    gremioNovorizontino.forEach(jogador => {
-      const primeiroNome = jogador.Jogador.split(' ')[0];
-      plotData.push({
-        x: [getValorMetrica(jogador, config.xKey, config.xType)],
-        y: [getValorMetrica(jogador, config.yKey, config.yType)],
-        mode: 'markers+text',
-        type: 'scatter',
-        name: `GN: ${jogador.Jogador}`,
-        text: [primeiroNome],
-        textposition: 'bottom center',
-        textfont: { size: 11, color: '#3b82f6', weight: 'bold' },
-        marker: { size: 14, color: '#3b82f6', symbol: 'diamond', line: { color: '#000', width: 1.5 } },
-        hovertemplate: `<b>${jogador.Jogador} (Elenco GN)</b><br>${config.xLabel}: %{x:.2f}<br>${config.yLabel}: %{y:.2f}<extra></extra>`,
-        showlegend: false
-      });
-    });
-
-    plotData.push({
-      x: [null], y: [null], mode: 'markers', type: 'scatter', name: 'Elenco GN',
-      marker: { size: 14, color: '#3b82f6', symbol: 'diamond', line: { color: '#000', width: 1.5 } },
-      showlegend: true
-    });
-
-    const serieBX = serieB.map(j => safeParseFloat(j[config.xKey]));
-    const serieBY = serieB.map(j => safeParseFloat(j[config.yKey]));
-    const avgX = serieBX.reduce((a, b) => a + b, 0) / (serieBX.length || 1);
-    const avgY = serieBY.reduce((a, b) => a + b, 0) / (serieBY.length || 1);
-    plotData.push({
-      x: [avgX], y: [avgY], mode: 'markers+text', type: 'scatter', name: 'Média Série B',
-      text: ['SÉRIE B'], textposition: 'bottom center',
-      textfont: { size: 13, color: '#ef4444', weight: 'bold' },
-      marker: { size: 24, color: 'rgba(239, 68, 68, 0.95)', symbol: 'star', line: { color: '#000', width: 2 } },
-      hovertemplate: `<b>Média Série B</b><br>${config.xLabel}: %{x:.2f}<br>${config.yLabel}: %{y:.2f}<extra></extra>`
-    });
-
-    const layout = {
-      title: { text: config.titulo, font: { size: 26, color: '#000', family: 'Arial Black' } },
-      xaxis: { title: { text: config.xLabel, font: { size: 16, color: '#000', weight: '900' } }, gridcolor: '#eee', tickfont: { size: 13, color: '#000', weight: 'bold' }, showline: true, linecolor: '#000', linewidth: 3 },
-      yaxis: { title: { text: config.yLabel, font: { size: 16, color: '#000', weight: '900' } }, gridcolor: '#eee', tickfont: { size: 13, color: '#000', weight: 'bold' }, showline: true, linecolor: '#000', linewidth: 3 },
-      paper_bgcolor: '#fff', plot_bgcolor: '#fff',
-      margin: { t: 80, b: 100, l: 100, r: 60 }, height: 750, showlegend: true,
-      legend: { font: { size: 13, color: '#000', weight: 'bold' }, orientation: 'h', y: -0.15, x: 0.5, xanchor: 'center' },
-      hovermode: 'closest'
-    };
-
-    return { data: plotData, layout };
+  const layout = {
+    title: { text: config.titulo, font: { size: 18, color: '#0f172a', family: 'Arial Black' }, x: 0.5, xanchor: 'center' },
+    xaxis: {
+      title: { text: config.xLabel, font: { size: 12, color: '#475569' } },
+      tickfont: { color: '#64748b', size: 10 },
+      gridcolor: '#e2e8f0', zeroline: false, showline: true, linecolor: '#94a3b8',
+    },
+    yaxis: {
+      title: { text: config.yLabel, font: { size: 12, color: '#475569' } },
+      tickfont: { color: '#64748b', size: 10 },
+      gridcolor: '#e2e8f0', zeroline: false, showline: true, linecolor: '#94a3b8',
+    },
+    paper_bgcolor: '#fff', plot_bgcolor: '#f8fafc',
+    showlegend: true,
+    legend: { orientation: 'h', x: 0.5, y: -0.2, xanchor: 'center', font: { size: 10, color: '#0f172a' }, bgcolor: '#f8fafc' },
+    margin: { l: 70, r: 30, t: 60, b: 90 },
+    height: 480,
+    hovermode: 'closest',
+    shapes: [
+      { type: 'line', x0: mediaX, x1: mediaX, y0: 0, y1: 1, yref: 'paper', line: { color: '#94a3b8', width: 1.5, dash: 'dot' } },
+      { type: 'line', x0: 0, x1: 1, xref: 'paper', y0: mediaY, y1: mediaY, line: { color: '#94a3b8', width: 1.5, dash: 'dot' } },
+    ],
+    annotations: [
+      { x: 0.98, y: 0.98, xref: 'paper', yref: 'paper', text: '▲ alto X + alto Y', showarrow: false, font: { size: 8, color: '#92400e' }, xanchor: 'right', yanchor: 'top', bgcolor: '#fef3c7', borderpad: 3, opacity: 0.85 },
+      { x: 0.02, y: 0.98, xref: 'paper', yref: 'paper', text: '▲ alto Y, baixo X', showarrow: false, font: { size: 8, color: '#065f46' }, xanchor: 'left', yanchor: 'top', bgcolor: '#d1fae5', borderpad: 3, opacity: 0.85 },
+      { x: 0.02, y: 0.02, xref: 'paper', yref: 'paper', text: '▼ abaixo da média', showarrow: false, font: { size: 8, color: '#475569' }, xanchor: 'left', yanchor: 'bottom', bgcolor: '#f1f5f9', borderpad: 3, opacity: 0.85 },
+      { x: 0.98, y: 0.02, xref: 'paper', yref: 'paper', text: '▲ alto X, baixo Y', showarrow: false, font: { size: 8, color: '#1e40af' }, xanchor: 'right', yanchor: 'bottom', bgcolor: '#dbeafe', borderpad: 3, opacity: 0.85 },
+    ],
   };
-
-  if (loading) return <div className="min-h-screen bg-white flex items-center justify-center text-amber-600 font-black italic animate-pulse text-3xl">CARREGANDO ANÁLISE...</div>;
 
   return (
-    <div className="min-h-screen bg-white text-black p-6 font-sans print:p-0">
-      <style jsx global>{`
-        @media print {
-          @page { size: landscape; margin: 0.5cm; }
-          .no-print { display: none !important; }
-          body { background: white !important; color: black !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-          .print-container { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important; background: white !important; }
-          .chart-card { break-inside: avoid; page-break-after: always; padding: 1.5cm !important; height: 19.5cm !important; display: flex !important; flex-direction: column !important; justify-content: center !important; border: 4px solid #000 !important; margin-bottom: 0 !important; }
-          .chart-card:last-child { page-break-after: auto; }
-        }
-      `}</style>
+    <div className="grafico-bloco bg-white rounded-2xl border-2 border-slate-200 overflow-hidden">
+      {/* Cabeçalho */}
+      <div className="bloco-header bg-slate-900 px-6 py-3 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h2 className="text-white font-black uppercase tracking-wide text-sm">{config.titulo}</h2>
+          <p className="text-slate-400 text-[10px] mt-0.5">{config.subtitulo}</p>
+        </div>
+        <div className="no-print flex items-center gap-4 text-[9px] font-black uppercase">
+          <span className="flex items-center gap-1.5 text-amber-400"><span className="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block"></span>Quadrante superior direito</span>
+          <span className="flex items-center gap-1.5 text-blue-400"><span className="inline-block w-3 h-3 bg-blue-400 rotate-45 scale-75"></span>Elenco GN</span>
+          <span className="flex items-center gap-1.5 text-red-400"><span>★</span>Média Série B</span>
+        </div>
+      </div>
 
-      <div className="max-w-[1550px] mx-auto print-container">
-        <header className="flex justify-between items-center mb-10 border-b-8 border-amber-500 pb-6">
-          <div className="flex items-center gap-10">
-            <img src="/club/escudonovorizontino.png" alt="Shield" className="h-28 w-auto" />
-            <div>
-              <h1 className="text-5xl font-black tracking-tighter text-black uppercase leading-none">Grêmio Novorizontino</h1>
-              <p className="text-2xl font-black tracking-widest text-slate-600 uppercase mt-1">Análise de Correlação e Dispersão</p>
-            </div>
-          </div>
-          <div className="flex gap-6 no-print">
-            <button onClick={() => window.print()} className="bg-slate-900 hover:bg-black text-white px-12 py-5 font-black rounded-[1.5rem] text-xl shadow-2xl transition-all transform hover:scale-105">GERAR PDF</button>
-            <button onClick={() => router.back()} className="bg-white hover:bg-slate-50 text-black px-12 py-5 font-black rounded-[1.5rem] text-xl border-4 border-slate-900 shadow-xl">VOLTAR</button>
-          </div>
-        </header>
+      {/* Gráfico */}
+      <div className="px-4 pt-4 pb-0">
+        <Plot
+          data={traces}
+          layout={layout}
+          config={{ responsive: true, displayModeBar: false }}
+          style={{ width: '100%' }}
+        />
+      </div>
 
-        <div className="flex flex-col gap-20">
-          {GRAFICOS_CORRELACAO.map((config, idx) => {
-            const { data, layout } = criarGraficoCorrelacao(config);
-            return (
-              <div key={idx} className="chart-card bg-white border-8 border-slate-100 rounded-[4rem] p-12 shadow-2xl overflow-hidden transition-all hover:border-amber-100">
-                <Plot data={data} layout={layout} config={{ displayModeBar: false, responsive: true }} style={{ width: '100%', height: '100%' }} />
-              </div>
-            );
-          })}
+      {/* Análise técnica */}
+      <div className="analise-tecnica border-t-2 border-amber-400 bg-amber-50 px-6 py-4">
+        <div className="flex items-start gap-3">
+          <div className="flex-shrink-0 mt-0.5">
+            <span className="analise-label text-[8px] font-black uppercase tracking-widest text-amber-700 bg-amber-200 px-2 py-0.5 rounded">Análise Técnica</span>
+          </div>
+          <p className="text-[11px] text-slate-700 leading-relaxed">
+            {typeof analise === 'string' && analise.split('**').map((part, i) =>
+              i % 2 === 1
+                ? <strong key={i} className="font-black text-slate-900">{part}</strong>
+                : <span key={i}>{part}</span>
+            )}
+          </p>
         </div>
       </div>
     </div>
   );
 }
 
-export default function Distorsao() {
-  return <Suspense fallback={<div>Carregando...</div>}><DistorsaoContent /></Suspense>;
+// ─── Página principal ────────────────────────────────────────────────────────
+function DispersaoContent() {
+  const router = useRouter();
+  const [lista, setLista] = useState([]);
+  const [gn, setGn] = useState([]);
+  const [serieB, setSerieB] = useState([]);
+  const [mapaCores, setMapaCores] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [posicaoFiltro, setPosicaoFiltro] = useState('TODOS');
+
+  // Posições disponíveis na lista
+  const posicaoOptions = useMemo(() => {
+    const posSet = new Set();
+    lista.forEach(j => {
+      const p = normalizePosicao(j.Posição);
+      if (p && POSITION_METRICS[p]) posSet.add(p);
+    });
+    return ['TODOS', ...Array.from(posSet).sort()];
+  }, [lista]);
+
+  // Lista filtrada por posição
+  const listaFiltrada = useMemo(() => {
+    if (posicaoFiltro === 'TODOS') return lista;
+    return lista.filter(j => normalizePosicao(j.Posição) === posicaoFiltro);
+  }, [lista, posicaoFiltro]);
+
+  // GN filtrado pela mesma posição
+  const gnFiltrado = useMemo(() => {
+    if (posicaoFiltro === 'TODOS') return gn;
+    return gn.filter(j => normalizePosicao(j.Posição) === posicaoFiltro);
+  }, [gn, posicaoFiltro]);
+
+  // Gráficos dinâmicos baseados na posição selecionada
+  const GRAFICOS = useMemo(() => {
+    if (posicaoFiltro === 'TODOS') return GRAFICOS_FALLBACK;
+    const config = POSITION_METRICS[posicaoFiltro];
+    if (!config) return GRAFICOS_FALLBACK;
+    return config.scatterPlots;
+  }, [posicaoFiltro]);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const urlLista  = sheetUrl('LISTA_PREFERENCIAL');
+        const urlGN     = sheetUrl('GREMIO_NOVORIZONTINO', false);
+        const urlSerieB = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQbSUvDghD3MPKBNEYz1cxeLgCmftwt5AoqkVmai6xCrA7W8fIy77Y2RlTmqR5w1A6a-MRPlV67pVYA/pub?output=csv';
+
+        const [r1, r2, r3] = await Promise.all([fetch(urlLista), fetch(urlGN), fetch(urlSerieB)]);
+        const [c1, c2, c3] = await Promise.all([r1.text(), r2.text(), r3.text()]);
+
+        const parseCSV = (csv, aba) => new Promise(resolve => {
+          Papa.parse(csv, {
+            header: true, skipEmptyLines: true,
+            complete: r => resolve(processarDados(cleanData(r.data), aba))
+          });
+        });
+
+        const parseSB = (csv) => new Promise(resolve => {
+          Papa.parse(csv, {
+            header: true, skipEmptyLines: true,
+            complete: r => resolve(processarDadosSB(cleanData(r.data)))
+          });
+        });
+
+        const [d1, d2, d3] = await Promise.all([
+          parseCSV(c1, 'LISTA'),
+          parseCSV(c2, 'GN'),
+          parseSB(c3),
+        ]);
+
+        // Cor única por jogador da lista preferencial
+        const cores = {};
+        d1.forEach((j, idx) => { cores[j.Jogador] = CORES_JOGADORES[idx % CORES_JOGADORES.length]; });
+
+        setLista(d1);
+        setGn(d2);
+        setSerieB(d3);
+        setMapaCores(cores);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
+
+  if (loading) return (
+    <div className="min-h-screen bg-white flex items-center justify-center text-amber-600 font-black italic animate-pulse text-2xl uppercase">
+      Carregando Análise de Dispersão...
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-white text-black p-4 font-sans print:p-0 overflow-x-hidden">
+      <style jsx global>{`
+        @media print {
+          @page {
+            size: A3 landscape;
+            margin: 0.8cm 0.6cm;
+          }
+
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+
+          .no-print { display: none !important; }
+
+          body {
+            background: white !important;
+            color: black !important;
+          }
+
+          /* Container principal */
+          .print-container {
+            width: 100% !important;
+            max-width: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            display: block !important;
+          }
+
+          /* Header da página — aparece apenas na primeira página */
+          .print-header {
+            border-bottom: 4px solid #f59e0b !important;
+            padding-bottom: 8px !important;
+            margin-bottom: 12px !important;
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+          }
+
+          .print-header h1 { font-size: 22px !important; }
+          .print-header p  { font-size: 11px !important; }
+
+          .print-badge {
+            background-color: #f59e0b !important;
+            color: #000 !important;
+            padding: 2px 16px !important;
+            font-weight: 900 !important;
+            font-style: italic !important;
+            text-transform: uppercase !important;
+          }
+
+          /* Wrapper dos gráficos: block, sem gap */
+          .graficos-wrapper {
+            display: block !important;
+          }
+
+          /* Cada bloco ocupa uma página */
+          .grafico-bloco {
+            break-after: page !important;
+            page-break-after: always !important;
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+            border-radius: 0 !important;
+            border: 1px solid #e2e8f0 !important;
+            margin: 0 !important;
+            overflow: visible !important;
+            width: 100% !important;
+            display: block !important;
+          }
+
+          .grafico-bloco:last-child {
+            break-after: avoid !important;
+            page-break-after: avoid !important;
+          }
+
+          /* Cabeçalho escuro do bloco */
+          .bloco-header {
+            background-color: #0f172a !important;
+            color: white !important;
+            padding: 8px 16px !important;
+          }
+
+          .bloco-header h2 {
+            color: white !important;
+            font-size: 12px !important;
+            font-weight: 900 !important;
+          }
+
+          .bloco-header p {
+            color: #94a3b8 !important;
+            font-size: 9px !important;
+          }
+
+          /* Plotly chart */
+          .js-plotly-plot,
+          .js-plotly-plot .plot-container,
+          .js-plotly-plot svg {
+            width: 100% !important;
+            max-width: 100% !important;
+          }
+
+          /* Análise técnica */
+          .analise-tecnica {
+            background-color: #fffbeb !important;
+            border-top: 2px solid #fbbf24 !important;
+            padding: 8px 16px !important;
+          }
+
+          .analise-tecnica span,
+          .analise-tecnica p {
+            font-size: 9px !important;
+            color: #374151 !important;
+            line-height: 1.4 !important;
+          }
+
+          .analise-label {
+            background-color: #fde68a !important;
+            color: #92400e !important;
+            font-size: 7px !important;
+            font-weight: 900 !important;
+            padding: 1px 4px !important;
+          }
+        }
+      `}</style>
+
+      <div className="max-w-[1400px] mx-auto print-container flex flex-col gap-4">
+
+        {/* HEADER */}
+        <header className="print-header flex justify-between items-center border-b-4 border-amber-500 pb-2">
+          <div className="flex items-center gap-4">
+            <img src="/club/escudonovorizontino.png" alt="Shield" className="h-16 w-auto" onError={e => e.target.style.display = 'none'} />
+            <div>
+              <h1 className="text-3xl font-black tracking-tighter text-black uppercase leading-none">Grêmio Novorizontino</h1>
+              <p className="text-base font-bold tracking-widest text-slate-600 uppercase">Departamento de Scouting</p>
+            </div>
+          </div>
+          <div className="text-right flex flex-col items-end gap-2">
+            <button
+              onClick={() => router.push('/central-scouting/lista-preferencial')}
+              className="no-print bg-slate-200 text-slate-800 px-3 py-1 rounded-md text-xs font-bold hover:bg-slate-300 transition-colors"
+            >
+              ← VOLTAR
+            </button>
+            <div className="print-badge bg-amber-500 text-black px-6 py-1 font-black text-xl uppercase italic shadow-md">
+              Análise de Dispersão
+            </div>
+            <div className="text-slate-600 font-black text-[10px] mt-1 tracking-wider uppercase">
+              DATA: {new Date().toLocaleDateString('pt-BR')} · {listaFiltrada.length}/{lista.length} ATLETAS
+            </div>
+          </div>
+        </header>
+
+        {/* Filtro de Posição */}
+        <div className="no-print flex items-center gap-3 flex-wrap">
+          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Filtrar por posição:</span>
+          {posicaoOptions.map(pos => (
+            <button
+              key={pos}
+              onClick={() => setPosicaoFiltro(pos)}
+              className={`px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border-2 transition-all ${
+                posicaoFiltro === pos
+                  ? 'bg-amber-500 border-amber-500 text-black'
+                  : 'border-slate-200 text-slate-500 hover:border-amber-400'
+              }`}
+            >
+              {pos === 'TODOS' ? 'Todos' : (POSITION_METRICS[pos]?.label || pos)}
+            </button>
+          ))}
+          <span className="text-[9px] text-slate-400 font-bold ml-2">
+            {listaFiltrada.length} atletas · comparados com média da posição
+          </span>
+        </div>
+
+        {/* Gráficos */}
+        <div className="graficos-wrapper flex flex-col gap-4">
+          {GRAFICOS.map(cfg => (
+            <GraficoBloco key={cfg.id} config={cfg} lista={listaFiltrada} gn={gnFiltrado} serieB={serieB} mapaCores={mapaCores} />
+          ))}
+        </div>
+
+        {/* FOOTER */}
+        <footer className="no-print flex justify-between items-center border-t-2 border-slate-900 pt-3 mt-4">
+          <div className="flex gap-4">
+            <button
+              onClick={() => window.print()}
+              className="bg-slate-900 hover:bg-black text-white font-black px-8 py-3 rounded-2xl text-sm shadow-xl transition-all transform hover:scale-105 active:scale-95 flex items-center gap-3"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+              </svg>
+              EXPORTAR PDF
+            </button>
+            <button
+              onClick={() => router.push('/central-scouting/lista-preferencial')}
+              className="text-slate-500 hover:text-black text-sm font-black uppercase tracking-widest px-4 transition-colors"
+            >
+              Voltar
+            </button>
+          </div>
+          <p className="text-[10px] text-slate-500 font-black italic tracking-tight uppercase">© Scouting System GN</p>
+        </footer>
+
+      </div>
+    </div>
+  );
+}
+
+export default function DispersaoPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="w-12 h-12 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin"></div>
+      </div>
+    }>
+      <DispersaoContent />
+    </Suspense>
+  );
 }
