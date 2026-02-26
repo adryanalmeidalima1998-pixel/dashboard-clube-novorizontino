@@ -23,8 +23,10 @@ const CORES_JOGADORES = [
   '#F5B7B1', '#D7BDE2', '#A3E4D7', '#F9E79F', '#ABEBC6'
 ];
 
-// ─── Todos os 5 gráficos ────────────────────────────────────────────────────
-const GRAFICOS = [
+import { getMetricsByPosicao, normalizePosicao, POSITION_METRICS } from '@/app/utils/positionMetrics';
+
+// GRAFICOS estático (fallback para posição sem configuração)
+const GRAFICOS_FALLBACK = [
   {
     id: 'criacao-finalizacao',
     titulo: 'Criação vs Finalização',
@@ -32,14 +34,14 @@ const GRAFICOS = [
     xLabel: 'Passes Chave/90',
     yLabel: 'xG/90',
     xKey: 'Passes chave',
-    yKey: 'Xg',
+    yKey: 'xG',
     xType: 'per90',
     yType: 'per90',
   },
   {
     id: 'progressao-perigo',
     titulo: 'Progressão vs Perigo',
-    subtitulo: '% passes progressivos precisos  ×  Entradas no terço final carregando a bola por 90',
+    subtitulo: 'Passes progressivos precisos %  ×  Entradas no terço final carregando',
     xLabel: 'Passes Progressivos %',
     yLabel: 'Entradas 1/3 Final (C)/90',
     xKey: 'Passes progressivos precisos,%',
@@ -49,7 +51,7 @@ const GRAFICOS = [
   },
   {
     id: 'chances-xa',
-    titulo: 'Chances Criadas vs Assistências Esperadas',
+    titulo: 'Chances Criadas vs xA',
     subtitulo: 'Chances com sucesso por 90  ×  xA por 90',
     xLabel: 'Chances com Sucesso/90',
     yLabel: 'xA/90',
@@ -60,10 +62,10 @@ const GRAFICOS = [
   },
   {
     id: 'recuperacoes-desafios',
-    titulo: 'Recuperações de Bola vs Desafios Vencidos',
-    subtitulo: 'Recuperações no campo adversário por 90  ×  Desafios ganhos por 90',
+    titulo: 'Recuperações vs Desafios',
+    subtitulo: 'Recuperações no campo adversário/90  ×  Desafios vencidos/90',
     xLabel: 'Recuperações Campo Adv/90',
-    yLabel: 'Desafios Ganhos/90',
+    yLabel: 'Desafios Vencidos/90',
     xKey: 'Bolas recuperadas no campo do adversário',
     yKey: 'Desafios vencidos',
     xType: 'per90',
@@ -72,7 +74,7 @@ const GRAFICOS = [
   {
     id: 'drible-eficiencia',
     titulo: 'Volume vs Eficiência de Dribles',
-    subtitulo: 'Dribles tentados por 90  ×  Dribles bem-sucedidos por 90',
+    subtitulo: 'Dribles tentados/90  ×  Dribles bem-sucedidos/90',
     xLabel: 'Dribles/90',
     yLabel: 'Dribles Certos/90',
     xKey: 'Dribles',
@@ -81,20 +83,15 @@ const GRAFICOS = [
     yType: 'per90',
   },
 ];
-
-// ─── Processar dados: calcula per90 para lista preferencial e elenco GN ─────
+// ─── Processar dados: pré-calcula per90 para todas as colunas numéricas ──────
 function processarDados(dados, aba) {
   return dados.map(jogador => {
     const minutos = safeParseFloat(jogador['Minutos jogados']);
     const processado = { ...jogador, aba };
-    GRAFICOS.forEach(g => {
-      if (g.xType === 'per90') {
-        const val = safeParseFloat(jogador[g.xKey]);
-        processado[`${g.xKey}_per90`] = minutos > 0 ? (val / minutos) * 90 : 0;
-      }
-      if (g.yType === 'per90') {
-        const val = safeParseFloat(jogador[g.yKey]);
-        processado[`${g.yKey}_per90`] = minutos > 0 ? (val / minutos) * 90 : 0;
+    Object.keys(jogador).forEach(key => {
+      const rawVal = safeParseFloat(jogador[key]);
+      if (!isNaN(rawVal)) {
+        processado[`${key}_per90`] = minutos > 0 ? (rawVal / minutos) * 90 : 0;
       }
     });
     return processado;
@@ -105,9 +102,8 @@ function processarDados(dados, aba) {
 function processarDadosSB(dados) {
   return dados.map(jogador => {
     const processado = { ...jogador, aba: 'SERIEB' };
-    GRAFICOS.forEach(g => {
-      if (g.xType === 'per90') processado[`${g.xKey}_per90`] = safeParseFloat(jogador[g.xKey]);
-      if (g.yType === 'per90') processado[`${g.yKey}_per90`] = safeParseFloat(jogador[g.yKey]);
+    Object.keys(jogador).forEach(key => {
+      processado[`${key}_per90`] = safeParseFloat(jogador[key]);
     });
     return processado;
   });
@@ -353,6 +349,37 @@ function DispersaoContent() {
   const [serieB, setSerieB] = useState([]);
   const [mapaCores, setMapaCores] = useState({});
   const [loading, setLoading] = useState(true);
+  const [posicaoFiltro, setPosicaoFiltro] = useState('TODOS');
+
+  // Posições disponíveis na lista
+  const posicaoOptions = useMemo(() => {
+    const posSet = new Set();
+    lista.forEach(j => {
+      const p = normalizePosicao(j.Posição);
+      if (p && POSITION_METRICS[p]) posSet.add(p);
+    });
+    return ['TODOS', ...Array.from(posSet).sort()];
+  }, [lista]);
+
+  // Lista filtrada por posição
+  const listaFiltrada = useMemo(() => {
+    if (posicaoFiltro === 'TODOS') return lista;
+    return lista.filter(j => normalizePosicao(j.Posição) === posicaoFiltro);
+  }, [lista, posicaoFiltro]);
+
+  // GN filtrado pela mesma posição
+  const gnFiltrado = useMemo(() => {
+    if (posicaoFiltro === 'TODOS') return gn;
+    return gn.filter(j => normalizePosicao(j.Posição) === posicaoFiltro);
+  }, [gn, posicaoFiltro]);
+
+  // Gráficos dinâmicos baseados na posição selecionada
+  const GRAFICOS = useMemo(() => {
+    if (posicaoFiltro === 'TODOS') return GRAFICOS_FALLBACK;
+    const config = POSITION_METRICS[posicaoFiltro];
+    if (!config) return GRAFICOS_FALLBACK;
+    return config.scatterPlots;
+  }, [posicaoFiltro]);
 
   useEffect(() => {
     const load = async () => {
@@ -555,15 +582,36 @@ function DispersaoContent() {
               Análise de Dispersão
             </div>
             <div className="text-slate-600 font-black text-[10px] mt-1 tracking-wider uppercase">
-              DATA: {new Date().toLocaleDateString('pt-BR')} · {lista.length} ATLETAS
+              DATA: {new Date().toLocaleDateString('pt-BR')} · {listaFiltrada.length}/{lista.length} ATLETAS
             </div>
           </div>
         </header>
 
+        {/* Filtro de Posição */}
+        <div className="no-print flex items-center gap-3 flex-wrap">
+          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Filtrar por posição:</span>
+          {posicaoOptions.map(pos => (
+            <button
+              key={pos}
+              onClick={() => setPosicaoFiltro(pos)}
+              className={`px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border-2 transition-all ${
+                posicaoFiltro === pos
+                  ? 'bg-amber-500 border-amber-500 text-black'
+                  : 'border-slate-200 text-slate-500 hover:border-amber-400'
+              }`}
+            >
+              {pos === 'TODOS' ? 'Todos' : (POSITION_METRICS[pos]?.label || pos)}
+            </button>
+          ))}
+          <span className="text-[9px] text-slate-400 font-bold ml-2">
+            {listaFiltrada.length} atletas · comparados com média da posição
+          </span>
+        </div>
+
         {/* Gráficos */}
         <div className="graficos-wrapper flex flex-col gap-4">
           {GRAFICOS.map(cfg => (
-            <GraficoBloco key={cfg.id} config={cfg} lista={lista} gn={gn} serieB={serieB} mapaCores={mapaCores} />
+            <GraficoBloco key={cfg.id} config={cfg} lista={listaFiltrada} gn={gnFiltrado} serieB={serieB} mapaCores={mapaCores} />
           ))}
         </div>
 
