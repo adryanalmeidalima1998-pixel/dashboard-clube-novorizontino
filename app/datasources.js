@@ -17,6 +17,7 @@ const GIDS = {
   CENTRAL_DADOS:        1750539192,
   AGENDA:               938807395,
   ELENCO:               1499961831,
+  SERIE_B:              1860272965,
 }
 
 /**
@@ -39,4 +40,5 @@ export const URLS = {
   GREMIO_NOVORIZONTINO: `${BASE_URL}&gid=${GIDS.GREMIO_NOVORIZONTINO}`,
   PERFIS:               `${BASE_URL}&gid=${GIDS.PERFIS}`,
   RANKING_PERFIL:       `${BASE_URL}&gid=${GIDS.RANKING_PERFIL}`,
+  SERIE_B:              `${BASE_URL}&gid=${GIDS.SERIE_B}`,
 }
