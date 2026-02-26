@@ -34,7 +34,7 @@ const GRAFICOS_FALLBACK = [
     xLabel: 'Passes Chave/90',
     yLabel: 'xG/90',
     xKey: 'Passes chave',
-    yKey: 'xG',
+    yKey: 'Xg',
     xType: 'per90',
     yType: 'per90',
   },
