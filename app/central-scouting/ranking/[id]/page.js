@@ -29,17 +29,21 @@ const CSV_GREMIO = sheetUrl('GREMIO_NOVORIZONTINO', false);
 // CSV da Série B (benchmark)
 const CSV_SERIEB = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQbSUvDghD3MPKBNEYz1cxeLgCmftwt5AoqkVmai6xCrA7W8fIy77Y2RlTmqR5w1A6a-MRPlV67pVYA/pub?output=csv';
 
-const METRICAS_RADAR = [
+import { getMetricsByPosicao, calcMetricValue, calcPercentil } from '@/app/utils/positionMetrics';
+
+// METRICAS_RADAR é agora dinâmico por posição — definido no useMemo abaixo
+// Mantemos um fallback estático para posições sem configuração
+const METRICAS_RADAR_FALLBACK = [
   { label: 'Passes Chave',              key: 'Passes chave',                                    type: 'per90' },
   { label: 'Passes Progressivos %',     key: 'Passes progressivos precisos,%',                  type: 'raw'   },
-  { label: 'Passes na Área %',          key: 'Passes dentro da área / precisos, %',             type: 'raw'   },
   { label: 'Dribles Certos/90',         key: 'Dribles bem sucedidos',                           type: 'per90' },
-  { label: 'Dribles 1/3 Final Certos/90', key: 'Dribles no último terço do campo com sucesso', type: 'per90' },
   { label: 'Entradas 1/3 Final (C)',    key: 'Entradas no terço final carregando a bola',       type: 'per90' },
   { label: 'Recuperações Campo Adv',    key: 'Bolas recuperadas no campo do adversário',        type: 'per90' },
-  { label: 'xA',                        key: 'xA',                                              type: 'per90' },
-  { label: 'xG',                        key: 'Xg',                                              type: 'per90' },
-  { label: 'Ações Área Adv Certas/90',  key: 'Ações na área adversária bem-sucedidas',          type: 'per90' },
+  { label: 'xA',                        key: 'xA',                                              type: 'raw'   },
+  { label: 'xG',                        key: 'xG',                                              type: 'raw'   },
+  { label: 'Chances Criadas/90',        key: 'Chances criadas',                                 type: 'per90' },
+  { label: 'Interceptações/90',         key: 'Interceptações',                                  type: 'per90' },
+  { label: 'Ações Área Adv./90',        key: 'Ações na área adversária bem-sucedidas',          type: 'per90' },
 ];
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -48,10 +52,11 @@ function processarDados(dados, aba) {
   return dados.map(jogador => {
     const minutos = safeParseFloat(jogador['Minutos jogados']);
     const processado = { ...jogador, aba };
-    METRICAS_RADAR.forEach(m => {
-      if (m.type === 'per90') {
-        const val = safeParseFloat(jogador[m.key]);
-        processado[`${m.key}_per90`] = minutos > 0 ? (val / minutos) * 90 : 0;
+    // Pré-calcula per90 para todas as métricas possíveis de todas as posições
+    Object.keys(jogador).forEach(key => {
+      const rawVal = safeParseFloat(jogador[key]);
+      if (!isNaN(rawVal) && rawVal >= 0) {
+        processado[`${key}_per90`] = minutos > 0 ? (rawVal / minutos) * 90 : 0;
       }
     });
     return processado;
@@ -62,8 +67,8 @@ function processarDados(dados, aba) {
 function processarDadosSB(dados) {
   return dados.map(jogador => {
     const processado = { ...jogador, aba: 'SERIEB' };
-    METRICAS_RADAR.forEach(m => {
-      if (m.type === 'per90') processado[`${m.key}_per90`] = safeParseFloat(jogador[m.key]);
+    Object.keys(jogador).forEach(key => {
+      processado[`${key}_per90`] = safeParseFloat(jogador[key]);
     });
     return processado;
   });
@@ -185,6 +190,24 @@ function RankingPlayerProfileContent() {
     setTextoAnalitico(texto);
   }, [perfilSelecionado, player, rankingList, serieB]);
 
+  // ── Métricas dinâmicas por posição ────────────────────────────────────────
+  const METRICAS_RADAR = useMemo(() => {
+    if (!player) return METRICAS_RADAR_FALLBACK;
+    const posicaoConfig = getMetricsByPosicao(player.Posição || '');
+    if (!posicaoConfig) return METRICAS_RADAR_FALLBACK;
+    return posicaoConfig.radarMetrics;
+  }, [player]);
+
+  // Jogadores da mesma posição para comparação real
+  const mesmaposicaoRanking = useMemo(() => {
+    if (!player) return rankingList;
+    const posKey = player.Posição?.trim()?.toUpperCase();
+    const filtered = rankingList.filter(j =>
+      j.Posição?.trim()?.toUpperCase() === posKey
+    );
+    return filtered.length >= 3 ? filtered : rankingList;
+  }, [player, rankingList]);
+
   // ── Valor de métrica ───────────────────────────────────────────────────────
   const getValorMetrica = (jogador, metrica) => {
     if (!jogador) return 0;
@@ -196,7 +219,7 @@ function RankingPlayerProfileContent() {
 
   // ── Escalas (máximos) por métrica ─────────────────────────────────────────
   const escalasMetricas = useMemo(() => {
-    const todos = [...rankingList, ...gremioNovorizontino, ...serieB];
+    const todos = [...mesmaposicaoRanking, ...gremioNovorizontino, ...serieB];
     const escalas = {};
     METRICAS_RADAR.forEach(m => {
       const valores = todos.map(j => getValorMetrica(j, m)).filter(v => v >= 0);
@@ -209,7 +232,7 @@ function RankingPlayerProfileContent() {
   const pontosFortesFragos = useMemo(() => {
     if (!player || rankingList.length === 0) return { fortes: [], fracos: [] };
 
-    const baseComparacao = [...rankingList, ...serieB];
+    const baseComparacao = [...mesmaposicaoRanking, ...serieB];
 
     const comparacoes = METRICAS_RADAR.map(m => {
       const valAtleta  = getValorMetrica(player, m);
@@ -244,14 +267,14 @@ function RankingPlayerProfileContent() {
     if (type === 'media') {
       const mediaVals = [
         ...METRICAS_RADAR.map(m => {
-          const valores = rankingList.map(j => getValorMetrica(j, m));
+          const valores = mesmaposicaoRanking.map(j => getValorMetrica(j, m));
           return ((valores.reduce((a, b) => a + b, 0) / (valores.length || 1)) / (escalasMetricas[m.label]?.max || 1)) * 100;
         }),
         0,
       ];
       mediaVals[mediaVals.length - 1] = mediaVals[0];
       data.push({
-        type: 'scatterpolar', r: mediaVals, theta: labels, fill: 'toself', name: 'Média Ranking',
+        type: 'scatterpolar', r: mediaVals, theta: labels, fill: 'toself', name: `Média ${player?.Posição || 'Posição'}`,
         line: { color: '#ef4444', dash: 'dot', width: 2 }, fillcolor: 'rgba(239, 68, 68, 0.15)', mode: 'lines',
       });
     } else if (type === 'serieb') {
