@@ -3,91 +3,78 @@
 import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import Papa from 'papaparse';
-import { sheetUrl, URLS } from '../../../datasources';
+import { sheetUrl } from '../../../datasources';
 import { cleanData, safeParseFloat } from '@/app/utils/dataCleaner';
+import { getMetricsByPosicao, normalizePosicao, POSITION_METRICS, calcPercentil } from '@/app/utils/positionMetrics';
 
-const METRICAS_RADAR = [
-  { label: 'Passes Chave',         key: 'Passes chave',                                   type: 'per90' },
-  { label: 'Passes Progr. %',      key: 'Passes progressivos precisos,%',                 type: 'raw'   },
-  { label: 'Passes Área %',        key: 'Passes dentro da área / precisos, %',            type: 'raw'   },
-  { label: 'Dribles Certos/90',    key: 'Dribles bem sucedidos',                          type: 'per90' },
-  { label: 'Dribles 1/3 Final/90', key: 'Dribles no último terço do campo com sucesso',   type: 'per90' },
-  { label: 'Entradas 1/3 Final',   key: 'Entradas no terço final carregando a bola',      type: 'per90' },
-  { label: 'Recup. Campo Adv',     key: 'Bolas recuperadas no campo do adversário',       type: 'per90' },
-  { label: 'xA',                   key: 'xA',                                             type: 'per90' },
-  { label: 'xG',                   key: 'Xg',                                             type: 'per90' },
-  { label: 'Ações Área Adv/90',    key: 'Ações na área adversária bem-sucedidas',         type: 'per90' },
-];
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function getValorMetrica(jogador, metrica) {
   if (!jogador) return 0;
-  if (metrica.type === 'per90') {
-    const val = safeParseFloat(jogador[`${metrica.key}_per90`]);
-    return isNaN(val) ? 0 : val;
-  }
-  const val = safeParseFloat(jogador[metrica.key]);
-  return isNaN(val) ? 0 : val;
+  if (metrica.type === 'per90') return safeParseFloat(jogador[`${metrica.key}_per90`]) || 0;
+  return safeParseFloat(jogador[metrica.key]) || 0;
 }
 
 function processarDados(dados, aba) {
   return dados.map(jogador => {
     const minutos = safeParseFloat(jogador['Minutos jogados']);
-    const processado = { ...jogador, aba };
-    METRICAS_RADAR.forEach(m => {
-      if (m.type === 'per90') {
-        const val = safeParseFloat(jogador[m.key]);
-        processado[`${m.key}_per90`] = minutos > 0 ? (val / minutos) * 90 : 0;
-      }
+    const proc = { ...jogador, aba };
+    Object.keys(jogador).forEach(key => {
+      const v = safeParseFloat(jogador[key]);
+      if (!isNaN(v)) proc[`${key}_per90`] = minutos > 0 ? (v / minutos) * 90 : 0;
     });
-    return processado;
+    return proc;
   });
 }
 
-// Série B: valores já vêm por/90 — mapeia direto, sem transformar
 function processarDadosSB(dados) {
   return dados.map(jogador => {
-    const processado = { ...jogador, aba: 'SERIEB' };
-    METRICAS_RADAR.forEach(m => {
-      if (m.type === 'per90') processado[`${m.key}_per90`] = safeParseFloat(jogador[m.key]);
+    const proc = { ...jogador, aba: 'SERIEB' };
+    Object.keys(jogador).forEach(key => {
+      proc[`${key}_per90`] = safeParseFloat(jogador[key]);
     });
-    return processado;
+    return proc;
   });
 }
 
-function calcularScore(jogador, maxes) {
+function calcularScore(jogador, metricas, maxes) {
   let total = 0;
-  METRICAS_RADAR.forEach(m => {
+  metricas.forEach(m => {
     const val = getValorMetrica(jogador, m);
     const max = maxes[m.label] || 1;
     total += (val / max) * 100;
   });
-  return total / METRICAS_RADAR.length;
+  return total / (metricas.length || 1);
 }
+
+// ─── Componente ───────────────────────────────────────────────────────────────
 
 function PonderacaoContent() {
   const router = useRouter();
   const [listaPreferencial, setListaPreferencial] = useState([]);
-  const [serieB, setSerieB] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [sortMetrica, setSortMetrica] = useState('_score');
-  const [sortDir, setSortDir] = useState('desc');
-  const [busca, setBusca] = useState('');
-  const [filtroTime, setFiltroTime] = useState('todos');
+  const [serieB, setSerieB]                       = useState([]);
+  const [loading, setLoading]                     = useState(true);
+  const [sortMetrica, setSortMetrica]             = useState('_score');
+  const [sortDir, setSortDir]                     = useState('desc');
+  const [busca, setBusca]                         = useState('');
+  const [filtroTime, setFiltroTime]               = useState('todos');
+  const [posicaoFiltro, setPosicaoFiltro]         = useState('TODOS');
 
+  // ── Carrega dados ────────────────────────────────────────────────────────
   useEffect(() => {
     const loadData = async () => {
       try {
-        const urlAba1 = sheetUrl('LISTA_PREFERENCIAL');
+        const urlAba1   = sheetUrl('LISTA_PREFERENCIAL');
         const urlSerieB = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQbSUvDghD3MPKBNEYz1cxeLgCmftwt5AoqkVmai6xCrA7W8fIy77Y2RlTmqR5w1A6a-MRPlV67pVYA/pub?output=csv';
         const [res1, res2] = await Promise.all([fetch(urlAba1), fetch(urlSerieB)]);
         const [csv1, csv2] = await Promise.all([res1.text(), res2.text()]);
         Papa.parse(csv1, {
           header: true, skipEmptyLines: true,
-          complete: (results) => setListaPreferencial(processarDados(cleanData(results.data), 'LISTA PREFERENCIAL'))
+          complete: (r) => setListaPreferencial(processarDados(cleanData(r.data), 'LISTA PREFERENCIAL'))
         });
         Papa.parse(csv2, {
           header: true, skipEmptyLines: true,
-          complete: (results) => setSerieB(processarDadosSB(cleanData(results.data)))
+          complete: (r) => setSerieB(processarDadosSB(cleanData(r.data)))
         });
         setLoading(false);
       } catch (err) {
@@ -98,36 +85,70 @@ function PonderacaoContent() {
     loadData();
   }, []);
 
-  const { maxes } = useMemo(() => {
-    const base = [...listaPreferencial, ...serieB];
-    const maxes = {};
-    METRICAS_RADAR.forEach(m => {
-      const vals = base.map(j => getValorMetrica(j, m)).filter(v => v >= 0);
-      maxes[m.label] = Math.max(...vals, 0.01);
+  // ── Posições disponíveis ─────────────────────────────────────────────────
+  const posicaoOptions = useMemo(() => {
+    const posSet = new Set();
+    listaPreferencial.forEach(j => {
+      const p = normalizePosicao(j.Posição);
+      if (p && POSITION_METRICS[p]) posSet.add(p);
     });
-    return { maxes };
-  }, [listaPreferencial, serieB]);
+    return ['TODOS', ...Array.from(posSet).sort()];
+  }, [listaPreferencial]);
 
+  // ── Lista filtrada pela posição ──────────────────────────────────────────
+  const listaFiltradaPosicao = useMemo(() => {
+    if (posicaoFiltro === 'TODOS') return listaPreferencial;
+    return listaPreferencial.filter(j => normalizePosicao(j.Posição) === posicaoFiltro);
+  }, [listaPreferencial, posicaoFiltro]);
+
+  // ── Série B filtrada pela posição ────────────────────────────────────────
+  const serieBFiltrada = useMemo(() => {
+    if (posicaoFiltro === 'TODOS') return serieB;
+    return serieB.filter(j => normalizePosicao(j.Posição) === posicaoFiltro);
+  }, [serieB, posicaoFiltro]);
+
+  // ── Métricas dinâmicas pela posição ─────────────────────────────────────
+  const METRICAS = useMemo(() => {
+    if (posicaoFiltro === 'TODOS') {
+      // Usa as métricas de extremo como padrão quando "todos"
+      return POSITION_METRICS['EXTREMO'].radarMetrics;
+    }
+    const config = POSITION_METRICS[posicaoFiltro];
+    return config ? config.radarMetrics : POSITION_METRICS['EXTREMO'].radarMetrics;
+  }, [posicaoFiltro]);
+
+  // ── Máximos para normalização (apenas da posição) ────────────────────────
+  const maxes = useMemo(() => {
+    const base = [...listaFiltradaPosicao, ...serieBFiltrada];
+    const m = {};
+    METRICAS.forEach(met => {
+      const vals = base.map(j => getValorMetrica(j, met)).filter(v => v >= 0);
+      m[met.label] = Math.max(...vals, 0.01);
+    });
+    return m;
+  }, [listaFiltradaPosicao, serieBFiltrada, METRICAS]);
+
+  // ── Score e percentis ────────────────────────────────────────────────────
   const jogadoresComScore = useMemo(() => {
-    if (!listaPreferencial.length || !Object.keys(maxes).length) return [];
-    const base = [...listaPreferencial, ...serieB];
-    return listaPreferencial.map(j => {
-      const score = calcularScore(j, maxes);
+    if (!listaFiltradaPosicao.length || !Object.keys(maxes).length) return [];
+    const base = [...listaFiltradaPosicao, ...serieBFiltrada];
+    return listaFiltradaPosicao.map(j => {
+      const score     = calcularScore(j, METRICAS, maxes);
       const percentis = {};
-      METRICAS_RADAR.forEach(m => {
-        const val = getValorMetrica(j, m);
+      METRICAS.forEach(m => {
+        const val  = getValorMetrica(j, m);
         const vals = base.map(x => getValorMetrica(x, m)).filter(v => v >= 0);
-        percentis[m.label] = Math.round((vals.filter(v => v <= val).length / vals.length) * 100);
+        percentis[m.label] = calcPercentil(val, vals);
       });
       const timeKey = Object.keys(j).find(k => k.toLowerCase() === 'time') || 'TIME';
       return {
         ...j,
-        _score: score,
+        _score:    score,
         _percentis: percentis,
         TIME_FIXED: j[timeKey] || j['Equipa'] || j['Equipe'] || '-',
       };
     });
-  }, [listaPreferencial, serieB, maxes]);
+  }, [listaFiltradaPosicao, serieBFiltrada, maxes, METRICAS]);
 
   const times = useMemo(() => {
     const t = new Set(jogadoresComScore.map(j => j.TIME_FIXED).filter(Boolean));
@@ -138,15 +159,15 @@ function PonderacaoContent() {
     return jogadoresComScore
       .filter(j => {
         const matchBusca = !busca || j.Jogador?.toLowerCase().includes(busca.toLowerCase());
-        const matchTime = filtroTime === 'todos' || j.TIME_FIXED === filtroTime;
+        const matchTime  = filtroTime === 'todos' || j.TIME_FIXED === filtroTime;
         return matchBusca && matchTime;
       })
       .sort((a, b) => {
-        const va = sortMetrica === '_score' ? a._score : getValorMetrica(a, METRICAS_RADAR.find(m => m.label === sortMetrica));
-        const vb = sortMetrica === '_score' ? b._score : getValorMetrica(b, METRICAS_RADAR.find(m => m.label === sortMetrica));
+        const va = sortMetrica === '_score' ? a._score : getValorMetrica(a, METRICAS.find(m => m.label === sortMetrica));
+        const vb = sortMetrica === '_score' ? b._score : getValorMetrica(b, METRICAS.find(m => m.label === sortMetrica));
         return sortDir === 'desc' ? vb - va : va - vb;
       });
-  }, [jogadoresComScore, busca, filtroTime, sortMetrica, sortDir]);
+  }, [jogadoresComScore, busca, filtroTime, sortMetrica, sortDir, METRICAS]);
 
   const handleSort = (col) => {
     if (sortMetrica === col) setSortDir(d => d === 'desc' ? 'asc' : 'desc');
@@ -165,6 +186,8 @@ function PonderacaoContent() {
     if (score >= 30) return 'text-orange-500';
     return 'text-red-500';
   }
+
+  const posLabel = posicaoFiltro === 'TODOS' ? 'Todas as Posições' : (POSITION_METRICS[posicaoFiltro]?.label || posicaoFiltro);
 
   if (loading) return (
     <div className="min-h-screen bg-white flex items-center justify-center text-amber-600 font-black italic animate-pulse text-2xl uppercase">
@@ -185,7 +208,6 @@ function PonderacaoContent() {
           th, td { padding: 3px 5px !important; word-break: break-word; white-space: nowrap; }
           thead tr { background-color: #0f172a !important; }
           thead th { color: white !important; }
-          thead th.bg-amber-500, thead th[class*="bg-amber"] { background-color: #f59e0b !important; color: black !important; }
           .score-bar { display: none !important; }
           .avatar-initial { display: none !important; }
         }
@@ -193,7 +215,7 @@ function PonderacaoContent() {
 
       <div className="max-w-[1800px] mx-auto print-container flex flex-col gap-4">
 
-        {/* HEADER — idêntico ao relatório individual */}
+        {/* HEADER */}
         <header className="flex justify-between items-center border-b-4 border-amber-500 pb-2">
           <div className="flex items-center gap-4">
             <img src="/club/escudonovorizontino.png" alt="Shield" className="h-16 w-auto" />
@@ -203,23 +225,41 @@ function PonderacaoContent() {
             </div>
           </div>
           <div className="text-right flex flex-col items-end gap-2">
-            <button
-              onClick={() => router.push('/central-scouting/lista-preferencial')}
-              className="no-print bg-slate-200 text-slate-800 px-3 py-1 rounded-md text-xs font-bold hover:bg-slate-300 transition-colors"
-            >
+            <button onClick={() => router.push('/central-scouting/lista-preferencial')} className="no-print bg-slate-200 text-slate-800 px-3 py-1 rounded-md text-xs font-bold hover:bg-slate-300 transition-colors">
               ← VOLTAR
             </button>
             <div className="bg-amber-500 text-black px-6 py-1 font-black text-xl uppercase italic shadow-md">
               Ponderação por Métrica
             </div>
             <div className="text-slate-600 font-black text-[10px] mt-1 tracking-wider uppercase">
-              DATA: {new Date().toLocaleDateString('pt-BR')} · {jogadoresFiltrados.length} ATLETAS
+              {posLabel} · {jogadoresFiltrados.length} ATLETAS · {new Date().toLocaleDateString('pt-BR')}
             </div>
           </div>
         </header>
 
-        {/* FILTROS — só na tela */}
+        {/* FILTROS */}
         <div className="no-print flex flex-wrap gap-3 items-center">
+
+          {/* Filtro de posição */}
+          <div className="flex flex-wrap gap-2 items-center">
+            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Posição:</span>
+            {posicaoOptions.map(pos => (
+              <button
+                key={pos}
+                onClick={() => { setPosicaoFiltro(pos); setSortMetrica('_score'); }}
+                className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase border-2 transition-all ${
+                  posicaoFiltro === pos
+                    ? 'bg-amber-500 border-amber-500 text-black'
+                    : 'border-slate-200 text-slate-500 hover:border-amber-400'
+                }`}
+              >
+                {pos === 'TODOS' ? 'Todos' : (POSITION_METRICS[pos]?.label || pos)}
+              </button>
+            ))}
+          </div>
+
+          <div className="w-px h-6 bg-slate-200 mx-1"></div>
+
           <input
             type="text"
             placeholder="BUSCAR ATLETA..."
@@ -234,18 +274,22 @@ function PonderacaoContent() {
           >
             {times.map(t => <option key={t} value={t}>{t === 'todos' ? 'TODOS OS TIMES' : t.toUpperCase()}</option>)}
           </select>
+
           <div className="flex items-center gap-3 ml-2">
             <span className="text-[9px] font-black text-slate-400 uppercase">Legenda:</span>
-            <span className="text-[9px] font-black text-emerald-600">■ Top 15%</span>
-            <span className="text-[9px] font-black text-amber-500">■ Top 35%</span>
+            <span className="text-[9px] font-black text-emerald-600">■ P75+</span>
+            <span className="text-[9px] font-black text-amber-500">■ P50+</span>
           </div>
-          <span className="ml-auto text-[8px] font-black text-slate-400 uppercase tracking-widest">Clique no cabeçalho para ordenar</span>
+
+          <span className="ml-auto text-[8px] font-black text-slate-400 uppercase tracking-widest">
+            Score compara só com {posLabel}
+          </span>
         </div>
 
         {/* TABELA */}
         <div className="border-2 border-slate-900 rounded-2xl overflow-hidden shadow-lg">
           <div className="bg-slate-900 text-white font-black text-center py-2 text-[10px] uppercase tracking-widest">
-            Ponderação por Métrica · Score = média normalizada das 10 métricas do radar (0–100) · Base: Lista Preferencial + Série B
+            Ponderação · {posLabel} · Score = média normalizada das {METRICAS.length} métricas (0–100)
           </div>
           <div className="overflow-x-auto table-scroll-wrapper">
             <table className="w-full border-collapse text-[10px]">
@@ -260,7 +304,7 @@ function PonderacaoContent() {
                   >
                     Score {sortMetrica === '_score' ? (sortDir === 'desc' ? '↓' : '↑') : '+'}
                   </th>
-                  {METRICAS_RADAR.map(m => (
+                  {METRICAS.map(m => (
                     <th
                       key={m.label}
                       onClick={() => handleSort(m.label)}
@@ -289,11 +333,12 @@ function PonderacaoContent() {
                           </div>
                           <div>
                             <div className="font-black uppercase italic tracking-tight text-[10px] group-hover:text-amber-600 transition-colors">{j.Jogador}</div>
-                            <div className="text-[8px] text-slate-400 font-bold">{j.Idade} anos</div>
+                            <div className="text-[8px] text-slate-400 font-bold">{j.Posição} · {j.Idade} anos</div>
                           </div>
                         </div>
                       </td>
                       <td className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-600">{j.TIME_FIXED}</td>
+
                       {/* Score */}
                       <td className="px-3 py-2.5 text-center">
                         <div className="flex flex-col items-center gap-1">
@@ -303,20 +348,21 @@ function PonderacaoContent() {
                           </div>
                         </div>
                       </td>
+
                       {/* Métricas */}
-                      {METRICAS_RADAR.map(m => {
-                        const val = getValorMetrica(j, m);
+                      {METRICAS.map(m => {
+                        const val      = getValorMetrica(j, m);
                         const percentil = j._percentis?.[m.label] ?? 0;
-                        const isTop15 = percentil >= 85;
-                        const isTop35 = percentil >= 65 && percentil < 85;
+                        const isTop    = percentil >= 75;
+                        const isMid    = percentil >= 50 && percentil < 75;
                         return (
                           <td key={m.label} className="px-2 py-2.5 text-center">
-                            <div className={`tabular-nums text-[10px] ${isTop15 ? 'text-emerald-600 font-black' : isTop35 ? 'text-amber-500 font-black' : 'text-slate-500 font-bold'}`}>
-                              {val.toFixed(2)}{m.label.includes('%') ? '%' : ''}
+                            <div className={`tabular-nums text-[10px] ${isTop ? 'text-emerald-600 font-black' : isMid ? 'text-amber-500 font-black' : 'text-slate-500 font-bold'}`}>
+                              {val.toFixed(2)}
                             </div>
-                            {(isTop15 || isTop35) && (
-                              <div className={`text-[7px] font-black ${isTop15 ? 'text-emerald-600' : 'text-amber-500'}`}>
-                                Top {100 - percentil}%
+                            {(isTop || isMid) && (
+                              <div className={`text-[7px] font-black ${isTop ? 'text-emerald-600' : 'text-amber-500'}`}>
+                                P{percentil}
                               </div>
                             )}
                           </td>
@@ -330,15 +376,14 @@ function PonderacaoContent() {
           </div>
         </div>
 
-        {/* LEGENDA RODAPÉ */}
+        {/* RODAPÉ */}
         <div className="flex flex-wrap gap-6 text-[8px] font-black text-slate-400 uppercase tracking-widest border-t-2 border-slate-900 pt-2">
-          <span>Score = média normalizada (0–100) das 10 métricas do radar</span>
-          <span className="text-emerald-600">■ Verde = Top 15% da base</span>
-          <span className="text-amber-500">■ Amarelo = Top 35% da base</span>
-          <span>Base: Lista Preferencial + Série B</span>
+          <span>Score = média normalizada (0–100) das {METRICAS.length} métricas</span>
+          <span className="text-emerald-600">■ Verde = Percentil 75+</span>
+          <span className="text-amber-500">■ Amarelo = Percentil 50+</span>
+          <span>Base: apenas jogadores da mesma posição</span>
         </div>
 
-        {/* FOOTER AÇÕES */}
         <footer className="no-print flex justify-between items-center border-t-2 border-slate-900 pt-3">
           <div className="flex gap-4">
             <button
@@ -350,10 +395,7 @@ function PonderacaoContent() {
               </svg>
               EXPORTAR PDF
             </button>
-            <button
-              onClick={() => router.push('/central-scouting/lista-preferencial')}
-              className="text-slate-500 hover:text-black text-sm font-black uppercase tracking-widest px-4 transition-colors"
-            >
+            <button onClick={() => router.push('/central-scouting/lista-preferencial')} className="text-slate-500 hover:text-black text-sm font-black uppercase tracking-widest px-4 transition-colors">
               Voltar
             </button>
           </div>
@@ -361,8 +403,6 @@ function PonderacaoContent() {
         </footer>
 
       </div>
-
-
     </div>
   );
 }
