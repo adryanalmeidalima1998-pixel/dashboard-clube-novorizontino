@@ -37,14 +37,44 @@ function processarDadosSB(dados) {
   });
 }
 
-function calcularScore(jogador, metricas, maxes) {
-  let total = 0;
+function getEstatisticas(valores) {
+  if (!valores || valores.length === 0) return { media: 0, desvioPadrao: 1 };
+  
+  const media = valores.reduce((acc, val) => acc + val, 0) / valores.length;
+  const variancia = valores.reduce((acc, val) => acc + Math.pow(val - media, 2), 0) / valores.length;
+  const desvioPadrao = Math.sqrt(variancia) || 1; // Evita divisão por zero
+  
+  return { media, desvioPadrao };
+}
+
+function calcularScoreEstatistico(jogador, metricas, statsMap) {
+  if (!metricas.length) return 0;
+  let somaScores = 0;
+
   metricas.forEach(m => {
     const val = getValorMetrica(jogador, m);
-    const max = maxes[m.label] || 1;
-    total += (val / max) * 100;
+    const stats = statsMap[m.label];
+    
+    if (stats) {
+      // 1. Calcula o Z-Score (quantos desvios padrões o atleta está da média)
+      let zScore = (val - stats.media) / stats.desvioPadrao;
+
+      // 2. Trava o Z-Score entre -3 e +3 para evitar "espinhos" e distorções de outliers absurdos
+      zScore = Math.max(-3, Math.min(3, zScore));
+
+      // 3. Converte o Z-Score para a escala 0-100
+      // Média (Z=0) vira Score 50. Z=+3 vira 100. Z=-3 vira 0.
+      let scoreMetrica = 50 + (zScore * (50 / 3));
+      
+      // Garante que não passe de 100 nem caia abaixo de 0
+      scoreMetrica = Math.max(0, Math.min(100, scoreMetrica));
+      
+      somaScores += scoreMetrica;
+    }
   });
-  return total / (metricas.length || 1);
+
+  // Retorna a média dos scores das métricas
+  return somaScores / metricas.length;
 }
 
 // ─── Componente ───────────────────────────────────────────────────────────────
@@ -117,38 +147,45 @@ function PonderacaoContent() {
     return config ? config.radarMetrics : POSITION_METRICS['EXTREMO'].radarMetrics;
   }, [posicaoFiltro]);
 
-  // ── Máximos para normalização (apenas da posição) ────────────────────────
-  const maxes = useMemo(() => {
+  // ── Estatísticas para normalização (Z-Score) ─────────────────────────────
+  const metricasStats = useMemo(() => {
     const base = [...listaFiltradaPosicao, ...serieBFiltrada];
-    const m = {};
+    const stats = {};
+    
     METRICAS.forEach(met => {
+      // Filtra valores válidos para o cálculo
       const vals = base.map(j => getValorMetrica(j, met)).filter(v => v >= 0);
-      m[met.label] = Math.max(...vals, 0.01);
+      stats[met.label] = getEstatisticas(vals);
     });
-    return m;
+    
+    return stats;
   }, [listaFiltradaPosicao, serieBFiltrada, METRICAS]);
 
   // ── Score e percentis ────────────────────────────────────────────────────
   const jogadoresComScore = useMemo(() => {
-    if (!listaFiltradaPosicao.length || !Object.keys(maxes).length) return [];
+    if (!listaFiltradaPosicao.length || !Object.keys(metricasStats).length) return [];
     const base = [...listaFiltradaPosicao, ...serieBFiltrada];
+    
     return listaFiltradaPosicao.map(j => {
-      const score     = calcularScore(j, METRICAS, maxes);
+      // Agora usamos o Score Estatístico baseado no Z-Score
+      const score = calcularScoreEstatistico(j, METRICAS, metricasStats);
+      
       const percentis = {};
       METRICAS.forEach(m => {
-        const val  = getValorMetrica(j, m);
+        const val = getValorMetrica(j, m);
         const vals = base.map(x => getValorMetrica(x, m)).filter(v => v >= 0);
         percentis[m.label] = calcPercentil(val, vals);
       });
+      
       const timeKey = Object.keys(j).find(k => k.toLowerCase() === 'time') || 'TIME';
       return {
         ...j,
-        _score:    score,
+        _score: score,
         _percentis: percentis,
         TIME_FIXED: j[timeKey] || j['Equipa'] || j['Equipe'] || '-',
       };
     });
-  }, [listaFiltradaPosicao, serieBFiltrada, maxes, METRICAS]);
+  }, [listaFiltradaPosicao, serieBFiltrada, metricasStats, METRICAS]);
 
   const times = useMemo(() => {
     const t = new Set(jogadoresComScore.map(j => j.TIME_FIXED).filter(Boolean));
@@ -191,7 +228,7 @@ function PonderacaoContent() {
 
   if (loading) return (
     <div className="min-h-screen bg-white flex items-center justify-center text-amber-600 font-black italic animate-pulse text-2xl uppercase">
-      Carregando Ponderação...
+      A carregar Ponderação...
     </div>
   );
 
@@ -229,10 +266,10 @@ function PonderacaoContent() {
               ← VOLTAR
             </button>
             <div className="bg-amber-500 text-black px-6 py-1 font-black text-xl uppercase italic shadow-md">
-              Ponderação por Métrica
+              Ponderação por Métrica Estatística
             </div>
             <div className="text-slate-600 font-black text-[10px] mt-1 tracking-wider uppercase">
-              {posLabel} · {jogadoresFiltrados.length} ATLETAS · {new Date().toLocaleDateString('pt-BR')}
+              {posLabel} · {jogadoresFiltrados.length} ATLETAS · {new Date().toLocaleDateString('pt-PT')}
             </div>
           </div>
         </header>
@@ -272,7 +309,7 @@ function PonderacaoContent() {
             onChange={e => setFiltroTime(e.target.value)}
             className="border-2 border-slate-200 rounded-xl px-4 py-2 text-[10px] font-black outline-none focus:border-amber-500"
           >
-            {times.map(t => <option key={t} value={t}>{t === 'todos' ? 'TODOS OS TIMES' : t.toUpperCase()}</option>)}
+            {times.map(t => <option key={t} value={t}>{t === 'todos' ? 'TODAS AS EQUIPAS' : t.toUpperCase()}</option>)}
           </select>
 
           <div className="flex items-center gap-3 ml-2">
@@ -282,14 +319,14 @@ function PonderacaoContent() {
           </div>
 
           <span className="ml-auto text-[8px] font-black text-slate-400 uppercase tracking-widest">
-            Score compara só com {posLabel}
+            Score compara só com {posLabel} (Z-Score)
           </span>
         </div>
 
         {/* TABELA */}
         <div className="border-2 border-slate-900 rounded-2xl overflow-hidden shadow-lg">
           <div className="bg-slate-900 text-white font-black text-center py-2 text-[10px] uppercase tracking-widest">
-            Ponderação · {posLabel} · Score = média normalizada das {METRICAS.length} métricas (0–100)
+            Ponderação · {posLabel} · Score = Média de Z-Score (0–100)
           </div>
           <div className="overflow-x-auto table-scroll-wrapper">
             <table className="w-full border-collapse text-[10px]">
@@ -297,7 +334,7 @@ function PonderacaoContent() {
                 <tr className="border-b-2 border-slate-900 bg-slate-900">
                   <th className="px-3 py-3 text-left text-[8px] font-black uppercase tracking-widest text-slate-300 w-8">#</th>
                   <th className="px-3 py-3 text-left text-[8px] font-black uppercase tracking-widest text-slate-300 min-w-[160px]">Atleta</th>
-                  <th className="px-3 py-3 text-left text-[8px] font-black uppercase tracking-widest text-slate-300 min-w-[90px]">Time</th>
+                  <th className="px-3 py-3 text-left text-[8px] font-black uppercase tracking-widest text-slate-300 min-w-[90px]">Equipa</th>
                   <th
                     onClick={() => handleSort('_score')}
                     className={`px-3 py-3 text-center text-[8px] font-black uppercase tracking-widest cursor-pointer min-w-[80px] transition-colors ${sortMetrica === '_score' ? 'bg-amber-500 text-black' : 'text-slate-300 hover:bg-slate-700'}`}
@@ -351,10 +388,10 @@ function PonderacaoContent() {
 
                       {/* Métricas */}
                       {METRICAS.map(m => {
-                        const val      = getValorMetrica(j, m);
+                        const val       = getValorMetrica(j, m);
                         const percentil = j._percentis?.[m.label] ?? 0;
-                        const isTop    = percentil >= 75;
-                        const isMid    = percentil >= 50 && percentil < 75;
+                        const isTop     = percentil >= 75;
+                        const isMid     = percentil >= 50 && percentil < 75;
                         return (
                           <td key={m.label} className="px-2 py-2.5 text-center">
                             <div className={`tabular-nums text-[10px] ${isTop ? 'text-emerald-600 font-black' : isMid ? 'text-amber-500 font-black' : 'text-slate-500 font-bold'}`}>
@@ -378,7 +415,7 @@ function PonderacaoContent() {
 
         {/* RODAPÉ */}
         <div className="flex flex-wrap gap-6 text-[8px] font-black text-slate-400 uppercase tracking-widest border-t-2 border-slate-900 pt-2">
-          <span>Score = média normalizada (0–100) das {METRICAS.length} métricas</span>
+          <span>Score = média normalizada (Z-Score) (0–100) das {METRICAS.length} métricas</span>
           <span className="text-emerald-600">■ Verde = Percentil 75+</span>
           <span className="text-amber-500">■ Amarelo = Percentil 50+</span>
           <span>Base: apenas jogadores da mesma posição</span>
@@ -411,7 +448,7 @@ export default function PonderacaoPorMetrica() {
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-white flex items-center justify-center text-amber-600 font-black italic animate-pulse uppercase text-2xl">
-        Carregando...
+        A carregar...
       </div>
     }>
       <PonderacaoContent />
