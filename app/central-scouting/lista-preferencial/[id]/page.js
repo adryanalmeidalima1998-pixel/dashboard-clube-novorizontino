@@ -57,10 +57,18 @@ function processarJogador(raw, fonte) {
 /** Retorna o valor processado de uma métrica para um jogador */
 function getVal(jogador, metrica) {
   if (!jogador) return 0;
-  // Aceita tanto metrica.type === 'per90' (do positionMetrics) quanto metrica.per90 (do antigo)
   const isPer90 = metrica.type === 'per90' || metrica.per90 === true;
   const key = isPer90 ? `_v_${metrica.key}_per90` : `_v_${metrica.key}_raw`;
-  return jogador[key] !== undefined ? jogador[key] : safeParseFloat(jogador[metrica.key]);
+  let val = jogador[key] !== undefined ? jogador[key] : safeParseFloat(jogador[metrica.key]);
+
+  // CORREÇÃO INTELIGENTE PARA PORCENTAGEM:
+  // Se a métrica é de %, e o valor no CSV veio como decimal (ex: 0.31), multiplicamos por 100 para virar 31%.
+  const isPercentage = metrica.label.includes('%') || metrica.key.includes('%');
+  if (isPercentage && val > 0 && val <= 2) {
+    val = val * 100;
+  }
+
+  return val;
 }
 
 /** Normaliza uma posição para string uppercase padronizada */
@@ -304,15 +312,12 @@ function PlayerProfileContent() {
     if (!dados?.player || !scatterPlots || scatterPlots.length === 0) return [];
     
     const { player, listaMesmaPos, serieBMesmaPos } = dados;
-    // Base de comparação para os pontos cinzas
     const base = [...listaMesmaPos, ...serieBMesmaPos];
     
     return scatterPlots.map(plot => {
-      // Funções auxiliares para buscar x e y considerando se é raw ou per90
-      const getX = (j) => getVal(j, { key: plot.xKey, type: plot.xType });
-      const getY = (j) => getVal(j, { key: plot.yKey, type: plot.yType });
+      const getX = (j) => getVal(j, { key: plot.xKey, type: plot.xType, label: plot.xLabel });
+      const getY = (j) => getVal(j, { key: plot.yKey, type: plot.yType, label: plot.yLabel });
 
-      // Trace da Liga (Pontos cinzas)
       const bgTrace = {
         x: base.map(getX),
         y: base.map(getY),
@@ -324,7 +329,6 @@ function PlayerProfileContent() {
         text: base.map(j => j.Jogador)
       };
 
-      // Trace do Atleta (Ponto destacado)
       const playerTrace = {
         x: [getX(player)],
         y: [getY(player)],
@@ -616,8 +620,8 @@ function PlayerProfileContent() {
                     <tr key={idx} className="hover:bg-slate-50 transition-colors">
                       <td className="px-6 py-2 text-slate-700 font-black uppercase tracking-tight">{m.label}</td>
                       <td className="px-6 py-2 text-right font-black text-black text-xs">
-                        {getVal(player, m).toFixed(3)}
-                        {m.label.includes('%') ? '%' : ''}
+                        {getVal(player, m).toFixed(1)}
+                        {m.label.includes('%') || m.key.includes('%') ? '%' : ''}
                       </td>
                     </tr>
                   ))}
