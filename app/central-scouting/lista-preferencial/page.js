@@ -68,6 +68,7 @@ function ListaPreferencialContent() {
   const [metricasSelecionadas, setMetricasSelecionadas] = useState([]);
   const [todasMetricas, setTodasMetricas] = useState([]);
   const [categoriaAtiva, setCategoriaAtiva] = useState('ATAQUE');
+  const [gerandoLote, setGerandoLote] = useState(false);
 
   const calcularPor90 = (valor, minutosJogados) => {
     const val = safeParseFloat(valor);
