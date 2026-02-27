@@ -84,29 +84,27 @@ const GRAFICOS_FALLBACK = [
   },
 ];
 // ─── Processar dados: pré-calcula per90 para todas as colunas numéricas ──────
-function processarDados(dados, aba) {
+// jaPer90: true quando os valores já chegam normalizados por 90min (GN, Série B)
+function processarDados(dados, aba, jaPer90 = false) {
   return dados.map(jogador => {
     const minutos = safeParseFloat(jogador['Minutos jogados']);
     const processado = { ...jogador, aba };
     Object.keys(jogador).forEach(key => {
       const rawVal = safeParseFloat(jogador[key]);
       if (!isNaN(rawVal)) {
-        processado[`${key}_per90`] = minutos > 0 ? (rawVal / minutos) * 90 : 0;
+        // GN e Série B já entregam valores per/90 — não dividir de novo
+        processado[`${key}_per90`] = jaPer90
+          ? rawVal
+          : (minutos > 0 ? (rawVal / minutos) * 90 : 0);
       }
     });
     return processado;
   });
 }
 
-// ─── Série B: valores já vêm por/90 — mapeia direto, sem transformar ─────────
+// ─── Série B: valores já vêm por/90 — alias para clareza ────────────────────
 function processarDadosSB(dados) {
-  return dados.map(jogador => {
-    const processado = { ...jogador, aba: 'SERIEB' };
-    Object.keys(jogador).forEach(key => {
-      processado[`${key}_per90`] = safeParseFloat(jogador[key]);
-    });
-    return processado;
-  });
+  return processarDados(dados, 'SERIEB', true);
 }
 
 function getVal(jogador, key, type) {
@@ -137,7 +135,9 @@ function gerarAnalise(lista, gn, serieB, config) {
   const nomesCompletos = completos.map(j => j.Jogador?.split(' ')[0]).filter(Boolean);
   const gnAbaixo = gn.filter(j => getVal(j, xKey, xType) < mediaListaX && getVal(j, yKey, yType) < mediaListaY);
   const diffXpct = mediaSBX > 0 ? ((mediaListaX - mediaSBX) / mediaSBX * 100) : 0;
+  const diffYpct = mediaSBY > 0 ? ((mediaListaY - mediaSBY) / mediaSBY * 100) : 0;
 
+  // IDs específicos com texto personalizado
   if (id === 'criacao-finalizacao') {
     let txt = `O gráfico cruza a capacidade de ${bold('criação de jogadas')} (passes chave/90) com o ${bold('potencial de finalização')} (xG/90), revelando quais atletas acumulam influência direta tanto na construção quanto no desfecho das jogadas ofensivas. `;
     txt += `A média da lista em passes chave é ${bold(mediaListaX.toFixed(2))}/90 — ${Math.abs(diffXpct).toFixed(0)}% ${diffXpct >= 0 ? 'acima' : 'abaixo'} da Série B (${mediaSBX.toFixed(2)}) — enquanto em xG a lista registra ${bold(mediaListaY.toFixed(2))}/90 frente a ${mediaSBY.toFixed(2)} da divisão. `;
@@ -198,7 +198,41 @@ function gerarAnalise(lista, gn, serieB, config) {
     return txt;
   }
 
-  return 'Análise não disponível para este gráfico.';
+  // ── GERADOR GENÉRICO para IDs de posição específica (ext-1x1, zag-fisico, etc.) ──
+  let txt = `O gráfico posiciona os atletas no cruzamento entre ${bold(xLabel)} e ${bold(yLabel)}, dois indicadores complementares para avaliar o perfil técnico-tático nesta função. `;
+
+  // Comparação com Série B
+  if (serieB.length > 0) {
+    const diffX = Math.abs(diffXpct).toFixed(0);
+    const diffY = Math.abs(diffYpct).toFixed(0);
+    txt += `A lista está ${diffXpct >= 0 ? bold(diffX+'% acima') : bold(diffX+'% abaixo')} da média da Série B em ${xLabel} (${bold(mediaListaX.toFixed(2))} vs ${mediaSBX.toFixed(2)}) e ${diffYpct >= 0 ? bold(diffY+'% acima') : bold(diffY+'% abaixo')} em ${yLabel} (${bold(mediaListaY.toFixed(2))} vs ${mediaSBY.toFixed(2)}). `;
+  } else {
+    txt += `A média da lista é ${bold(mediaListaX.toFixed(2))} em ${xLabel} e ${bold(mediaListaY.toFixed(2))} em ${yLabel}. `;
+  }
+
+  // Líderes
+  if (liderX) {
+    txt += `${bold(liderX.Jogador)} lidera em ${xLabel} com ${bold(getVal(liderX, xKey, xType).toFixed(2))}`;
+    if (liderY && liderY.Jogador !== liderX.Jogador) {
+      txt += `, enquanto ${bold(liderY.Jogador)} se destaca em ${yLabel} com ${bold(getVal(liderY, yKey, yType).toFixed(2))}. `;
+    } else {
+      txt += `. `;
+    }
+  }
+
+  // Quadrante superior direito (destaque completo)
+  if (nomesCompletos.length > 0) {
+    txt += `${bold(nomesCompletos.join(', '))} ${nomesCompletos.length > 1 ? 'reúnem' : 'reúne'} performance acima da média nos dois eixos — perfil prioritário para o recrutamento nesta função. `;
+  } else {
+    txt += `Nenhum atleta supera simultaneamente a média da lista nos dois indicadores — os perfis tendem a ser especializados. `;
+  }
+
+  // Elenco GN abaixo da média
+  if (gnAbaixo.length > 0) {
+    txt += `Do elenco GN, ${bold(gnAbaixo.map(j => j.Jogador?.split(' ')[0]).filter(Boolean).join(', '))} ficam abaixo da média da lista nos dois eixos, identificando área de melhoria ou necessidade de reforço.`;
+  }
+
+  return txt;
 }
 
 // ─── Componente de cada gráfico ──────────────────────────────────────────────
@@ -391,10 +425,10 @@ function DispersaoContent() {
         const [r1, r2, r3] = await Promise.all([fetch(urlLista), fetch(urlGN), fetch(urlSerieB)]);
         const [c1, c2, c3] = await Promise.all([r1.text(), r2.text(), r3.text()]);
 
-        const parseCSV = (csv, aba) => new Promise(resolve => {
+        const parseCSV = (csv, aba, jaPer90 = false) => new Promise(resolve => {
           Papa.parse(csv, {
             header: true, skipEmptyLines: true,
-            complete: r => resolve(processarDados(cleanData(r.data), aba))
+            complete: r => resolve(processarDados(cleanData(r.data), aba, jaPer90))
           });
         });
 
@@ -407,7 +441,7 @@ function DispersaoContent() {
 
         const [d1, d2, d3] = await Promise.all([
           parseCSV(c1, 'LISTA'),
-          parseCSV(c2, 'GN'),
+          parseCSV(c2, 'GN', true),
           parseSB(c3),
         ]);
 
