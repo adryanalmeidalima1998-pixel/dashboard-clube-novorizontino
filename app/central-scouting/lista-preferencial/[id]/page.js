@@ -242,10 +242,14 @@ function PlayerProfileContent() {
     const playerHover = metricasAtuais.map(m => `${m.label}: ${getVal(player, m).toFixed(2)}`);
     playerHover.push(playerHover[0]);
 
+    // Cor fixa para o jogador selecionado — SEMPRE amarelo/âmbar para destaque
+    const PLAYER_COLOR = '#f59e0b'; // âmbar — nunca conflita com GN ou outras séries
+
     const tracePlayer = {
       type: 'scatterpolar', mode: 'lines+markers', r: playerR, theta: labels,
-      fill: 'toself', fillcolor: `${pColor}44`, name: player.Jogador,
-      line: { color: pColor, width: 3 },
+      fill: 'toself', fillcolor: 'rgba(245,158,11,0.25)', name: player.Jogador,
+      line: { color: PLAYER_COLOR, width: 3 },
+      marker: { color: PLAYER_COLOR, size: 5 },
       text: playerHover, hoverinfo: 'text+name'
     };
 
@@ -276,18 +280,33 @@ function PlayerProfileContent() {
     const traceMediaLista = buildMediaTrace(listaMesmaPos, `Média Lista`, '#ef4444', 'rgba(239,68,68,0.12)');
     const traceMediaSB = buildMediaTrace(serieBMesmaPos, `Média Série B`, '#3b82f6', 'rgba(59,130,246,0.12)');
 
-    const CORES = ['#3b82f6','#10b981','#8b5cf6','#f97316','#ec4899','#06b6d4','#84cc16','#a855f7'];
+    // Paleta bem distinta para jogadores GN — nenhuma cor repete o âmbar do jogador principal
+    const CORES_GN = [
+      '#3b82f6', // azul
+      '#10b981', // verde-esmeralda
+      '#8b5cf6', // roxo
+      '#ef4444', // vermelho
+      '#ec4899', // rosa
+      '#06b6d4', // ciano
+      '#84cc16', // verde-limão
+      '#a855f7', // violeta
+    ];
+
     const gnCandidatos = (gnMesmaPos && gnMesmaPos.length > 0) ? gnMesmaPos : (dados.gn || []);
     
     const tracesGN = gnCandidatos.map((p, i) => {
+      const cor = CORES_GN[i % CORES_GN.length];
       const gnR = metricasAtuais.map(m => calcPercentilRadar(getVal(p, m), m));
       gnR.push(gnR[0]);
       const gnHover = metricasAtuais.map(m => `${m.label}: ${getVal(p, m).toFixed(2)}`);
       gnHover.push(gnHover[0]);
       
       return {
-        type: 'scatterpolar', mode: 'lines', r: gnR, theta: labels,
-        name: p.Jogador, line: { color: CORES[i % CORES.length], width: 2 },
+        type: 'scatterpolar', mode: 'lines+markers', r: gnR, theta: labels,
+        name: p.Jogador,
+        line: { color: cor, width: 2 },
+        marker: { color: cor, size: 4 },
+        opacity: 0.85,
         text: gnHover, hoverinfo: 'text+name'
       };
     });
@@ -344,6 +363,29 @@ function PlayerProfileContent() {
     showlegend: true,
     legend: { orientation: 'h', x: 0.5, y: -0.12, xanchor: 'center', font: { size: 9, color: '#111' } },
     margin: { l: 50, r: 50, t: 20, b: 30 },
+    paper_bgcolor: '#ffffff', plot_bgcolor: '#ffffff', autosize: true,
+  };
+
+  // Layout específico para o gráfico Vs Elenco GN (muitos jogadores = legenda lateral compacta)
+  const radarLayoutGN = {
+    polar: {
+      radialaxis: { visible: true, range: [0, 100], gridcolor: '#e2e8f0', showticklabels: false, ticks: '' },
+      angularaxis: { tickfont: { size: 8, color: '#111', family: 'Arial Black' }, gridcolor: '#e2e8f0', rotation: 90, direction: 'clockwise' },
+      bgcolor: '#ffffff',
+      domain: { x: [0, 0.72], y: [0.05, 0.95] },
+    },
+    showlegend: true,
+    legend: {
+      orientation: 'v',
+      x: 0.76, y: 0.5,
+      xanchor: 'left', yanchor: 'middle',
+      font: { size: 8, color: '#111', family: 'Arial' },
+      bgcolor: 'rgba(255,255,255,0.9)',
+      bordercolor: '#e2e8f0',
+      borderwidth: 1,
+      tracegroupgap: 1,
+    },
+    margin: { l: 40, r: 10, t: 20, b: 20 },
     paper_bgcolor: '#ffffff', plot_bgcolor: '#ffffff', autosize: true,
   };
 
@@ -452,7 +494,7 @@ function PlayerProfileContent() {
                 <div className="bg-white border-2 border-slate-900 rounded-[2rem] p-4 flex flex-col items-center shadow-lg">
                   <h3 className="text-black font-black text-[10px] uppercase tracking-widest mb-2 border-b-2 border-amber-500 px-4 pb-0.5">Vs Elenco GN</h3>
                   <div className="w-full h-[260px] radar-chart">
-                    <Plot data={radarData.gremio} layout={radarLayout} config={{ displayModeBar: false, responsive: true }} style={{ width: '100%', height: '100%' }} />
+                    <Plot data={radarData.gremio} layout={radarLayoutGN} config={{ displayModeBar: false, responsive: true }} style={{ width: '100%', height: '100%' }} />
                   </div>
                 </div>
               </div>
