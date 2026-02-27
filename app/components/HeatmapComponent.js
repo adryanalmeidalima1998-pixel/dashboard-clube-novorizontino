@@ -197,6 +197,26 @@ const BRUSHES = [
 const COL_LABELS = ['DEF','MEIO','TRANS','ATAQ','ÁREA'];
 const ROW_LABELS = ['A.Dir','M.Dir','M.Esq','A.Esq'];
 
+// ─── localStorage helpers ─────────────────────────────────────────────────────
+function storageKey(player) {
+  return `heatmap_zones_${player?.ID_ATLETA || player?.Jogador || 'unknown'}`;
+}
+function loadSavedZones(player) {
+  try {
+    const raw = localStorage.getItem(storageKey(player));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.length === COLS && parsed[0].length === ROWS) return parsed;
+  } catch {}
+  return null;
+}
+function saveZones(player, zones) {
+  try { localStorage.setItem(storageKey(player), JSON.stringify(zones)); } catch {}
+}
+function clearSavedZones(player) {
+  try { localStorage.removeItem(storageKey(player)); } catch {}
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function HeatmapComponent({ player }) {
   const autoZones = useMemo(() => {
@@ -204,12 +224,21 @@ export default function HeatmapComponent({ player }) {
     return computeZones(player);
   }, [player]);
 
-  const [editMode, setEditMode]     = useState(false);
+  const [editMode, setEditMode]       = useState(false);
   const [manualZones, setManualZones] = useState(null);
-  const [brush, setBrush]           = useState(BRUSHES[3]);
-  const [hovInfo, setHovInfo]       = useState(null);
+  const [brush, setBrush]             = useState(BRUSHES[3]);
+  const [hovInfo, setHovInfo]         = useState(null);
+  const [savedIndicator, setSavedIndicator] = useState(false);
+
+  // Load saved zones on mount / player change
+  useEffect(() => {
+    if (!player) return;
+    const saved = loadSavedZones(player);
+    setManualZones(saved); // null if nothing saved → auto mode
+  }, [player?.ID_ATLETA || player?.Jogador]);
 
   const activeZones = manualZones || autoZones;
+  const hasManual = manualZones !== null;
 
   const pe = String(player?.['Pé dominante']||player?.['Pé']||'').toUpperCase();
   const isRight = pe.includes('DIREITO')||pe==='R'||pe==='RIGHT';
@@ -223,9 +252,25 @@ export default function HeatmapComponent({ player }) {
     setManualZones(prev => {
       const next = (prev||autoZones).map(col=>[...col]);
       next[c][r] = brush.value;
+      // Save immediately on every paint
+      saveZones(player, next);
       return next;
     });
-  }, [brush, autoZones]);
+  }, [brush, autoZones, player]);
+
+  const handleSave = () => {
+    if (manualZones) {
+      saveZones(player, manualZones);
+      setSavedIndicator(true);
+      setTimeout(() => setSavedIndicator(false), 2000);
+    }
+    setEditMode(false);
+  };
+
+  const handleReset = () => {
+    clearSavedZones(player);
+    setManualZones(null);
+  };
 
   const handleZoneHover = useCallback((c, r) => {
     setHovInfo({c, r});
@@ -245,11 +290,31 @@ export default function HeatmapComponent({ player }) {
     <div className="bg-slate-900 border border-slate-700 rounded-xl overflow-hidden shadow-xl">
       {/* Header */}
       <div className="flex items-center justify-between bg-amber-500 px-3 py-2">
-        <span className="text-black font-black text-xs uppercase tracking-widest">
-          Mapa de Calor · Zona de Atuação
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-black font-black text-xs uppercase tracking-widest">
+            Mapa de Calor · Zona de Atuação
+          </span>
+          {hasManual && !editMode && (
+            <span style={{
+              background:'rgba(0,0,0,0.2)', color:'rgba(0,0,0,0.65)',
+              borderRadius:'4px', padding:'1px 6px',
+              fontSize:'8px', fontWeight:'800', letterSpacing:'0.1em',
+            }}>
+              ● EDITADO
+            </span>
+          )}
+          {savedIndicator && (
+            <span style={{
+              background:'rgba(0,0,0,0.2)', color:'rgba(0,0,0,0.65)',
+              borderRadius:'4px', padding:'1px 6px',
+              fontSize:'8px', fontWeight:'800', letterSpacing:'0.1em',
+            }}>
+              ✓ SALVO
+            </span>
+          )}
+        </div>
         <button
-          onClick={() => editMode ? setEditMode(false) : enterEdit()}
+          onClick={() => editMode ? handleSave() : enterEdit()}
           style={{
             background: editMode ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.15)',
             border: editMode ? '1px solid rgba(0,0,0,0.4)' : '1px solid rgba(0,0,0,0.2)',
@@ -259,7 +324,7 @@ export default function HeatmapComponent({ player }) {
             cursor:'pointer', textTransform:'uppercase', fontFamily:'inherit',
           }}
         >
-          {editMode ? '✎ EDITANDO' : '✎ EDITAR'}
+          {editMode ? '✓ SALVAR' : '✎ EDITAR'}
         </button>
       </div>
 
@@ -288,16 +353,21 @@ export default function HeatmapComponent({ player }) {
             </span>
           )}
           <div style={{display:'flex',gap:'4px',marginLeft:'auto'}}>
-            <button onClick={()=>setManualZones(Array.from({length:COLS},()=>new Array(ROWS).fill(0)))} style={{
+            <button onClick={()=>{ setManualZones(Array.from({length:COLS},()=>new Array(ROWS).fill(0))); saveZones(player, Array.from({length:COLS},()=>new Array(ROWS).fill(0))); }} style={{
               background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)',
               color:'#64748b', borderRadius:'5px', padding:'3px 8px',
               fontSize:'9px', fontWeight:'700', cursor:'pointer', fontFamily:'inherit',
             }}>LIMPAR</button>
-            <button onClick={()=>setManualZones(autoZones.map(col=>[...col]))} style={{
+            <button onClick={()=>{ const a=autoZones.map(col=>[...col]); setManualZones(a); saveZones(player, a); }} style={{
               background:'rgba(59,130,246,0.1)', border:'1px solid rgba(59,130,246,0.3)',
               color:'#93c5fd', borderRadius:'5px', padding:'3px 8px',
               fontSize:'9px', fontWeight:'700', cursor:'pointer', fontFamily:'inherit',
             }}>↺ AUTO</button>
+            <button onClick={()=>{ handleReset(); setEditMode(false); }} style={{
+              background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.3)',
+              color:'#fca5a5', borderRadius:'5px', padding:'3px 8px',
+              fontSize:'9px', fontWeight:'700', cursor:'pointer', fontFamily:'inherit',
+            }}>⌫ RESETAR</button>
           </div>
         </div>
       )}
