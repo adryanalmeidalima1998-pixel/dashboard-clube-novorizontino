@@ -386,7 +386,7 @@ function DispersaoContent() {
       try {
         const urlLista  = sheetUrl('LISTA_PREFERENCIAL');
         const urlGN     = sheetUrl('GREMIO_NOVORIZONTINO', false);
-        const urlSerieB = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQbSUvDghD3MPKBNEYz1cxeLgCmftwt5AoqkVmai6xCrA7W8fIy77Y2RlTmqR5w1A6a-MRPlV67pVYA/pub?output=csv';
+        const urlSerieB = sheetUrl('SERIE_B', false);
 
         const [r1, r2, r3] = await Promise.all([fetch(urlLista), fetch(urlGN), fetch(urlSerieB)]);
         const [c1, c2, c3] = await Promise.all([r1.text(), r2.text(), r3.text()]);

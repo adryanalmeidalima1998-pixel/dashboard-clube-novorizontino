@@ -26,8 +26,8 @@ const CSV_RANKING = sheetUrl('RANKING_PERFIL', false);
 // CSV do elenco do Grêmio Novorizontino (aba 2 da lista preferencial)
 const CSV_GREMIO = sheetUrl('GREMIO_NOVORIZONTINO', false);
 
-// CSV da Série B (benchmark)
-const CSV_SERIEB = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQbSUvDghD3MPKBNEYz1cxeLgCmftwt5AoqkVmai6xCrA7W8fIy77Y2RlTmqR5w1A6a-MRPlV67pVYA/pub?output=csv';
+// CSV da Série B (benchmark) — mesma planilha, aba correta
+const CSV_SERIEB = sheetUrl('SERIE_B', false);
 
 import { getMetricsByPosicao, calcMetricValue, calcPercentil } from '@/app/utils/positionMetrics';
 
@@ -291,15 +291,20 @@ function RankingPlayerProfileContent() {
         line: { color: '#3b82f6', dash: 'dot', width: 2 }, fillcolor: 'rgba(59, 130, 246, 0.15)', mode: 'lines',
       });
     } else {
-      const cores = ['#3b82f6', '#10b981', '#8b5cf6'];
-      gremioNovorizontino.slice(0, 3).forEach((p, i) => {
+      const cores = ['#3b82f6', '#10b981', '#8b5cf6', '#f97316', '#ec4899', '#06b6d4', '#84cc16', '#a855f7'];
+      const posicaoAtleta = (player.Posição || '').trim().toUpperCase();
+      const mesmaPosicao = gremioNovorizontino.filter(p =>
+        (p.Posição || '').trim().toUpperCase() === posicaoAtleta
+      );
+      const candidatos = mesmaPosicao.length > 0 ? mesmaPosicao : gremioNovorizontino;
+      candidatos.forEach((p, i) => {
         const gVals = [
           ...METRICAS_RADAR.map(m => (getValorMetrica(p, m) / (escalasMetricas[m.label]?.max || 1)) * 100),
           (getValorMetrica(p, METRICAS_RADAR[0]) / (escalasMetricas[METRICAS_RADAR[0].label]?.max || 1)) * 100,
         ];
         data.push({
           type: 'scatterpolar', r: gVals, theta: labels, name: p.Jogador,
-          line: { color: cores[i], width: 2 }, mode: 'lines',
+          line: { color: cores[i % cores.length], width: 2 }, mode: 'lines',
         });
       });
     }

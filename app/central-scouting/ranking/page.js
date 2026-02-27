@@ -1,680 +1,280 @@
 'use client';
 
-import { useState, useEffect, useMemo, Suspense } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useState, useEffect, useMemo } from 'react';
 import Papa from 'papaparse';
+import { getRankingByPerfil, getPerfisForPosicao } from '@/app/utils/ratingSystem';
 import { cleanData, safeParseFloat } from '@/app/utils/dataCleaner';
-import dynamic from 'next/dynamic';
-import HeatmapComponent from '@/app/components/HeatmapComponent';
+import { useRouter } from 'next/navigation';
 import { sheetUrl } from '@/app/datasources';
-import { calcularPerfilSugerido } from '@/app/utils/perfilAnalyzer';
-import { gerarTextoAnalise } from '@/app/utils/textGenerator';
-import { PERFIL_DESCRICOES } from '@/app/utils/perfilWeights';
 
-const Plot = dynamic(() => import('react-plotly.js'), {
-  ssr: false,
-  loading: () => (
-    <div className="h-48 flex items-center justify-center text-slate-500 font-bold italic animate-pulse text-2xl">
-      CARREGANDO GRÁFICOS...
-    </div>
-  ),
-});
+export default function RankingPerfil() {
+  const router = useRouter();
+  const [atletas, setAtletas] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-// CSV do Ranking de Perfil (mesmo da página de lista)
-const CSV_RANKING = sheetUrl('RANKING_PERFIL', false);
+  const [selectedPerfil, setSelectedPerfil] = useState('');
+  const [minMinutos, setMinMinutos] = useState(450);
+  const [allPerfis, setAllPerfis] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedPosicao, setSelectedPosicao] = useState('');
+  const [selectedTime, setSelectedTime] = useState('');
+  const [minIdade, setMinIdade] = useState('');
+  const [maxIdade, setMaxIdade] = useState('');
+  const [options, setOptions] = useState({ posicoes: [], times: [] });
+  const [sortConfig, setSortConfig] = useState({ key: 'notaPerfil', direction: 'desc' });
+  const [comparisonModal, setComparisonModal] = useState({ open: false, player1: null, player2: null });
 
-// CSV do elenco do Grêmio Novorizontino (aba 2 da lista preferencial)
-const CSV_GREMIO = sheetUrl('GREMIO_NOVORIZONTINO', false);
-
-// CSV da Série B (benchmark)
-const CSV_SERIEB = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQbSUvDghD3MPKBNEYz1cxeLgCmftwt5AoqkVmai6xCrA7W8fIy77Y2RlTmqR5w1A6a-MRPlV67pVYA/pub?output=csv';
-
-import { getMetricsByPosicao, calcMetricValue, calcPercentil } from '@/app/utils/positionMetrics';
-
-// METRICAS_RADAR é agora dinâmico por posição — definido no useMemo abaixo
-// Mantemos um fallback estático para posições sem configuração
-const METRICAS_RADAR_FALLBACK = [
-  { label: 'Passes Chave',              key: 'Passes chave',                                    type: 'per90' },
-  { label: 'Passes Progressivos %',     key: 'Passes progressivos precisos,%',                  type: 'raw'   },
-  { label: 'Dribles Certos/90',         key: 'Dribles bem sucedidos',                           type: 'per90' },
-  { label: 'Entradas 1/3 Final (C)',    key: 'Entradas no terço final carregando a bola',       type: 'per90' },
-  { label: 'Recuperações Campo Adv',    key: 'Bolas recuperadas no campo do adversário',        type: 'per90' },
-  { label: 'xA',                        key: 'xA',                                              type: 'raw'   },
-  { label: 'xG',                        key: 'Xg',                                              type: 'raw'   },
-  { label: 'Chances Criadas/90',        key: 'Chances criadas',                                 type: 'per90' },
-  { label: 'Interceptações/90',         key: 'Interceptações',                                  type: 'per90' },
-  { label: 'Ações Área Adv./90',        key: 'Ações na área adversária bem-sucedidas',          type: 'per90' },
-];
-
-// ─── helpers ──────────────────────────────────────────────────────────────────
-
-function processarDados(dados, aba) {
-  return dados.map(jogador => {
-    const minutos = safeParseFloat(jogador['Minutos jogados']);
-    const processado = { ...jogador, aba };
-    // Pré-calcula per90 para todas as métricas possíveis de todas as posições
-    Object.keys(jogador).forEach(key => {
-      const rawVal = safeParseFloat(jogador[key]);
-      if (!isNaN(rawVal) && rawVal >= 0) {
-        processado[`${key}_per90`] = minutos > 0 ? (rawVal / minutos) * 90 : 0;
-      }
-    });
-    return processado;
-  });
-}
-
-// Série B: valores já vêm por/90 — mapeia direto
-function processarDadosSB(dados) {
-  return dados.map(jogador => {
-    const processado = { ...jogador, aba: 'SERIEB' };
-    Object.keys(jogador).forEach(key => {
-      processado[`${key}_per90`] = safeParseFloat(jogador[key]);
-    });
-    return processado;
-  });
-}
-
-function getPlayerPhoto(name) {
-  if (!name) return '/images/players/default.png';
-  const cleanName = name.trim();
-  const mapa = {
-    'Kayke':           'Kayke_Ferrari.png',
-    'Rodrigo Farofa':  'rodrigo_rodrigues.png',
-    'Allison Patrick': 'Allison.png',
-    'Santi González':  'santi_gonzález.png',
-    'Sorriso':         'sorriso.png',
-    'Romarinho':       'romarinho.png',
-  };
-  if (mapa[cleanName]) return `/images/players/${mapa[cleanName]}`;
-  return `/images/players/${cleanName.replace(/\s+/g, '_')}.png`;
-}
-
-// ─── Componente principal ────────────────────────────────────────────────────
-
-function RankingPlayerProfileContent() {
-  const { id } = useParams();
-  const router  = useRouter();
-
-  const [player,           setPlayer]           = useState(null);
-  const [rankingList,      setRankingList]       = useState([]);   // todos os jogadores do ranking
-  const [gremioNovorizontino, setGremioNovorizontino] = useState([]);
-  const [serieB,           setSerieB]            = useState([]);
-  const [loading,          setLoading]           = useState(true);
-
-  // perfil
-  const [perfisRankeados,  setPerfisRankeados]   = useState([]);
-  const [perfilSelecionado, setPerfilSelecionado] = useState('');
-  const [textoAnalitico,   setTextoAnalitico]     = useState('');
-  const [perfilEditando,   setPerfilEditando]     = useState(false);
-
-  // ── Fetch ──────────────────────────────────────────────────────────────────
   useEffect(() => {
-    const loadData = async () => {
+    const fetchData = async () => {
       try {
-        const [resRanking, resGremio, resSB] = await Promise.all([
-          fetch(`${CSV_RANKING}&t=${Date.now()}`),
-          fetch(`${CSV_GREMIO}&t=${Date.now()}`),
-          fetch(`${CSV_SERIEB}&t=${Date.now()}`),
-        ]);
-        const [csvRanking, csvGremio, csvSB] = await Promise.all([
-          resRanking.text(), resGremio.text(), resSB.text(),
-        ]);
-
-        // Ranking
-        Papa.parse(csvRanking, {
+        setLoading(true);
+        const response = await fetch(sheetUrl('RANKING_PERFIL'));
+        const csvText = await response.text();
+        Papa.parse(csvText, {
           header: true, skipEmptyLines: true,
           complete: (results) => {
-            const cleaned  = cleanData(results.data);
-            const dados    = processarDados(cleaned, 'RANKING');
-
-            // Normaliza campo TIME
-            dados.forEach(p => {
-              const timeKey = Object.keys(p).find(k => k.toLowerCase() === 'time') || 'Time';
-              p.TIME_FIXED = p[timeKey] || p['Equipa'] || p['Equipe'] || '-';
+            const cleaned = cleanData(results.data);
+            setAtletas(cleaned);
+            const perfisUnicos = new Set();
+            const posicoes = new Set();
+            const times = new Set();
+            cleaned.forEach(a => {
+              if (a.Posicao || a.Posição) {
+                const pos = (a.Posicao || a.Posição).trim().toUpperCase();
+                posicoes.add(pos);
+                getPerfisForPosicao(a.Posicao || a.Posição).forEach(p => perfisUnicos.add(p));
+              }
+              if (a.Time) times.add(a.Time);
             });
-
-            setRankingList(dados);
-
-            const decodedId = decodeURIComponent(id);
-            const found = dados.find(d =>
-              d.ID_ATLETA === decodedId ||
-              d.Jogador   === decodedId
-            );
-            if (found) setPlayer(found);
+            const sortedPerfis = Array.from(perfisUnicos).sort();
+            setAllPerfis(sortedPerfis);
+            setOptions({ posicoes: Array.from(posicoes).sort(), times: Array.from(times).sort() });
+            if (sortedPerfis.length > 0) setSelectedPerfil(sortedPerfis[0]);
+            setLoading(false);
           },
+          error: (err) => { setError(err.message); setLoading(false); }
         });
-
-        // Grêmio Novorizontino
-        Papa.parse(csvGremio, {
-          header: true, skipEmptyLines: true,
-          complete: (results) =>
-            setGremioNovorizontino(processarDados(cleanData(results.data), 'GRÊMIO NOVORIZONTINO')),
-        });
-
-        // Série B
-        Papa.parse(csvSB, {
-          header: true, skipEmptyLines: true,
-          complete: (results) =>
-            setSerieB(processarDadosSB(cleanData(results.data))),
-        });
-
-        setLoading(false);
-      } catch (error) {
-        console.error('Erro ao carregar dados:', error);
+      } catch (err) {
+        setError(err.message);
         setLoading(false);
       }
     };
-    loadData();
-  }, [id]);
+    fetchData();
+  }, []);
 
-  // ── Perfil sugerido ────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!player || rankingList.length === 0) return;
-    const populacao = [...rankingList, ...serieB];
-    const ranked    = calcularPerfilSugerido(player, populacao);
-    setPerfisRankeados(ranked);
-    setPerfilSelecionado(prev => prev || ranked[0]?.perfil || '');
-  }, [player, rankingList, serieB]);
-
-  // ── Texto analítico ────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!player || !perfilSelecionado || rankingList.length === 0) return;
-    const texto = gerarTextoAnalise({
-      player,
-      perfil:           perfilSelecionado,
-      descricaoPerfil:  PERFIL_DESCRICOES[perfilSelecionado] || '',
-      listaPreferencial: rankingList,   // mesma assinatura do textGenerator
-      serieB,
-      metricas:         METRICAS_RADAR,
+  const processedRanking = useMemo(() => {
+    if (atletas.length === 0 || !selectedPerfil) return [];
+    let ranking = getRankingByPerfil(atletas, selectedPerfil, minMinutos);
+    ranking = ranking.filter(a => {
+      const nomeOk = (a.Jogador || '').toLowerCase().includes(searchTerm.toLowerCase());
+      const posOk = !selectedPosicao || (a.Posicao || a.Posição || '').trim().toUpperCase() === selectedPosicao;
+      const timeOk = !selectedTime || a.Time === selectedTime;
+      const idMin = !minIdade || parseInt(a.Idade) >= parseInt(minIdade);
+      const idMax = !maxIdade || parseInt(a.Idade) <= parseInt(maxIdade);
+      return nomeOk && posOk && timeOk && idMin && idMax;
     });
-    setTextoAnalitico(texto);
-  }, [perfilSelecionado, player, rankingList, serieB]);
+    return ranking;
+  }, [atletas, selectedPerfil, minMinutos, searchTerm, selectedPosicao, selectedTime, minIdade, maxIdade]);
 
-  // ── Métricas dinâmicas por posição ────────────────────────────────────────
-  const METRICAS_RADAR = useMemo(() => {
-    if (!player) return METRICAS_RADAR_FALLBACK;
-    const posicaoConfig = getMetricsByPosicao(player.Posição || '');
-    if (!posicaoConfig) return METRICAS_RADAR_FALLBACK;
-    return posicaoConfig.radarMetrics;
-  }, [player]);
-
-  // Jogadores da mesma posição para comparação real
-  const mesmaposicaoRanking = useMemo(() => {
-    if (!player) return rankingList;
-    const posKey = player.Posição?.trim()?.toUpperCase();
-    const filtered = rankingList.filter(j =>
-      j.Posição?.trim()?.toUpperCase() === posKey
-    );
-    return filtered.length >= 3 ? filtered : rankingList;
-  }, [player, rankingList]);
-
-  // ── Valor de métrica ───────────────────────────────────────────────────────
-  const getValorMetrica = (jogador, metrica) => {
-    if (!jogador) return 0;
-    if (metrica.type === 'per90') {
-      return safeParseFloat(jogador[`${metrica.key}_per90`]);
-    }
-    return safeParseFloat(jogador[metrica.key]);
+  const calcSim = (p1, p2) => {
+    const keys = Object.keys(p1).filter(k => !['Jogador','Time','Posicao','Posição','Idade','Nacionalidade','Minutos jogados','notaPerfil','ID_ATLETA'].includes(k));
+    let diff = 0;
+    keys.forEach(k => diff += Math.abs(safeParseFloat(p1[k]) - safeParseFloat(p2[k])));
+    return Math.round(Math.min(100, Math.max(0, 100 - (diff / keys.length) * 2)));
   };
 
-  // ── Escalas (máximos) por métrica ─────────────────────────────────────────
-  const escalasMetricas = useMemo(() => {
-    const todos = [...mesmaposicaoRanking, ...gremioNovorizontino, ...serieB];
-    const escalas = {};
-    METRICAS_RADAR.forEach(m => {
-      const valores = todos.map(j => getValorMetrica(j, m)).filter(v => v >= 0);
-      escalas[m.label] = { max: Math.max(...valores, 0.1) };
-    });
-    return escalas;
-  }, [rankingList, gremioNovorizontino, serieB]);
-
-  // ── Pontos fortes e fracos ─────────────────────────────────────────────────
-  const pontosFortesFragos = useMemo(() => {
-    if (!player || rankingList.length === 0) return { fortes: [], fracos: [] };
-
-    const baseComparacao = [...mesmaposicaoRanking, ...serieB];
-
-    const comparacoes = METRICAS_RADAR.map(m => {
-      const valAtleta  = getValorMetrica(player, m);
-      const valores    = baseComparacao.map(j => getValorMetrica(j, m)).filter(v => v >= 0);
-      const media      = valores.reduce((a, b) => a + b, 0) / (valores.length || 1);
-      const diff       = media > 0 ? ((valAtleta - media) / media) * 100 : 0;
-      const percentil  = Math.round((valores.filter(v => v <= valAtleta).length / valores.length) * 100);
-      return { label: m.label, diff, percentil, valAtleta, media };
-    });
-
-    const ordenado = [...comparacoes].sort((a, b) => b.diff - a.diff);
-    const fortes   = ordenado.filter(m => m.diff >  5 && m.percentil >= 55).slice(0, 3);
-    const fracos   = [...ordenado].reverse().filter(m => m.diff < -5 && m.percentil <= 45).slice(0, 3);
-    return { fortes, fracos };
-  }, [player, rankingList, escalasMetricas]);
-
-  // ── Dados do Radar ─────────────────────────────────────────────────────────
-  const getRadarData = (type) => {
-    if (!player) return [];
-
-    const labels     = [...METRICAS_RADAR.map(m => m.label), METRICAS_RADAR[0].label];
-    const playerVals = [
-      ...METRICAS_RADAR.map(m => (getValorMetrica(player, m) / (escalasMetricas[m.label]?.max || 1)) * 100),
-      (getValorMetrica(player, METRICAS_RADAR[0]) / (escalasMetricas[METRICAS_RADAR[0].label]?.max || 1)) * 100,
-    ];
-
-    const data = [{
-      type: 'scatterpolar', r: playerVals, theta: labels, fill: 'toself', name: player.Jogador,
-      line: { color: '#fbbf24', width: 3 }, fillcolor: 'rgba(251, 191, 36, 0.4)', mode: 'lines',
-    }];
-
-    if (type === 'media') {
-      const mediaVals = [
-        ...METRICAS_RADAR.map(m => {
-          const valores = mesmaposicaoRanking.map(j => getValorMetrica(j, m));
-          return ((valores.reduce((a, b) => a + b, 0) / (valores.length || 1)) / (escalasMetricas[m.label]?.max || 1)) * 100;
-        }),
-        0,
-      ];
-      mediaVals[mediaVals.length - 1] = mediaVals[0];
-      data.push({
-        type: 'scatterpolar', r: mediaVals, theta: labels, fill: 'toself', name: `Média ${player?.Posição || 'Posição'}`,
-        line: { color: '#ef4444', dash: 'dot', width: 2 }, fillcolor: 'rgba(239, 68, 68, 0.15)', mode: 'lines',
-      });
-    } else if (type === 'serieb') {
-      const mediaVals = [
-        ...METRICAS_RADAR.map(m => {
-          const valores = serieB.map(j => getValorMetrica(j, m));
-          return ((valores.reduce((a, b) => a + b, 0) / (valores.length || 1)) / (escalasMetricas[m.label]?.max || 1)) * 100;
-        }),
-        0,
-      ];
-      mediaVals[mediaVals.length - 1] = mediaVals[0];
-      data.push({
-        type: 'scatterpolar', r: mediaVals, theta: labels, fill: 'toself', name: 'Média Série B',
-        line: { color: '#3b82f6', dash: 'dot', width: 2 }, fillcolor: 'rgba(59, 130, 246, 0.15)', mode: 'lines',
-      });
-    } else {
-      const cores = ['#3b82f6', '#10b981', '#8b5cf6'];
-      gremioNovorizontino.slice(0, 3).forEach((p, i) => {
-        const gVals = [
-          ...METRICAS_RADAR.map(m => (getValorMetrica(p, m) / (escalasMetricas[m.label]?.max || 1)) * 100),
-          (getValorMetrica(p, METRICAS_RADAR[0]) / (escalasMetricas[METRICAS_RADAR[0].label]?.max || 1)) * 100,
-        ];
-        data.push({
-          type: 'scatterpolar', r: gVals, theta: labels, name: p.Jogador,
-          line: { color: cores[i], width: 2 }, mode: 'lines',
-        });
-      });
-    }
-
-    return data;
+  const notaColor = (nota) => {
+    const n = parseFloat(nota);
+    if (n >= 80) return 'text-emerald-600';
+    if (n >= 60) return 'text-amber-500';
+    if (n >= 40) return 'text-orange-400';
+    return 'text-red-500';
   };
 
-  const radarLayout = {
-    polar: {
-      radialaxis: { visible: true, range: [0, 100], gridcolor: '#ddd', showticklabels: false },
-      angularaxis: { tickfont: { size: 9, color: '#000', weight: 'bold' }, gridcolor: '#ddd', rotation: 90, direction: 'clockwise' },
-      bgcolor: '#fff',
-    },
-    showlegend: true,
-    legend: { orientation: 'h', x: 0.5, y: -0.1, font: { size: 10, color: '#000' }, xanchor: 'center' },
-    margin: { l: 50, r: 50, t: 30, b: 30 },
-    paper_bgcolor: '#fff', plot_bgcolor: '#fff', autosize: true,
-  };
+  const navId = (a) => encodeURIComponent(a.ID_ATLETA || a.Jogador);
 
-  // ── Navegação prev / next dentro do ranking ────────────────────────────────
-  const navigation = useMemo(() => {
-    if (!player || rankingList.length === 0) return { prev: null, next: null };
-    const decodedId = decodeURIComponent(id);
-    const idx = rankingList.findIndex(p =>
-      p.ID_ATLETA === decodedId || p.Jogador === decodedId
-    );
-    return {
-      prev: idx > 0                      ? rankingList[idx - 1] : null,
-      next: idx < rankingList.length - 1 ? rankingList[idx + 1] : null,
-    };
-  }, [player, rankingList, id]);
+  if (loading) return <div className="min-h-screen bg-white flex items-center justify-center text-amber-600 font-black italic animate-pulse text-2xl uppercase">Carregando Ranking...</div>;
+  if (error) return <div className="min-h-screen bg-white flex items-center justify-center text-red-600 font-black text-lg">Erro: {error}</div>;
 
-  const navId = (p) => encodeURIComponent(p.ID_ATLETA || p.Jogador);
-
-  // ── Guards ─────────────────────────────────────────────────────────────────
-  if (loading) return (
-    <div className="min-h-screen bg-white flex items-center justify-center text-amber-600 font-black italic animate-pulse text-2xl uppercase">
-      Carregando Relatório...
-    </div>
-  );
-  if (!player) return (
-    <div className="min-h-screen bg-white flex items-center justify-center text-black font-black uppercase text-2xl">
-      Atleta não encontrado.
-    </div>
-  );
-
-  // ─────────────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-white text-black p-4 font-sans print:p-0 overflow-x-hidden">
-      <style jsx global>{`
-        @media print {
-          @page { size: landscape; margin: 0.2cm; }
-          .no-print { display: none !important; }
-          body { background: white !important; color: black !important;
-                 -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-          .print-container { width: 100% !important; max-width: none !important;
-                             margin: 0 !important; padding: 0.1cm !important;
-                             transform: scale(0.96); transform-origin: top left; }
-          .radar-chart { height: 260px !important; }
-        }
-      `}</style>
+    <div className="min-h-screen bg-white text-black p-4 font-sans overflow-x-hidden">
+      <div className="max-w-[1400px] mx-auto flex flex-col gap-4">
 
-      <div className="max-w-[1600px] mx-auto print-container flex flex-col gap-3">
-
-        {/* ── HEADER ──────────────────────────────────────────────────────── */}
+        {/* HEADER */}
         <header className="flex justify-between items-center border-b-4 border-amber-500 pb-2">
           <div className="flex items-center gap-4">
-            <img src="/club/escudonovorizontino.png" alt="Shield" className="h-16 w-auto" />
+            <img src="/club/escudonovorizontino.png" alt="GN" className="h-16 w-auto" onError={e => e.target.style.display='none'} />
             <div>
               <h1 className="text-3xl font-black tracking-tighter text-black uppercase leading-none">Grêmio Novorizontino</h1>
               <p className="text-base font-bold tracking-widest text-slate-600 uppercase">Departamento de Scouting</p>
             </div>
           </div>
-
           <div className="text-right flex flex-col items-end gap-2">
-            <div className="flex gap-2 no-print">
-              {navigation.prev && (
-                <button
-                  onClick={() => router.push(`/central-scouting/ranking/${navId(navigation.prev)}`)}
-                  className="bg-slate-800 text-white px-3 py-1 rounded-md text-xs font-bold hover:bg-slate-700 transition-colors flex items-center gap-1"
-                >
-                  ← ANTERIOR
-                </button>
-              )}
-              <button
-                onClick={() => router.push('/central-scouting/ranking')}
-                className="bg-slate-200 text-slate-800 px-3 py-1 rounded-md text-xs font-bold hover:bg-slate-300 transition-colors"
-              >
-                RANKING
-              </button>
-              {navigation.next && (
-                <button
-                  onClick={() => router.push(`/central-scouting/ranking/${navId(navigation.next)}`)}
-                  className="bg-amber-500 text-black px-3 py-1 rounded-md text-xs font-bold hover:bg-amber-400 transition-colors flex items-center gap-1"
-                >
-                  PRÓXIMO →
-                </button>
-              )}
-            </div>
-            <div className="bg-amber-500 text-black px-6 py-1 font-black text-xl uppercase italic shadow-md">
-              Ranking de Perfil
-            </div>
-            <div className="text-slate-600 font-black text-[10px] mt-1 tracking-wider uppercase">
-              DATA: {new Date().toLocaleDateString('pt-BR')} | {player.Jogador}
-            </div>
+            <button onClick={() => router.push('/central-scouting')} className="bg-slate-200 text-slate-800 px-3 py-1 rounded-md text-xs font-bold hover:bg-slate-300 transition-colors">← VOLTAR</button>
+            <div className="bg-amber-500 text-black px-6 py-1 font-black text-xl uppercase italic shadow-md">Ranking de Perfil</div>
+            <div className="text-slate-600 font-black text-[10px] mt-1 tracking-wider uppercase">DATA: {new Date().toLocaleDateString('pt-BR')} · {processedRanking.length} ATLETAS</div>
           </div>
         </header>
 
-        {/* ── GRID PRINCIPAL ───────────────────────────────────────────────── */}
-        <div className="grid grid-cols-12 gap-3">
-
-          {/* COLUNA ESQUERDA: Foto + Heatmap */}
-          <div className="col-span-3 flex flex-col gap-3">
-            <div className="bg-white border-2 border-slate-900 rounded-[2rem] overflow-hidden shadow-lg">
-              <div className="relative h-48 bg-slate-50 border-b-2 border-slate-900">
-                <img
-                  src={getPlayerPhoto(player.Jogador)}
-                  alt={player.Jogador}
-                  className="absolute bottom-0 left-1/2 -translate-x-1/2 h-full object-contain"
-                  onError={e => { e.target.src = '/images/players/default.png'; }}
-                />
-              </div>
-              <div className="p-4">
-                <h2 className="text-2xl font-black text-black uppercase mb-2 leading-none">{player.Jogador}</h2>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <p className="text-[9px] text-slate-500 uppercase font-black tracking-widest">TIME</p>
-                    <p className="text-sm font-black truncate">{player.TIME_FIXED || player.Time || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-[9px] text-slate-500 uppercase font-black tracking-widest">Posição</p>
-                    <p className="text-sm font-black">{player.Posição || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-[9px] text-slate-500 uppercase font-black tracking-widest">Idade</p>
-                    <p className="text-sm font-black">{player.Idade} anos</p>
-                  </div>
-                  <div>
-                    <p className="text-[9px] text-slate-500 uppercase font-black tracking-widest">Minutos</p>
-                    <p className="text-sm font-black">{player['Minutos jogados']}'</p>
-                  </div>
-                  <div>
-                    <p className="text-[9px] text-slate-500 uppercase font-black tracking-widest">Pé</p>
-                    <p className="text-sm font-black">{player['Pé dominante'] || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-[9px] text-slate-500 uppercase font-black tracking-widest">Nac.</p>
-                    <p className="text-sm font-black">{player.Nacionalidade || '-'}</p>
-                  </div>
-                </div>
-              </div>
+        {/* FILTROS */}
+        <div className="bg-white border-2 border-slate-200 rounded-2xl p-4 shadow-sm">
+          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3">Filtros</p>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+            <div className="col-span-2">
+              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-1.5">Perfil Tático</label>
+              <select value={selectedPerfil} onChange={e => setSelectedPerfil(e.target.value)} className="w-full border-2 border-amber-500 rounded-xl p-2.5 text-[10px] font-black uppercase outline-none bg-white">
+                {allPerfis.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
             </div>
-            <div className="scale-95 origin-top-left">
-              <HeatmapComponent player={player} />
+            <div className="col-span-2">
+              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-1.5">Buscar atleta</label>
+              <input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Nome..." className="w-full border-2 border-slate-200 rounded-xl p-2.5 text-[10px] font-black outline-none focus:border-amber-500 placeholder:text-slate-300" />
+            </div>
+            <div>
+              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-1.5">Min. Min.</label>
+              <input type="number" value={minMinutos} onChange={e => setMinMinutos(parseInt(e.target.value)||0)} className="w-full border-2 border-slate-200 rounded-xl p-2.5 text-[10px] font-black outline-none focus:border-amber-500" />
+            </div>
+            <div>
+              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-1.5">Posição</label>
+              <select value={selectedPosicao} onChange={e => setSelectedPosicao(e.target.value)} className="w-full border-2 border-slate-200 rounded-xl p-2.5 text-[10px] font-black uppercase outline-none focus:border-amber-500 bg-white">
+                <option value="">Todas</option>
+                {options.posicoes.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-1.5">Time</label>
+              <select value={selectedTime} onChange={e => setSelectedTime(e.target.value)} className="w-full border-2 border-slate-200 rounded-xl p-2.5 text-[10px] font-black uppercase outline-none focus:border-amber-500 bg-white">
+                <option value="">Todos</option>
+                {options.times.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
             </div>
           </div>
-
-          {/* COLUNA DIREITA: Radares (2/3) + Análise Técnica (1/3) */}
-          <div className="col-span-9 grid grid-cols-3 gap-3">
-
-            {/* Radares: 2 das 3 colunas */}
-            <div className="col-span-2 flex flex-col gap-3">
-              {/* Radar Média Ranking + Radar Elenco GN lado a lado */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-white border-2 border-slate-900 rounded-[2rem] p-4 flex flex-col items-center shadow-lg">
-                  <h3 className="text-black font-black text-[10px] uppercase tracking-widest mb-2 border-b-2 border-amber-500 px-4 pb-0.5">
-                    Vs Média Ranking
-                  </h3>
-                  <div className="w-full h-[260px] radar-chart">
-                    <Plot
-                      data={getRadarData('media')}
-                      layout={radarLayout}
-                      config={{ displayModeBar: false, responsive: true }}
-                      style={{ width: '100%', height: '100%' }}
-                    />
-                  </div>
-                </div>
-                <div className="bg-white border-2 border-slate-900 rounded-[2rem] p-4 flex flex-col items-center shadow-lg">
-                  <h3 className="text-black font-black text-[10px] uppercase tracking-widest mb-2 border-b-2 border-amber-500 px-4 pb-0.5">
-                    Vs Elenco GN
-                  </h3>
-                  <div className="w-full h-[260px] radar-chart">
-                    <Plot
-                      data={getRadarData('gremio')}
-                      layout={radarLayout}
-                      config={{ displayModeBar: false, responsive: true }}
-                      style={{ width: '100%', height: '100%' }}
-                    />
-                  </div>
-                </div>
-              </div>
-              {/* Radar Série B */}
-              <div className="bg-white border-2 border-slate-900 rounded-[2rem] p-4 flex flex-col items-center shadow-lg">
-                <h3 className="text-black font-black text-[10px] uppercase tracking-widest mb-2 border-b-2 border-amber-500 px-4 pb-0.5">
-                  Vs Série B
-                </h3>
-                <div className="w-full h-[260px] radar-chart">
-                  <Plot
-                    data={getRadarData('serieb')}
-                    layout={radarLayout}
-                    config={{ displayModeBar: false, responsive: true }}
-                    style={{ width: '100%', height: '100%' }}
-                  />
-                </div>
-              </div>
+          <div className="grid grid-cols-2 gap-3 mt-3 max-w-xs">
+            <div>
+              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-1.5">Idade mín.</label>
+              <input type="number" value={minIdade} onChange={e => setMinIdade(e.target.value)} placeholder="Ex: 18" className="w-full border-2 border-slate-200 rounded-xl p-2.5 text-[10px] font-black outline-none focus:border-amber-500 placeholder:text-slate-300" />
             </div>
-
-            {/* Análise Técnica: 1 das 3 colunas */}
-            {textoAnalitico && (
-              <div className="col-span-1 bg-white border-2 border-slate-900 rounded-[1.5rem] overflow-hidden shadow-lg flex flex-col">
-                <div className="bg-slate-900 text-white font-black text-center py-2 text-[10px] uppercase tracking-widest">
-                  Análise Técnica
-                </div>
-                <div className="p-4 flex flex-col gap-3 flex-1">
-
-                  {/* Perfil sugerido + seletor */}
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Perfil Técnico:</span>
-                    {!perfilEditando ? (
-                      <>
-                        <span className="bg-amber-500 text-black font-black text-[10px] uppercase px-2 py-0.5 rounded-full tracking-wide">
-                          {perfilSelecionado}
-                        </span>
-                        <button
-                          onClick={() => setPerfilEditando(true)}
-                          className="no-print text-[9px] font-black text-slate-400 hover:text-black uppercase tracking-widest underline underline-offset-2 transition-colors"
-                        >
-                          Ajustar
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <select
-                          value={perfilSelecionado}
-                          onChange={e => { setPerfilSelecionado(e.target.value); setPerfilEditando(false); }}
-                          className="no-print border-2 border-amber-500 rounded-lg px-2 py-0.5 text-[10px] font-black bg-white text-black uppercase focus:outline-none"
-                          autoFocus
-                        >
-                          {perfisRankeados.map(({ perfil, percentual }) => (
-                            <option key={perfil} value={perfil}>
-                              {perfil} {percentual >= 100 ? '★' : `(${percentual}%)`}
-                            </option>
-                          ))}
-                        </select>
-                        <button
-                          onClick={() => setPerfilEditando(false)}
-                          className="no-print text-[9px] font-black text-slate-400 hover:text-black uppercase tracking-widest underline underline-offset-2 transition-colors"
-                        >
-                          Cancelar
-                        </button>
-                      </>
-                    )}
-                  </div>
-
-                  {/* Parágrafo analítico */}
-                  <p className="text-[10px] text-slate-800 leading-relaxed font-medium">
-                    {textoAnalitico.split('**').map((part, i) =>
-                      i % 2 === 1
-                        ? <strong key={i} className="font-black text-black">{part}</strong>
-                        : <span key={i}>{part}</span>
-                    )}
-                  </p>
-
-                  {/* Pontos fortes e fracos */}
-                  {pontosFortesFragos.fortes.length > 0 && (
-                    <div className="flex flex-col gap-2 mt-1">
-
-                      <div>
-                        <div className="flex items-center gap-1.5 mb-1.5">
-                          <div className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" />
-                          <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Pontos Fortes</span>
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          {pontosFortesFragos.fortes.map((item, i) => (
-                            <div key={i} className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-lg px-2.5 py-1.5">
-                              <span className="text-[9px] font-black text-slate-700 uppercase tracking-tight leading-tight">{item.label}</span>
-                              <div className="flex items-center gap-1.5 flex-shrink-0 ml-1">
-                                <span className="text-[9px] font-black text-emerald-700">+{item.percentil}%</span>
-                                <span className="text-[8px] font-bold text-emerald-700 bg-white border border-emerald-200 rounded px-1">
-                                  Top {100 - item.percentil}%
-                                </span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div>
-                        <div className="flex items-center gap-1.5 mb-1.5">
-                          <div className="w-2 h-2 rounded-full bg-red-400 flex-shrink-0" />
-                          <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Pontos de Atenção</span>
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          {pontosFortesFragos.fracos.map((item, i) => (
-                            <div key={i} className="flex items-center justify-between bg-red-50 border border-red-200 rounded-lg px-2.5 py-1.5">
-                              <span className="text-[9px] font-black text-slate-700 uppercase tracking-tight leading-tight">{item.label}</span>
-                              <div className="flex items-center gap-1.5 flex-shrink-0 ml-1">
-                                <span className="text-[9px] font-black text-red-600">{item.percentil}%</span>
-                                <span className="text-[8px] font-bold text-red-600 bg-white border border-red-200 rounded px-1">
-                                  Bot {100 - item.percentil}%
-                                </span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                    </div>
-                  )}
-
-                </div>
-              </div>
-            )}
-
+            <div>
+              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-1.5">Idade máx.</label>
+              <input type="number" value={maxIdade} onChange={e => setMaxIdade(e.target.value)} placeholder="Ex: 30" className="w-full border-2 border-slate-200 rounded-xl p-2.5 text-[10px] font-black outline-none focus:border-amber-500 placeholder:text-slate-300" />
+            </div>
           </div>
         </div>
 
-        {/* ── MÉTRICAS DETALHADAS ──────────────────────────────────────────── */}
-        <div className="bg-white border-2 border-slate-900 rounded-[1.5rem] overflow-hidden shadow-lg">
-          <div className="bg-slate-900 text-white font-black text-center py-2 text-[10px] uppercase tracking-widest">
-            Métricas Detalhadas por 90 Minutos
+        {/* TOP 3 */}
+        {processedRanking.length >= 3 && (
+          <div className="grid grid-cols-3 gap-3">
+            {processedRanking.slice(0, 3).map((a, idx) => (
+              <div key={a.Jogador} onClick={() => router.push(`/central-scouting/ranking/${navId(a)}`)}
+                className="bg-white border-2 border-slate-900 rounded-2xl p-4 cursor-pointer hover:border-amber-500 hover:shadow-lg transition-all group flex items-center gap-3">
+                <div className={`text-3xl font-black ${idx===0?'text-amber-500':idx===1?'text-slate-400':'text-amber-700'}`}>#{idx+1}</div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-black text-sm uppercase italic truncate group-hover:text-amber-600 transition-colors">{a.Jogador}</p>
+                  <p className="text-[9px] text-slate-500 uppercase font-bold">{a.Time} · {a.Posicao || a.Posição}</p>
+                </div>
+                <span className={`text-lg font-black ${notaColor(a.notaPerfil)}`}>{a.notaPerfil}</span>
+              </div>
+            ))}
           </div>
-          <div className="grid grid-cols-2 divide-x-2 divide-slate-900">
-            {[0, 5].map(start => (
-              <table key={start} className="w-full text-left text-[10px]">
+        )}
+
+        {/* TABELA */}
+        <div className="border-2 border-slate-900 rounded-2xl overflow-hidden shadow-lg">
+          <div className="bg-slate-900 text-white font-black text-center py-2 text-[10px] uppercase tracking-widest">
+            Ranking · {selectedPerfil} · {processedRanking.length} atletas
+          </div>
+          {processedRanking.length === 0 ? (
+            <div className="py-16 text-center text-slate-400 font-black text-sm uppercase">Nenhum atleta encontrado com os filtros selecionados.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-[10px]">
+                <thead>
+                  <tr className="border-b-2 border-slate-900 bg-slate-800">
+                    {['#','Atleta','Time','Pos','Idade','Min'].map(h => (
+                      <th key={h} className="px-4 py-3 text-left text-[8px] font-black uppercase tracking-widest text-slate-300">{h}</th>
+                    ))}
+                    <th className="px-4 py-3 text-center text-[8px] font-black uppercase tracking-widest bg-amber-500 text-black">Nota</th>
+                    <th className="px-4 py-3 text-center text-[8px] font-black uppercase tracking-widest text-slate-300">Ações</th>
+                  </tr>
+                </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {METRICAS_RADAR.slice(start, start + 5).map((m, idx) => (
-                    <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-6 py-2 text-slate-700 font-black uppercase tracking-tight">{m.label}</td>
-                      <td className="px-6 py-2 text-right font-black text-black text-xs">
-                        {getValorMetrica(player, m).toFixed(2)}{m.label.includes('%') ? '%' : ''}
+                  {processedRanking.map((a, idx) => (
+                    <tr key={`${a.Jogador}-${idx}`} className="hover:bg-amber-50/60 transition-colors group">
+                      <td className="px-4 py-2.5 text-slate-400 font-black text-[9px]">{idx+1}</td>
+                      <td className="px-4 py-2.5 font-black uppercase italic group-hover:text-amber-600 transition-colors">{a.Jogador}</td>
+                      <td className="px-4 py-2.5 text-[9px] font-black uppercase text-slate-600">{a.Time}</td>
+                      <td className="px-4 py-2.5"><span className="px-2 py-0.5 bg-slate-100 rounded text-[8px] font-black text-slate-600">{a.Posicao || a.Posição}</span></td>
+                      <td className="px-4 py-2.5 text-center text-[9px] font-black">{a.Idade}</td>
+                      <td className="px-4 py-2.5 text-center text-[9px] font-black tabular-nums">{a['Minutos jogados']}</td>
+                      <td className="px-4 py-2.5 text-center"><span className={`text-sm font-black tabular-nums ${notaColor(a.notaPerfil)}`}>{a.notaPerfil}</span></td>
+                      <td className="px-4 py-2.5 text-center">
+                        <div className="flex gap-1.5 justify-center">
+                          <button onClick={() => router.push(`/central-scouting/ranking/${navId(a)}`)} className="px-3 py-1 bg-slate-900 text-white rounded-lg text-[8px] font-black uppercase tracking-wider hover:bg-amber-500 hover:text-black transition-all">VER →</button>
+                          <button onClick={() => setComparisonModal({ open: true, player1: a, player2: null })} className="px-2 py-1 border border-slate-200 hover:border-amber-500 rounded-lg transition-all text-sm" title="Comparar">⚔️</button>
+                        </div>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            ))}
-          </div>
+            </div>
+          )}
         </div>
 
-        {/* ── FOOTER ──────────────────────────────────────────────────────── */}
-        <footer className="flex justify-between items-center border-t-2 border-slate-900 pt-3 no-print">
-          <div className="flex gap-4">
-            <button
-              onClick={() => window.print()}
-              className="bg-slate-900 hover:bg-black text-white font-black px-8 py-3 rounded-2xl text-sm shadow-xl transition-all transform hover:scale-105 active:scale-95 flex items-center gap-3"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-              </svg>
-              EXPORTAR PDF
-            </button>
-            <button
-              onClick={() => router.push('/central-scouting/ranking')}
-              className="text-slate-500 hover:text-black text-sm font-black uppercase tracking-widest px-4 transition-colors"
-            >
-              Voltar ao Ranking
-            </button>
-          </div>
+        <footer className="flex justify-between items-center border-t-2 border-slate-200 pt-3 mt-2">
+          <button onClick={() => router.push('/central-scouting')} className="text-slate-500 hover:text-black text-sm font-black uppercase tracking-widest px-4 transition-colors">← Voltar</button>
           <p className="text-[10px] text-slate-500 font-black italic tracking-tight uppercase">© Scouting System GN</p>
         </footer>
 
+        {/* MODAL COMPARAÇÃO */}
+        {comparisonModal.open && comparisonModal.player1 && (
+          <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+            <div className="bg-white border-2 border-slate-900 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl">
+              <div className="flex justify-between items-center mb-4 pb-3 border-b-4 border-amber-500">
+                <h2 className="text-xl font-black uppercase tracking-tighter text-black">Comparação Técnica</h2>
+                <button onClick={() => setComparisonModal({ open: false, player1: null, player2: null })} className="text-slate-400 hover:text-black text-2xl font-black">✕</button>
+              </div>
+              {comparisonModal.player2 && (
+                <div className="border-2 border-amber-500 rounded-xl p-4 mb-4 bg-amber-50">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Índice de Similaridade</p>
+                  <p className="text-3xl font-black text-amber-600">{calcSim(comparisonModal.player1, comparisonModal.player2)}%</p>
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                {[comparisonModal.player1, comparisonModal.player2].map((p, i) => p ? (
+                  <div key={i} className="border-2 border-slate-200 rounded-xl p-4">
+                    <h3 className="text-base font-black uppercase italic text-amber-600 mb-1">{p.Jogador}</h3>
+                    <p className="text-[10px] font-bold text-slate-500 uppercase">{p.Time} · {p.Posicao || p.Posição}</p>
+                    <p className="text-[9px] text-slate-400">Nota: {p.notaPerfil} | Min: {p['Minutos jogados']}</p>
+                  </div>
+                ) : (
+                  <div key={i} className="border-2 border-dashed border-slate-200 rounded-xl p-4 flex items-center justify-center">
+                    <p className="text-[10px] text-slate-400 font-black uppercase text-center">Selecione abaixo</p>
+                  </div>
+                ))}
+              </div>
+              {!comparisonModal.player2 ? (
+                <div className="space-y-1.5 max-h-[280px] overflow-y-auto">
+                  {processedRanking.filter(p => p.Jogador !== comparisonModal.player1.Jogador).map(p => (
+                    <button key={p.Jogador} onClick={() => setComparisonModal({ ...comparisonModal, player2: p })}
+                      className="w-full p-3 border-2 border-slate-200 hover:border-amber-500 rounded-xl text-left flex justify-between items-center text-[10px] font-black uppercase text-slate-700 hover:text-amber-600 transition-all">
+                      <span>{p.Jogador} <span className="text-slate-400 font-bold">({p.Time})</span></span>
+                      <span className={notaColor(p.notaPerfil)}>{p.notaPerfil}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex gap-3 justify-end mt-4">
+                  <button onClick={() => setComparisonModal({ ...comparisonModal, player2: null })} className="border-2 border-slate-200 hover:border-slate-400 text-slate-600 font-black px-6 py-2.5 rounded-xl text-[10px] uppercase transition-all">Trocar atleta</button>
+                  <button onClick={() => setComparisonModal({ open: false, player1: null, player2: null })} className="border-2 border-slate-200 text-slate-600 font-black px-6 py-2.5 rounded-xl text-[10px] uppercase transition-all">Fechar</button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
-  );
-}
-
-export default function RankingPlayerProfile() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-white flex items-center justify-center text-amber-600 font-black italic animate-pulse text-2xl uppercase">
-        Carregando...
-      </div>
-    }>
-      <RankingPlayerProfileContent />
-    </Suspense>
   );
 }

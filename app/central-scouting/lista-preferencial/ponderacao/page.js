@@ -65,7 +65,7 @@ function PonderacaoContent() {
     const loadData = async () => {
       try {
         const urlAba1   = sheetUrl('LISTA_PREFERENCIAL');
-        const urlSerieB = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQbSUvDghD3MPKBNEYz1cxeLgCmftwt5AoqkVmai6xCrA7W8fIy77Y2RlTmqR5w1A6a-MRPlV67pVYA/pub?output=csv';
+        const urlSerieB = sheetUrl('SERIE_B', false);
         const [res1, res2] = await Promise.all([fetch(urlAba1), fetch(urlSerieB)]);
         const [csv1, csv2] = await Promise.all([res1.text(), res2.text()]);
         Papa.parse(csv1, {

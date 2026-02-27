@@ -231,13 +231,13 @@ function PlayerProfileContent() {
         return pos === posicaoAtleta || pos.includes(posicaoAtleta) || posicaoAtleta.includes(pos);
       });
       
-      // Se não achar ninguém da mesma posição, usa os 3 primeiros como fallback
-      const candidatos = mesmaPosicao.length > 0 ? mesmaPosicao.slice(0, 3) : gremioNovorizontino.slice(0, 3);
+      // Se não achar ninguém da mesma posição, usa todos como fallback
+      const candidatos = mesmaPosicao.length > 0 ? mesmaPosicao : gremioNovorizontino;
       
-      const cores = ['#3b82f6', '#10b981', '#8b5cf6'];
+      const cores = ['#3b82f6', '#10b981', '#8b5cf6', '#f97316', '#ec4899', '#06b6d4', '#84cc16', '#a855f7'];
       candidatos.forEach((p, i) => {
         const gVals = [...METRICAS_RADAR.map(m => (getValorMetrica(p, m) / (escalasMetricas[m.label]?.max || 1)) * 100), (getValorMetrica(p, METRICAS_RADAR[0]) / (escalasMetricas[METRICAS_RADAR[0].label]?.max || 1)) * 100];
-        data.push({ type: 'scatterpolar', r: gVals, theta: labels, name: p.Jogador, line: { color: cores[i], width: 2 }, mode: 'lines' });
+        data.push({ type: 'scatterpolar', r: gVals, theta: labels, name: p.Jogador, line: { color: cores[i % cores.length], width: 2 }, mode: 'lines' });
       });
     }
     return data;
