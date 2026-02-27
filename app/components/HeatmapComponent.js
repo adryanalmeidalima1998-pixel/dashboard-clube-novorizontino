@@ -32,52 +32,41 @@ function getPositionProfile(posString, foot) {
   const isRight = foot === 'R';
   
   let profile = {
-    type: 'MID', 
-    sideRow: isRight ? 0 : 3,    
-    mainRow: isRight ? 1 : 2,    
-    centerRow: isRight ? 2 : 1,  
-    oppSideRow: isRight ? 3 : 0, 
-    baseCols: [1, 2]
+    type: 'MID', sideRow: isRight ? 0 : 3, mainRow: isRight ? 1 : 2,    
+    centerRow: isRight ? 2 : 1, oppSideRow: isRight ? 3 : 0, baseCols: [1, 2]
   };
 
   if (p.includes('ZAG') || p.includes('CB') || p.includes('CENTRAL')) {
-    profile.type = 'DEF_CENTRAL';
-    profile.baseCols = [0, 1];
+    profile.type = 'DEF_CENTRAL'; profile.baseCols = [0, 1];
   } 
   else if (p.includes('LAT') || p.includes('FB') || p.includes('RB') || p.includes('LB') || p === 'LD' || p === 'LE') {
-    profile.type = 'WIDE_DEF';
-    profile.baseCols = [0, 1, 2];
+    profile.type = 'WIDE_DEF'; profile.baseCols = [0, 1, 2];
     if (p.includes('LD') || p.includes('RB') || p.includes('RIGHT')) { profile.sideRow = 0; profile.mainRow = 1; }
     if (p.includes('LE') || p.includes('LB') || p.includes('LEFT')) { profile.sideRow = 3; profile.mainRow = 2; }
   } 
   else if (p.includes('VOL') || p.includes('DM') || p.includes('MDF')) {
-    profile.type = 'DEF_MID';
-    profile.baseCols = [1, 2];
+    profile.type = 'DEF_MID'; profile.baseCols = [1, 2];
   } 
   else if (p.includes('MC') || p.includes('MEI') || p.includes('CM') || p.includes('AM')) {
-    profile.type = 'MID';
-    profile.baseCols = [1, 2, 3];
+    profile.type = 'MID'; profile.baseCols = [1, 2, 3];
   } 
   else if (p.includes('EXT') || p.includes('PONTA') || p.includes('W') || p === 'PD' || p === 'PE') {
-    profile.type = 'WIDE_ATT';
-    profile.baseCols = [2, 3];
+    profile.type = 'WIDE_ATT'; profile.baseCols = [2, 3];
     if (p === 'PD' || p.includes('RW')) { profile.sideRow = 0; profile.mainRow = 1; }
     if (p === 'PE' || p.includes('LW')) { profile.sideRow = 3; profile.mainRow = 2; }
   } 
   else if (p.includes('ATA') || p.includes('CA') || p.includes('ST') || p.includes('FW')) {
-    profile.type = 'ATT_CENTRAL';
-    profile.baseCols = [3, 4];
+    profile.type = 'ATT_CENTRAL'; profile.baseCols = [3, 4];
   }
-  
   return profile;
 }
 
-function computeZones(playerData) {
-  if (!playerData) return Array.from({ length: COLS }, () => new Array(ROWS).fill(0));
+function computeZones(pData) {
+  if (!pData) return Array.from({ length: COLS }, () => new Array(ROWS).fill(0));
   
-  const min = parseFloat(playerData.minutes) || 1;
-  const s = (key) => (parseFloat(playerData[key]) || 0) * (90 / min);
-  const prof = getPositionProfile(playerData.position, playerData.foot);
+  const min = pData.minutes || 1;
+  const s = (key) => (pData[key] || 0) * (90 / min);
+  const prof = getPositionProfile(pData.position, pData.foot);
   
   const z = Array.from({ length: COLS }, () => new Array(ROWS).fill(0));
   const add = (col, row, val) => { if (col >= 0 && col < COLS && row >= 0 && row < ROWS && val > 0) z[col][row] += val; };
@@ -123,8 +112,7 @@ function computeZones(playerData) {
 
   const wideAtk = s('drb_final3') * 1.5 + s('crosses') * 2.0 + s('dribbles') * 0.5;
   if (prof.type.includes('WIDE') || prof.type === 'MID') {
-    add(3, prof.sideRow, wideAtk * 1.2); add(4, prof.sideRow, wideAtk * 0.8); 
-    add(3, prof.mainRow, wideAtk * 0.5);
+    add(3, prof.sideRow, wideAtk * 1.2); add(4, prof.sideRow, wideAtk * 0.8); add(3, prof.mainRow, wideAtk * 0.5);
   }
 
   const box = s('shots') * 1.5 + s('actions_opp_box') * 1.2 + s('passes_box') * 0.8;
@@ -312,20 +300,60 @@ const ZONE_COL_LABELS = ['1/3 DEF.','MEIO','TRANSIÇÃO','1/3 ATAQ.','ÁREA'];
 const ZONE_ROW_LABELS = ['Ala Dir.','Meia Dir.','Meia Esq.','Ala Esq.'];
 
 export default function HeatmapComponent({ playerData }) {
-  // TRAVA DE SEGURANÇA 1: Se o playerData não estiver pronto, mostra estado de carregamento
   if (!playerData) {
     return <div style={{ color: '#8fa0b8', padding: '20px', fontFamily: 'monospace' }}>A carregar dados do atleta...</div>;
   }
 
-  const autoZones = useMemo(() => computeZones(playerData), [playerData]);
+  // ---------------------------------------------------------------------------------
+  // TRADUTOR DE DADOS: Pega os nomes da sua aba (em português) e converte para o mapa
+  // ---------------------------------------------------------------------------------
+  const pData = useMemo(() => {
+    // Tenta achar o valor verificando várias possibilidades de nomes das colunas
+    const getVal = (keys) => {
+      for (const k of keys) {
+        if (playerData[k] !== undefined && playerData[k] !== null && String(playerData[k]).trim() !== '-' && String(playerData[k]).trim() !== '') {
+          return parseFloat(String(playerData[k]).replace(',', '.')) || 0;
+        }
+      }
+      return 0;
+    };
+
+    const pe = String(playerData.foot || playerData['Pé dominante'] || '').toLowerCase();
+    const isCanhoto = pe.includes('esq') || pe === 'l';
+
+    return {
+      name: playerData.name || playerData.Jogador || 'Atleta Desconhecido',
+      team: playerData.team || playerData.Time || playerData.Equipa || '-',
+      age: playerData.age || playerData.Idade || '-',
+      position: playerData.position || playerData.Posição || 'N/D',
+      minutes: getVal(['minutes', 'Minutos jogados', 'minutos']) || 1,
+      foot: isCanhoto ? 'L' : 'R',
+      xG: getVal(['xG', 'xg', 'Expected Goals']),
+      goals: getVal(['goals', 'Gols', 'Golos']),
+      assists: getVal(['assists', 'Assistências']),
+      shots: getVal(['shots', 'Chutes', 'Remates', 'Finalizações']),
+      actions_opp_box: getVal(['actions_opp_box', 'Toques na área', 'Ações na área adv', 'Ações na área']),
+      prog_passes: getVal(['prog_passes', 'Passes progressivos']),
+      drb_final3: getVal(['drb_final3', 'Dribles no terço final', 'Dribles terço final']),
+      crosses: getVal(['crosses', 'Cruzamentos']),
+      entries_final3: getVal(['entries_final3', 'Passes para o terço final', 'Passes terço final']),
+      tackles: getVal(['tackles', 'Desarmes']),
+      intercepts: getVal(['intercepts', 'Interceptações']),
+      passes: getVal(['passes', 'Passes certos', 'Passes']),
+      dribbles: getVal(['dribbles', 'Dribles certos', 'Dribles']),
+      passes_box: getVal(['passes_box', 'Passes para a área', 'Passes decisivos'])
+    };
+  }, [playerData]);
+
+  // Daqui pra baixo, o componente usa pData (os dados já limpos e traduzidos)
+  const autoZones = useMemo(() => computeZones(pData), [pData]);
   const [editMode, setEditMode] = useState(false);
   const [manualZones, setManualZones] = useState(null);
   const [brushLevel, setBrushLevel] = useState(BRUSH_LEVELS[3]);
   const [hoveredInfo, setHoveredInfo] = useState(null);
 
   const activeZones = manualZones || autoZones;
-  
-  const posProfile = useMemo(() => getPositionProfile(playerData.position, playerData.foot), [playerData.position, playerData.foot]);
+  const posProfile = useMemo(() => getPositionProfile(pData.position, pData.foot), [pData.position, pData.foot]);
 
   const enterEdit = () => {
     if (!manualZones) setManualZones(autoZones.map(col=>[...col]));
@@ -344,25 +372,24 @@ export default function HeatmapComponent({ playerData }) {
     setHoveredInfo({ c, r, col: ZONE_COL_LABELS[c], row: ZONE_ROW_LABELS[r] });
   }, []);
 
-  // TRAVA DE SEGURANÇA 2: Conversão segura de valores na função p90
-  const p90 = (v) => (((parseFloat(v)||0)*90)/(parseFloat(playerData.minutes)||1)).toFixed(1);
+  const p90 = (v) => ((v * 90) / pData.minutes).toFixed(1);
 
   const statGroups = [
     { label:'ATAQUE', accent:'linear-gradient(90deg,#f97316,#ef4444)', stats:[
-      {label:'Chutes / 90', value:parseFloat(p90(playerData.shots)), max:getStatMax(posProfile.type, 'shots')},
-      {label:'Gols', value:parseFloat(playerData.goals)||0, max:getStatMax(posProfile.type, 'goals')},
-      {label:'Assistências', value:parseFloat(playerData.assists)||0, max:getStatMax(posProfile.type, 'assists')},
-      {label:'Ações área adv. / 90', value:parseFloat(p90(playerData.actions_opp_box)), max:getStatMax(posProfile.type, 'actions_opp_box')},
+      {label:'Chutes / 90', value: parseFloat(p90(pData.shots)), max:getStatMax(posProfile.type, 'shots')},
+      {label:'Gols', value: pData.goals, max:getStatMax(posProfile.type, 'goals')},
+      {label:'Assistências', value: pData.assists, max:getStatMax(posProfile.type, 'assists')},
+      {label:'Ações área adv. / 90', value: parseFloat(p90(pData.actions_opp_box)), max:getStatMax(posProfile.type, 'actions_opp_box')},
     ]},
     { label:'CRIAÇÃO', accent:'linear-gradient(90deg,#22d3ee,#3b82f6)', stats:[
-      {label:'Passes prog. / 90', value:parseFloat(p90(playerData.prog_passes)), max:getStatMax(posProfile.type, 'prog_passes')},
-      {label:'Dribles últ. terço / 90', value:parseFloat(p90(playerData.drb_final3)), max:getStatMax(posProfile.type, 'drb_final3')},
-      {label:'Cruzamentos / 90', value:parseFloat(p90(playerData.crosses)), max:getStatMax(posProfile.type, 'crosses')},
-      {label:'Entradas terço final / 90', value:parseFloat(p90(playerData.entries_final3)), max:getStatMax(posProfile.type, 'entries_final3')},
+      {label:'Passes prog. / 90', value: parseFloat(p90(pData.prog_passes)), max:getStatMax(posProfile.type, 'prog_passes')},
+      {label:'Dribles últ. terço / 90', value: parseFloat(p90(pData.drb_final3)), max:getStatMax(posProfile.type, 'drb_final3')},
+      {label:'Cruzamentos / 90', value: parseFloat(p90(pData.crosses)), max:getStatMax(posProfile.type, 'crosses')},
+      {label:'Entradas terço final / 90', value: parseFloat(p90(pData.entries_final3)), max:getStatMax(posProfile.type, 'entries_final3')},
     ]},
     { label:'DEFESA', accent:'linear-gradient(90deg,#a78bfa,#6366f1)', stats:[
-      {label:'Desarmes / 90', value:parseFloat(p90(playerData.tackles)), max:getStatMax(posProfile.type, 'tackles')},
-      {label:'Interceptações / 90', value:parseFloat(p90(playerData.intercepts)), max:getStatMax(posProfile.type, 'intercepts')},
+      {label:'Desarmes / 90', value: parseFloat(p90(pData.tackles)), max:getStatMax(posProfile.type, 'tackles')},
+      {label:'Interceptações / 90', value: parseFloat(p90(pData.intercepts)), max:getStatMax(posProfile.type, 'intercepts')},
     ]},
   ];
 
@@ -378,7 +405,7 @@ export default function HeatmapComponent({ playerData }) {
         <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:'10px'}}>
           <div style={{fontSize:'10px',color:'#2a3a56',textAlign:'right'}}>
             <div>PÉ DOMINANTE</div>
-            <div style={{fontSize:'20px',color:'#3b82f6',marginTop:'2px'}}>{playerData.foot==='R'?'D →':'← E'}</div>
+            <div style={{fontSize:'20px',color:'#3b82f6',marginTop:'2px'}}>{pData.foot==='R'?'D →':'← E'}</div>
           </div>
           <button onClick={()=>editMode?setEditMode(false):enterEdit()} style={{
             background: editMode?'linear-gradient(135deg,#f97316,#ef4444)':'rgba(255,255,255,0.07)',
@@ -451,17 +478,15 @@ export default function HeatmapComponent({ playerData }) {
               display:'flex', alignItems:'center', justifyContent:'center',
               fontSize:'14px', fontWeight:'800', color:'#e0f0ff',
             }}>
-              {/* TRAVA DE SEGURANÇA 3: Garantindo que o nome exista antes do split */}
-              {String(playerData.name || 'A').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}
+              {String(pData.name).split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}
             </div>
             <div>
-              <div style={{fontSize:'16px',fontWeight:'800',color:'#f0f4ff',lineHeight:1}}>{playerData.name || 'Desconhecido'}</div>
-              <div style={{fontSize:'11px',color:'#3b82f6',marginTop:'3px'}}>{playerData.team || '-'} · {playerData.position ? String(playerData.position).toUpperCase() : 'N/D'} · {playerData.age || '-'} anos</div>
+              <div style={{fontSize:'16px',fontWeight:'800',color:'#f0f4ff',lineHeight:1}}>{pData.name}</div>
+              <div style={{fontSize:'11px',color:'#3b82f6',marginTop:'3px'}}>{pData.team} · {String(pData.position).toUpperCase()} · {pData.age} anos</div>
             </div>
             <div style={{marginLeft:'auto',textAlign:'right'}}>
               <div style={{fontSize:'10px',color:'#4a5a76'}}>MIN JOGADOS</div>
-              {/* TRAVA DE SEGURANÇA 4: Garantindo que minutos é número antes de formatar */}
-              <div style={{fontSize:'18px',fontWeight:'800',color:'#93c5fd'}}>{Number(playerData.minutes || 0).toLocaleString('pt-BR')}</div>
+              <div style={{fontSize:'18px',fontWeight:'800',color:'#93c5fd'}}>{Number(pData.minutes).toLocaleString('pt-BR')}</div>
             </div>
           </div>
 
@@ -471,7 +496,7 @@ export default function HeatmapComponent({ playerData }) {
             borderRadius:'0 0 10px 10px', overflow:'hidden', position:'relative',
           }}>
             <FieldCanvas
-              player={playerData} zones={activeZones} editMode={editMode}
+              player={pData} zones={activeZones} editMode={editMode}
               onZoneClick={handleZoneClick} onZoneHover={handleZoneHover}
             />
             {editMode && (
@@ -551,13 +576,13 @@ export default function HeatmapComponent({ playerData }) {
           }}>
             <div>
               <div style={{fontSize:'10px',color:'#f87171',letterSpacing:'0.2em',textTransform:'uppercase'}}>Expected Goals</div>
-              <div style={{fontSize:'36px',fontWeight:'800',color:'#fca5a5',lineHeight:1.1}}>{(parseFloat(playerData.xG)||0).toFixed(2)}</div>
+              <div style={{fontSize:'36px',fontWeight:'800',color:'#fca5a5',lineHeight:1.1}}>{pData.xG.toFixed(2)}</div>
             </div>
             <div style={{textAlign:'right'}}>
               <div style={{fontSize:'10px',color:'#6b7a94'}}>Gols</div>
-              <div style={{fontSize:'28px',fontWeight:'800',color:'#f0f4ff'}}>{playerData.goals||0}</div>
+              <div style={{fontSize:'28px',fontWeight:'800',color:'#f0f4ff'}}>{pData.goals}</div>
               <div style={{fontSize:'10px',color:'#6b7a94',marginTop:'4px'}}>Assist.</div>
-              <div style={{fontSize:'22px',fontWeight:'700',color:'#93c5fd'}}>{playerData.assists||0}</div>
+              <div style={{fontSize:'22px',fontWeight:'700',color:'#93c5fd'}}>{pData.assists}</div>
             </div>
           </div>
           {statGroups.map(group=>(
@@ -569,9 +594,9 @@ export default function HeatmapComponent({ playerData }) {
           <div style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.06)',borderRadius:'10px',padding:'14px 16px'}}>
             <div style={{fontSize:'10px',color:'#4a5a76',letterSpacing:'0.2em',marginBottom:'10px'}}>VOLUME DE JOGO / 90</div>
             {[
-              {label:'Passes',v:p90(playerData.passes),max:getStatMax(posProfile.type, 'passes')},
-              {label:'Dribles',v:p90(playerData.dribbles),max:getStatMax(posProfile.type, 'dribbles')},
-              {label:'Passes p/ área',v:p90(playerData.passes_box),max:getStatMax(posProfile.type, 'passes_box')},
+              {label:'Passes',v:p90(pData.passes),max:getStatMax(posProfile.type, 'passes')},
+              {label:'Dribles',v:p90(pData.dribbles),max:getStatMax(posProfile.type, 'dribbles')},
+              {label:'Passes p/ área',v:p90(pData.passes_box),max:getStatMax(posProfile.type, 'passes_box')},
             ].map(s=><StatBar key={s.label} label={s.label} value={parseFloat(s.v)} max={s.max} accent="linear-gradient(90deg,#34d399,#10b981)"/>)}
           </div>
         </div>
