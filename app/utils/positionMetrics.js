@@ -64,14 +64,14 @@ export const POSITION_METRICS = {
     radarMetrics: [
       { label: 'Desafios Vencidos/90', key: 'Desafios vencidos', type: 'per90', max: 8 },
       { label: 'Duelos Aéreos/90', key: 'Disputas de bolas aéreas / com sucesso', type: 'per90', max: 6 },
+      { label: 'Aprov. Aéreo %', key: 'Desafios aéreos vencidos, %', type: 'raw', max: 100 },
       { label: 'Desarmes/90', key: 'Desarmes bem sucedidos', type: 'per90', max: 5 },
       { label: 'Interceptações/90', key: 'Interceptações', type: 'per90', max: 6 },
-      { label: 'Bolas Rec./90', key: 'Bolas recuperadas', type: 'per90', max: 10 },
       { label: 'Passes Prog./90', key: 'Passes progressivos', type: 'per90', max: 8 },
       { label: 'Passes 1/3 Final/90', key: 'Passa para o terço final', type: 'per90', max: 5 },
       { label: 'Passes Longos/90', key: 'Passes longos', type: 'per90', max: 6 },
       { label: 'Duelos Def./90', key: 'Disputas na defesa / com sucesso', type: 'per90', max: 5 },
-      { label: 'Ações Área Adv./90', key: 'Ações na área adversária bem-sucedidas', type: 'per90', max: 2 },
+      { label: 'Aprov. Def. %', key: 'Disputas defensivas ganhas, %', type: 'raw', max: 100 },
     ],
     scatterPlots: [
       { id: 'zag-fisico', titulo: 'Dominância Física', subtitulo: 'Desafios vencidos/90 × Duelos aéreos vencidos/90', xLabel: 'Desafios Vencidos/90', yLabel: 'Duelos Aéreos/90', xKey: 'Desafios vencidos', yKey: 'Disputas de bolas aéreas / com sucesso', xType: 'per90', yType: 'per90' },
