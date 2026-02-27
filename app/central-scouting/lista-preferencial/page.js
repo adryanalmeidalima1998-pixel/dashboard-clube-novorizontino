@@ -64,10 +64,16 @@ function ListaPreferencialContent() {
   const router = useRouter();
   const [listaPreferencial, setListaPreferencial] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // ESTADOS DOS FILTROS
   const [filterTeam, setFilterTeam] = useState('');
+  const [filterPosicao, setFilterPosicao] = useState('TODAS');
+
   const [metricasSelecionadas, setMetricasSelecionadas] = useState([]);
   const [todasMetricas, setTodasMetricas] = useState([]);
   const [categoriaAtiva, setCategoriaAtiva] = useState('ATAQUE');
+
+  // ESTADO PARA GERADOR DE PDF EM LOTE
   const [gerandoLote, setGerandoLote] = useState(false);
 
   const calcularPor90 = (valor, minutosJogados) => {
@@ -174,12 +180,18 @@ function ListaPreferencialContent() {
     return grouped;
   }, [todasMetricas]);
 
+  const posicoesDisponiveis = useMemo(() => {
+    const posicoes = new Set(listaPreferencial.map(j => j.Posição).filter(Boolean));
+    return ['TODAS', ...Array.from(posicoes).sort()];
+  }, [listaPreferencial]);
+
   const jogadoresFiltrados = useMemo(() => {
     return listaPreferencial.filter(j => {
       const matchTeam = !filterTeam || (j.Time && j.Time.toLowerCase().includes(filterTeam.toLowerCase()));
-      return matchTeam;
+      const matchPos = filterPosicao === 'TODAS' || j.Posição === filterPosicao;
+      return matchTeam && matchPos;
     });
-  }, [listaPreferencial, filterTeam]);
+  }, [listaPreferencial, filterTeam, filterPosicao]);
 
   const handleToggleMetrica = (metrica) => {
     if (metricasSelecionadas.includes(metrica)) {
@@ -209,6 +221,46 @@ function ListaPreferencialContent() {
     };
     if (mapa[cleanName]) return `/images/players/${mapa[cleanName]}`;
     return `/images/players/${cleanName.replace(/\s+/g, '_')}.png`;
+  };
+
+  // LÓGICA DE EXPORTAÇÃO EM LOTE
+  const handleExportarLote = async () => {
+    if (jogadoresFiltrados.length === 0) return alert('Nenhum jogador na lista.');
+    if (jogadoresFiltrados.length > 15) {
+      const confirmar = confirm(`Você está prestes a gerar o relatório de ${jogadoresFiltrados.length} atletas. Isso pode demorar mais de 1 minuto. Deseja continuar?`);
+      if (!confirmar) return;
+    }
+
+    setGerandoLote(true);
+    try {
+      const atletasPayload = jogadoresFiltrados.map(j => ({
+        id: j.ID_ATLETA || j.Jogador,
+        nome: j.Jogador
+      }));
+
+      const response = await fetch('/api/exportar-lote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ atletas: atletasPayload }),
+      });
+
+      if (!response.ok) throw new Error('Erro ao gerar relatórios');
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Pacote_Scout_${new Date().toISOString().split('T')[0]}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+    } catch (error) {
+      console.error(error);
+      alert('Ocorreu um erro. Se o lote for muito grande, tente filtrar menos jogadores por vez.');
+    } finally {
+      setGerandoLote(false);
+    }
   };
 
   if (loading) return (
@@ -270,6 +322,19 @@ function ListaPreferencialContent() {
             onChange={(e) => setFilterTeam(e.target.value)}
             className="border-2 border-slate-200 rounded-xl px-4 py-2 text-[10px] font-black outline-none focus:border-amber-500 w-48"
           />
+          
+          <select
+            value={filterPosicao}
+            onChange={(e) => setFilterPosicao(e.target.value)}
+            className="border-2 border-slate-200 rounded-xl px-4 py-2 text-[10px] font-black outline-none focus:border-amber-500 bg-white min-w-[160px]"
+          >
+            {posicoesDisponiveis.map(pos => (
+              <option key={pos} value={pos}>
+                {pos === 'TODAS' ? 'TODAS AS POSIÇÕES' : pos}
+              </option>
+            ))}
+          </select>
+
           <div className="flex gap-2 ml-2">
             <button
               onClick={() => router.push('/central-scouting/lista-preferencial/ponderacao')}
@@ -291,7 +356,7 @@ function ListaPreferencialContent() {
             </button>
           </div>
           <div className="flex items-center gap-3 ml-auto">
-            <span className="text-[9px] font-black text-slate-400 uppercase">{listaPreferencial.length} atletas na lista</span>
+            <span className="text-[9px] font-black text-slate-400 uppercase">{jogadoresFiltrados.length} atletas na lista</span>
           </div>
         </div>
 
@@ -357,7 +422,8 @@ function ListaPreferencialContent() {
         <div className="border-2 border-slate-900 rounded-2xl overflow-hidden shadow-lg">
           <div className="bg-slate-900 text-white font-black text-center py-2 text-[10px] uppercase tracking-widest">
             Lista Preferencial · Métricas por 90 min · {jogadoresFiltrados.length} atletas exibidos
-          </div>          <div className="overflow-x-auto table-scroll-wrapper">
+          </div>          
+          <div className="overflow-x-auto table-scroll-wrapper">
             <table className="w-full border-collapse text-[10px]">
               <thead>
                 <tr className="border-b-2 border-slate-900 bg-slate-900">
@@ -431,13 +497,23 @@ function ListaPreferencialContent() {
         <footer className="no-print flex justify-between items-center border-t-2 border-slate-900 pt-3">
           <div className="flex gap-4">
             <button
-              onClick={() => window.print()}
-              className="bg-slate-900 hover:bg-black text-white font-black px-8 py-3 rounded-2xl text-sm shadow-xl transition-all transform hover:scale-105 active:scale-95 flex items-center gap-3"
+              onClick={handleExportarLote}
+              disabled={gerandoLote}
+              className={`${gerandoLote ? 'bg-amber-500 text-black animate-pulse' : 'bg-slate-900 hover:bg-black text-white'} font-black px-8 py-3 rounded-2xl text-sm shadow-xl transition-all flex items-center gap-3 disabled:opacity-80 disabled:cursor-wait`}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-              </svg>
-              EXPORTAR PDF
+              {gerandoLote ? (
+                <>
+                  <svg className="animate-spin h-5 w-5 text-black" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                  A GERAR LOTE...
+                </>
+              ) : (
+                <>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  BAIXAR LOTE FILTRADO (.ZIP)
+                </>
+              )}
             </button>
             <button
               onClick={() => router.push('/central-scouting')}
@@ -456,7 +532,7 @@ function ListaPreferencialContent() {
 
 export default function ListaPreferencial() {
   return (
-    <Suspense fallback={<div>Carregando...</div>}>
+    <Suspense fallback={<div>A carregar...</div>}>
       <ListaPreferencialContent />
     </Suspense>
   );
