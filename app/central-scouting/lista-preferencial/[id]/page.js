@@ -10,6 +10,7 @@ import HeatmapComponent from '@/app/components/HeatmapComponent';
 import { calcularPerfilSugerido } from '@/app/utils/perfilAnalyzer';
 import { gerarTextoAnalise } from '@/app/utils/textGenerator';
 import { PERFIL_DESCRICOES } from '@/app/utils/perfilWeights';
+import { getMetricsByPosicao, normalizePosicao } from '@/app/utils/positionMetrics';
 
 const Plot = dynamic(() => import('react-plotly.js'), {
   ssr: false,
@@ -20,48 +21,47 @@ const Plot = dynamic(() => import('react-plotly.js'), {
   ),
 });
 
-// ─── Métricas fixas do radar ────────────────────────────────────────────────
-const METRICAS = [
-  { label: 'Passes Chave',              key: 'Passes chave',                                 per90: true  },
-  { label: 'Passes Progressivos %',     key: 'Passes progressivos precisos,%',               per90: false },
-  { label: 'Passes na Área %',          key: 'Passes dentro da área / precisos, %',          per90: false },
-  { label: 'Dribles Certos/90',         key: 'Dribles bem sucedidos',                        per90: true  },
-  { label: 'Dribles 1/3 Final/90',      key: 'Dribles no último terço do campo com sucesso', per90: true  },
-  { label: 'Entradas 1/3 Final/90',     key: 'Entradas no terço final carregando a bola',    per90: true  },
-  { label: 'Recuperações Campo Adv/90', key: 'Bolas recuperadas no campo do adversário',     per90: true  },
-  { label: 'xA/90',                     key: 'xA',                                           per90: true  },
-  { label: 'xG/90',                     key: 'Xg',                                           per90: true  },
-  { label: 'Ações Área Adv/90',         key: 'Ações na área adversária bem-sucedidas',       per90: true  },
+// ─── Fallback de métricas (usado quando posição não está mapeada) ───────────
+// As métricas reais vêm de positionMetrics.js, derivadas da posição do jogador.
+const METRICAS_FALLBACK = [
+  { label: 'Passes Chave',              key: 'Passes chave',                                 type: 'per90' },
+  { label: 'Passes Progressivos %',     key: 'Passes progressivos precisos,%',               type: 'raw'   },
+  { label: 'Passes na Área %',          key: 'Passes dentro da área / precisos, %',          type: 'raw'   },
+  { label: 'Dribles Certos/90',         key: 'Dribles bem sucedidos',                        type: 'per90' },
+  { label: 'Dribles 1/3 Final/90',      key: 'Dribles no último terço do campo com sucesso', type: 'per90' },
+  { label: 'Entradas 1/3 Final/90',     key: 'Entradas no terço final carregando a bola',    type: 'per90' },
+  { label: 'Recuperações Campo Adv/90', key: 'Bolas recuperadas no campo do adversário',     type: 'per90' },
+  { label: 'xA/90',                     key: 'xA',                                           type: 'per90' },
+  { label: 'xG/90',                     key: 'Xg',                                           type: 'per90' },
+  { label: 'Ações Área Adv/90',         key: 'Ações na área adversária bem-sucedidas',       type: 'per90' },
 ];
 
 // ─── Utilitários puros (sem estado) ─────────────────────────────────────────
 
-/** Converte um jogador cru do CSV em objeto com valores per/90 calculados.
- *  LISTA PREFERENCIAL (fonte='LISTA'): valores são TOTAIS → converte dividindo por minutos.
- *  GRÊMIO NOVORIZONTINO (fonte='GN') e SÉRIE B (fonte='SERIEB'): já vêm por/90 → usa direto.
+/** Prepara um jogador cru: guarda _fonte e _minutos para uso posterior.
+ *  Os valores das métricas são calculados on-the-fly em getVal(), porque as
+ *  métricas variam por posição — não dá pré-calcular sem saber a posição.
  */
 function processarJogador(raw, fonte) {
   const minutos = safeParseFloat(raw['Minutos jogados']);
-  const jaPer90 = fonte === 'GN' || fonte === 'SERIEB';
-  const obj = { ...raw, _fonte: fonte, _minutos: minutos };
-  METRICAS.forEach(m => {
-    const v = safeParseFloat(raw[m.key]);
-    if (!m.per90) {
-      obj[`_v_${m.key}`] = v;                                    // % — usa direto
-    } else if (jaPer90) {
-      obj[`_v_${m.key}`] = v;                                    // GN/SB já são per/90
-    } else {
-      obj[`_v_${m.key}`] = minutos > 0 ? (v / minutos) * 90 : 0; // Lista: total → per/90
-    }
-  });
-  return obj;
+  return { ...raw, _fonte: fonte, _minutos: minutos };
 }
 
-/** Retorna o valor processado de uma métrica para um jogador */
+/** Retorna o valor de uma métrica para um jogador, aplicando a conversão correta.
+ *  Suporta tanto { type: 'per90'|'raw' } (positionMetrics) quanto { per90: bool } (fallback).
+ *
+ *  LISTA (_fonte='LISTA'): valores brutos → divide por minutos se per90
+ *  GN / SÉRIE B           : já estão por/90 → usa direto
+ */
 function getVal(jogador, metrica) {
   if (!jogador) return 0;
-  const v = jogador[`_v_${metrica.key}`];
-  return v !== undefined ? v : safeParseFloat(jogador[metrica.key]);
+  const v      = safeParseFloat(jogador[metrica.key]);
+  const isPer90 = metrica.type === 'per90' || metrica.per90 === true;
+  if (!isPer90) return v;                                        // raw / % — direto
+  const jaPer90 = jogador._fonte === 'GN' || jogador._fonte === 'SERIEB';
+  if (jaPer90) return v;                                         // GN/SB já são por/90
+  const min = jogador._minutos || 0;
+  return min > 0 ? (v / min) * 90 : 0;                          // Lista: total → por/90
 }
 
 /** Normaliza uma posição para string uppercase padronizada */
@@ -91,17 +91,19 @@ function parseCsv(csvText, fonte) {
   });
 }
 
-/** Computa a escala (p90) de cada métrica a partir de um array de jogadores */
-function computarEscalas(jogadores) {
+/** Computa a escala máxima de cada métrica.
+ *  Prioridade: m.max definido em positionMetrics → p90 calculado do grupo.
+ */
+function computarEscalas(jogadores, metricas) {
   const escalas = {};
-  METRICAS.forEach(m => {
+  metricas.forEach(m => {
+    if (m.max) { escalas[m.label] = m.max; return; }            // max manual da posição
     const vals = jogadores
       .map(j => getVal(j, m))
       .filter(v => isFinite(v) && v > 0)
       .sort((a, b) => a - b);
-    if (vals.length === 0) { escalas[m.label] = 1; return; }
-    const idx = Math.min(Math.floor(vals.length * 0.9), vals.length - 1);
-    escalas[m.label] = Math.max(vals[idx], 0.001);
+    if (!vals.length) { escalas[m.label] = 1; return; }
+    escalas[m.label] = Math.max(vals[Math.min(Math.floor(vals.length * 0.9), vals.length - 1)], 0.001);
   });
   return escalas;
 }
@@ -111,16 +113,6 @@ function normalizar(val, max) {
   return Math.min((val / max) * 100, 120);
 }
 
-/** Cria a série de trace para o radar */
-function buildTrace(jogadores, label, cor, isDash, fill, fillcolor) {
-  const N = METRICAS.length;
-  // Calcula média do grupo
-  const r = METRICAS.map(m => {
-    const vals = jogadores.map(j => getVal(j, m)).filter(v => isFinite(v) && v >= 0);
-    return vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
-  });
-  return { _r_raw: r, _label: label, _cor: cor, _isDash: isDash, _fill: fill, _fillcolor: fillcolor };
-}
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 function PlayerProfileContent() {
@@ -171,11 +163,16 @@ function PlayerProfileContent() {
         const gnMesmaPos     = gn.filter(j   => mesmaPos(j['Posição'] || j['POSIÇÃO'] || j.Posicao, pos));
         const serieBMesmaPos = serieB.filter(j => mesmaPos(j['Posição'] || j['POSIÇÃO'] || j.Posicao, pos));
 
-        // Escala baseada apenas na lista de mesma posição (reference group)
-        const baseEscala = listaMesmaPos.length >= 3 ? listaMesmaPos : lista;
-        const escalas = computarEscalas(baseEscala);
+        // Métricas dinâmicas pela posição do jogador (positionMetrics.js)
+        const posNorm  = player ? normalizePosicao(player['Posição'] || player['POSIÇÃO'] || player.Posicao || '') : null;
+        const posConfig = posNorm ? getMetricsByPosicao(player['Posição'] || player['POSIÇÃO'] || player.Posicao || '') : null;
+        const metricas  = posConfig?.radarMetrics || METRICAS_FALLBACK;
 
-        setDados({ player, lista, gn, serieB, listaMesmaPos, gnMesmaPos, serieBMesmaPos, escalas });
+        // Escala: usa m.max da posição (via computarEscalas) ou p90 do grupo
+        const baseEscala = listaMesmaPos.length >= 3 ? listaMesmaPos : lista;
+        const escalas = computarEscalas(baseEscala, metricas);
+
+        setDados({ player, lista, gn, serieB, listaMesmaPos, gnMesmaPos, serieBMesmaPos, escalas, metricas });
       } catch (e) {
         console.error('Erro ao carregar:', e);
       } finally {
@@ -203,7 +200,7 @@ function PlayerProfileContent() {
       descricaoPerfil:  PERFIL_DESCRICOES[perfilSelecionado] || '',
       listaPreferencial: dados.lista,
       serieB:           dados.serieB,
-      metricas:         METRICAS.map(m => ({ label: m.label, key: m.key, type: m.per90 ? 'per90' : 'raw' })),
+      metricas:         dados.metricas,
     });
     setTextoAnalitico(texto);
   }, [perfilSelecionado, dados]);
@@ -214,7 +211,7 @@ function PlayerProfileContent() {
     const { player, listaMesmaPos, serieBMesmaPos } = dados;
     const base = [...listaMesmaPos, ...serieBMesmaPos];
 
-    const comparacoes = METRICAS.map(m => {
+    const comparacoes = dados.metricas.map(m => {
       const vAtleta = getVal(player, m);
       const vals    = base.map(j => getVal(j, m)).filter(v => isFinite(v) && v >= 0);
       if (!vals.length) return null;
@@ -232,13 +229,13 @@ function PlayerProfileContent() {
 
   // ── Radar data ────────────────────────────────────────────────────────────
   const radarData = useMemo(() => {
-    if (!dados?.player) return { media: [], gremio: [], serieb: [] };
-    const { player, listaMesmaPos, gnMesmaPos, serieBMesmaPos, escalas } = dados;
+    if (!dados?.player || !dados?.metricas) return { media: [], gremio: [], serieb: [] };
+    const { player, listaMesmaPos, gnMesmaPos, serieBMesmaPos, escalas, metricas } = dados;
 
-    const labels = [...METRICAS.map(m => m.label), METRICAS[0].label];
+    const labels = [...metricas.map(m => m.label), metricas[0].label];
 
     // Trace do jogador analisado (comum a todos os radares)
-    const playerR = METRICAS.map(m => normalizar(getVal(player, m), escalas[m.label]));
+    const playerR = metricas.map(m => normalizar(getVal(player, m), escalas[m.label]));
     playerR.push(playerR[0]); // fecha o polígono
     const tracePlayer = {
       type: 'scatterpolar', mode: 'lines',
@@ -250,7 +247,7 @@ function PlayerProfileContent() {
 
     // ── VS Média Lista (mesma posição) ──
     const baseMediaLista = listaMesmaPos.length >= 2 ? listaMesmaPos : dados.lista;
-    const mediaListaR = METRICAS.map(m => {
+    const mediaListaR = metricas.map(m => {
       const vals = baseMediaLista.map(j => getVal(j, m)).filter(v => isFinite(v) && v >= 0);
       const med  = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
       return normalizar(med, escalas[m.label]);
@@ -260,7 +257,7 @@ function PlayerProfileContent() {
       type: 'scatterpolar', mode: 'lines',
       r: mediaListaR, theta: labels,
       fill: 'toself', fillcolor: 'rgba(239,68,68,0.12)',
-      name: `Média Lista (${normPos(player['Posição'] || player['POSIÇÃO'] || '')})`,
+      name: `Média Lista · ${normalizePosicao(player['Posição'] || player['POSIÇÃO'] || player.Posicao || '') || 'Posição'}`,
       line: { color: '#ef4444', width: 2, dash: 'dot' },
     };
 
@@ -268,7 +265,7 @@ function PlayerProfileContent() {
     const CORES = ['#3b82f6','#10b981','#8b5cf6','#f97316','#ec4899','#06b6d4','#84cc16','#a855f7'];
     const gnCandidatos = gnMesmaPos.length > 0 ? gnMesmaPos : dados.gn;
     const tracesGN = gnCandidatos.map((p, i) => {
-      const gnR = METRICAS.map(m => normalizar(getVal(p, m), escalas[m.label]));
+      const gnR = metricas.map(m => normalizar(getVal(p, m), escalas[m.label]));
       gnR.push(gnR[0]);
       return {
         type: 'scatterpolar', mode: 'lines',
@@ -280,7 +277,7 @@ function PlayerProfileContent() {
 
     // ── VS Série B (mesma posição) ──
     const baseSB = serieBMesmaPos.length >= 2 ? serieBMesmaPos : dados.serieB;
-    const mediaSBR = METRICAS.map(m => {
+    const mediaSBR = metricas.map(m => {
       const vals = baseSB.map(j => getVal(j, m)).filter(v => isFinite(v) && v >= 0);
       const med  = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
       return normalizar(med, escalas[m.label]);
@@ -290,7 +287,7 @@ function PlayerProfileContent() {
       type: 'scatterpolar', mode: 'lines',
       r: mediaSBR, theta: labels,
       fill: 'toself', fillcolor: 'rgba(59,130,246,0.12)',
-      name: `Média Série B (${normPos(player['Posição'] || player['POSIÇÃO'] || '')})`,
+      name: `Média Série B · ${normalizePosicao(player['Posição'] || player['POSIÇÃO'] || player.Posicao || '') || 'Posição'}`,
       line: { color: '#3b82f6', width: 2, dash: 'dot' },
     };
 
@@ -599,7 +596,7 @@ function PlayerProfileContent() {
             {[0, 5].map(start => (
               <table key={start} className="w-full text-left text-[10px]">
                 <tbody className="divide-y divide-slate-100">
-                  {METRICAS.slice(start, start + 5).map((m, idx) => (
+                  {dados.metricas.slice(start, start + 5).map((m, idx) => (
                     <tr key={idx} className="hover:bg-slate-50 transition-colors">
                       <td className="px-6 py-2 text-slate-700 font-black uppercase tracking-tight">{m.label}</td>
                       <td className="px-6 py-2 text-right font-black text-black text-xs">
