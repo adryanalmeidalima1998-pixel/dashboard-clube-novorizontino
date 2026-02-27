@@ -365,6 +365,15 @@ function PlayerProfileContent() {
       'Kayke': 'Kayke_Ferrari.png', 'Rodrigo Farofa': 'rodrigo_rodrigues.png',
       'Allison Patrick': 'Allison.png', 'Santi González': 'santi_gonzález.png',
       'Sorriso': 'sorriso.png', 'Romarinho': 'romarinho.png',
+      'Eduardo': 'eduardo.png',
+      'Wesley Marth': 'wesley_marth.png',
+      'Erik Henrique': 'erik_henrique.png',
+      'Thalisson': 'thalisson.png',
+      'Clayton Sampaio': 'clayton_sampaio.png',
+      'Carlinhos': 'carlinhos.png',
+      'Gustavo Henrique': 'gustavo_henrique.png',
+      'Gustavo Medina': 'gustavo_medina.png',
+      'Lucas Belezi': 'lucas_belezi.png',
     };
     if (mapa[name.trim()]) return `/images/players/${mapa[name.trim()]}`;
     return `/images/players/${name.trim().replace(/\s+/g, '_')}.png`;
