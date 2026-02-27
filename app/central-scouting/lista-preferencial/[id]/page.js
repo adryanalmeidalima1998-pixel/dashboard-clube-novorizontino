@@ -36,13 +36,23 @@ const METRICAS = [
 
 // ─── Utilitários puros (sem estado) ─────────────────────────────────────────
 
-/** Converte um jogador cru do CSV em objeto com valores per/90 calculados */
+/** Converte um jogador cru do CSV em objeto com valores per/90 calculados.
+ *  LISTA PREFERENCIAL (fonte='LISTA'): valores são TOTAIS → converte dividindo por minutos.
+ *  GRÊMIO NOVORIZONTINO (fonte='GN') e SÉRIE B (fonte='SERIEB'): já vêm por/90 → usa direto.
+ */
 function processarJogador(raw, fonte) {
   const minutos = safeParseFloat(raw['Minutos jogados']);
+  const jaPer90 = fonte === 'GN' || fonte === 'SERIEB';
   const obj = { ...raw, _fonte: fonte, _minutos: minutos };
   METRICAS.forEach(m => {
     const v = safeParseFloat(raw[m.key]);
-    obj[`_v_${m.key}`] = m.per90 ? (minutos > 0 ? (v / minutos) * 90 : 0) : v;
+    if (!m.per90) {
+      obj[`_v_${m.key}`] = v;                                    // % — usa direto
+    } else if (jaPer90) {
+      obj[`_v_${m.key}`] = v;                                    // GN/SB já são per/90
+    } else {
+      obj[`_v_${m.key}`] = minutos > 0 ? (v / minutos) * 90 : 0; // Lista: total → per/90
+    }
   });
   return obj;
 }
