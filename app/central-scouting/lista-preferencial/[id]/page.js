@@ -22,34 +22,28 @@ const Plot = dynamic(() => import('react-plotly.js'), {
 });
 
 const FALLBACK_METRICS = [
-  { label: 'Passes Chave', key: 'Passes chave', type: 'per90', max: 5 },
-  { label: 'Passes Progressivos %', key: 'Passes progressivos precisos,%', type: 'raw', max: 100 },
-  { label: 'Passes na Área %', key: 'Passes dentro da área / precisos, %', type: 'raw', max: 100 },
-  { label: 'Dribles Certos/90', key: 'Dribles bem sucedidos', type: 'per90', max: 6 },
-  { label: 'Dribles 1/3 Final/90', key: 'Dribles no último terço do campo com sucesso', type: 'per90', max: 4 },
-  { label: 'Entradas 1/3 Final/90', key: 'Entradas no terço final carregando a bola', type: 'per90', max: 5 },
-  { label: 'Recuperações Campo Adv/90', key: 'Bolas recuperadas no campo do adversário', type: 'per90', max: 6 },
-  { label: 'xA/90', key: 'xA', type: 'per90', max: 0.5 },
-  { label: 'xG/90', key: 'Xg', type: 'per90', max: 0.5 },
-  { label: 'Ações Área Adv/90', key: 'Ações na área adversária bem-sucedidas', type: 'per90', max: 6 },
+  { label: 'Passes Chave', key: 'Passes chave', type: 'per90' },
+  { label: 'Passes Progressivos %', key: 'Passes progressivos precisos,%', type: 'raw' },
+  { label: 'Passes na Área %', key: 'Passes dentro da área / precisos, %', type: 'raw' },
+  { label: 'Dribles Certos/90', key: 'Dribles bem sucedidos', type: 'per90' },
+  { label: 'Dribles 1/3 Final/90', key: 'Dribles no último terço do campo com sucesso', type: 'per90' },
+  { label: 'Entradas 1/3 Final/90', key: 'Entradas no terço final carregando a bola', type: 'per90' },
+  { label: 'Recuperações Campo Adv/90', key: 'Bolas recuperadas no campo do adversário', type: 'per90' },
+  { label: 'xA/90', key: 'xA', type: 'per90' },
+  { label: 'xG/90', key: 'Xg', type: 'per90' },
+  { label: 'Ações Área Adv/90', key: 'Ações na área adversária bem-sucedidas', type: 'per90' },
 ];
 
 function processarJogador(raw, fonte) {
   const minutos = safeParseFloat(raw['Minutos jogados']);
+  const jaPer90 = fonte === 'GN' || fonte === 'SERIEB';
   const obj = { ...raw, _fonte: fonte, _minutos: minutos };
   
   Object.keys(raw).forEach(k => {
     const v = safeParseFloat(raw[k]);
     obj[`_v_${k}_raw`] = v;
-    
-    // A Série B já vem calculada por 90 min. A Lista e GN precisam ser divididos.
-    if (fonte === 'SERIEB') {
-        obj[`_v_${k}_per90`] = v; 
-    } else {
-        obj[`_v_${k}_per90`] = (minutos > 0) ? (v / minutos) * 90 : v;
-    }
+    obj[`_v_${k}_per90`] = jaPer90 ? v : (minutos > 0 ? (v / minutos) * 90 : 0);
   });
-  
   return obj;
 }
 
@@ -63,7 +57,7 @@ function getVal(jogador, metrica) {
   if (isPercentage && val > 0 && val <= 2) {
     val = val * 100;
   }
-  return val || 0; 
+  return val || 0; // fallback de segurança
 }
 
 function normPos(p) {
@@ -179,7 +173,7 @@ function PlayerProfileContent() {
     const { player, listaMesmaPos, serieBMesmaPos } = dados;
     const base = [...listaMesmaPos, ...serieBMesmaPos];
 
-    if (base.length === 0) return { fortes: [], fracos: [] };
+    if (base.length === 0) return { fortes: [], fracos: [] }; // Prevenção de divisão por zero
 
     const comparacoes = metricasAtuais.map(m => {
       const vAtleta = getVal(player, m);
@@ -198,32 +192,46 @@ function PlayerProfileContent() {
     return { fortes, fracos };
   }, [dados, metricasAtuais]);
 
-  // ── GERADOR DE RADAR (ESCALA FIXA LINEAR COM FOLGA DE REALISMO) ──
+  // ── GERADOR DE RADAR POR PERCENTIL (VISUAL WYSCOUT FECHADINHO) ──
   const radarData = useMemo(() => {
     if (!dados?.player) return { media: [], gremio: [], serieb: [] };
     const { player, listaMesmaPos, gnMesmaPos, serieBMesmaPos } = dados;
 
     const labels = [...metricasAtuais.map(m => m.label), metricasAtuais[0].label];
     const pColor = configPosicao?.cor || '#fbbf24';
+    
+    // Garante que populacaoMercado nunca seja vazio (usa a própria lista geral como fallback)
+    let populacaoMercado = [...(listaMesmaPos || []), ...(serieBMesmaPos || [])];
+    if (populacaoMercado.length === 0) {
+        populacaoMercado = dados.lista || [player]; 
+    }
 
-    // Função modificada para criar a margem de realismo na borda
-    const calcRadarValue = (valorRaw, metrica) => {
-      // Limite técnico definido nas configurações (ex: 6 dribles)
-      const limiteTecnico = metrica.max || 10;
-      
-      // MARGEM DE REALISMO: Definimos que o limite técnico corresponde a 90% da borda do gráfico.
-      // O limite visual total (100% da borda) será ~11.1% maior que o limite técnico.
-      // Isso garante que mesmo que o jogador atinja o limite máximo definido, ele não toque a borda.
-      const limiteVisualTotal = limiteTecnico / 0.9; 
-      
-      let p = (valorRaw / limiteVisualTotal) * 100;
-      
-      // Trava o gráfico visualmente entre 0 e 100% para evitar erros
-      return Math.min(Math.max(p, 0), 100); 
+    // Converte valor real em raio do radar (0–95).
+    // Usa o campo `max` da métrica como teto absoluto realista (ex: xG/90 max = 0.8).
+    // Isso garante que nenhum jogador "preenche o radar" — só lendas chegariam a 95.
+    // Fallback: se não houver max, usa o p99 da população como teto dinâmico.
+    const calcRadarRadius = (valorRaw, metrica) => {
+      const vals = populacaoMercado.map(j => getVal(j, metrica)).filter(v => isFinite(v) && v >= 0);
+
+      // Teto: usa max da métrica se definido, senão p95 da população
+      let teto;
+      if (metrica.max && metrica.max > 0) {
+        teto = metrica.max;
+      } else if (vals.length > 0) {
+        vals.sort((a, b) => a - b);
+        teto = vals[Math.floor(vals.length * 0.95)] || vals[vals.length - 1];
+      } else {
+        return 30;
+      }
+
+      // Raio proporcional ao teto, capado em 95 (nunca toca a borda)
+      const ratio = teto > 0 ? valorRaw / teto : 0;
+      return Math.min(Math.max(ratio * 95, 3), 95);
     };
 
-    // Monta dados do Atleta
-    const playerR = metricasAtuais.map(m => calcRadarValue(getVal(player, m), m));
+    const calcPercentilRadar = calcRadarRadius; // alias para compatibilidade
+
+    const playerR = metricasAtuais.map(m => calcPercentilRadar(getVal(player, m), m));
     playerR.push(playerR[0]); 
     const playerHover = metricasAtuais.map(m => `${m.label}: ${getVal(player, m).toFixed(2)}`);
     playerHover.push(playerHover[0]);
@@ -235,13 +243,12 @@ function PlayerProfileContent() {
       text: playerHover, hoverinfo: 'text+name'
     };
 
-    // Cria as Médias
     const buildMediaTrace = (listaComparacao, nome, colorLine, fillCol) => {
-      const baseParaMedia = (listaComparacao && listaComparacao.length > 0) ? listaComparacao : (dados.lista || []);
+      const baseParaMedia = (listaComparacao && listaComparacao.length >= 2) ? listaComparacao : populacaoMercado;
       const mediaR = metricasAtuais.map(m => {
         const vals = baseParaMedia.map(j => getVal(j, m)).filter(v => isFinite(v));
         const mediaReal = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
-        return calcRadarValue(mediaReal, m);
+        return calcPercentilRadar(mediaReal, m);
       });
       mediaR.push(mediaR[0]);
       
@@ -263,12 +270,11 @@ function PlayerProfileContent() {
     const traceMediaLista = buildMediaTrace(listaMesmaPos, `Média Lista`, '#ef4444', 'rgba(239,68,68,0.12)');
     const traceMediaSB = buildMediaTrace(serieBMesmaPos, `Média Série B`, '#3b82f6', 'rgba(59,130,246,0.12)');
 
-    // Elenco GN
     const CORES = ['#3b82f6','#10b981','#8b5cf6','#f97316','#ec4899','#06b6d4','#84cc16','#a855f7'];
     const gnCandidatos = (gnMesmaPos && gnMesmaPos.length > 0) ? gnMesmaPos : (dados.gn || []);
     
     const tracesGN = gnCandidatos.map((p, i) => {
-      const gnR = metricasAtuais.map(m => calcRadarValue(getVal(p, m), m));
+      const gnR = metricasAtuais.map(m => calcPercentilRadar(getVal(p, m), m));
       gnR.push(gnR[0]);
       const gnHover = metricasAtuais.map(m => `${m.label}: ${getVal(p, m).toFixed(2)}`);
       gnHover.push(gnHover[0]);
@@ -337,8 +343,14 @@ function PlayerProfileContent() {
 
   const navigation = useMemo(() => {
     if (!dados?.player || !dados?.lista?.length) return { prev: null, next: null };
-    const idx = dados.lista.findIndex(p => p.ID_ATLETA === dados.player.ID_ATLETA);
-    return { prev: idx > 0 ? dados.lista[idx - 1] : null, next: idx < dados.lista.length - 1 ? dados.lista[idx + 1] : null };
+    const currentId = dados.player.ID_ATLETA || dados.player.Jogador;
+    const idx = dados.lista.findIndex(p => (p.ID_ATLETA || p.Jogador) === currentId);
+    const prev = idx > 0 ? dados.lista[idx - 1] : null;
+    const next = idx < dados.lista.length - 1 ? dados.lista[idx + 1] : null;
+    return {
+      prev: prev && (prev.ID_ATLETA || prev.Jogador) ? prev : null,
+      next: next && (next.ID_ATLETA || next.Jogador) ? next : null,
+    };
   }, [dados]);
 
   const getPlayerPhoto = (name) => {
@@ -381,9 +393,9 @@ function PlayerProfileContent() {
           </div>
           <div className="text-right flex flex-col items-end gap-2">
             <div className="flex gap-2 no-print">
-              {navigation.prev && <button onClick={() => router.push(`/central-scouting/lista-preferencial/${navigation.prev.ID_ATLETA}`)} className="bg-slate-800 text-white px-3 py-1 rounded-md text-xs font-bold hover:bg-slate-700 transition-colors">← ANTERIOR</button>}
+              {navigation.prev && <button onClick={() => router.push(`/central-scouting/lista-preferencial/${encodeURIComponent(navigation.prev.ID_ATLETA || navigation.prev.Jogador)}`)} className="bg-slate-800 text-white px-3 py-1 rounded-md text-xs font-bold hover:bg-slate-700 transition-colors">← ANTERIOR</button>}
               <button onClick={() => router.push('/central-scouting/lista-preferencial')} className="bg-slate-200 text-slate-800 px-3 py-1 rounded-md text-xs font-bold hover:bg-slate-300 transition-colors">MENU</button>
-              {navigation.next && <button onClick={() => router.push(`/central-scouting/lista-preferencial/${navigation.next.ID_ATLETA}`)} className="bg-amber-500 text-black px-3 py-1 rounded-md text-xs font-bold hover:bg-amber-400 transition-colors">PRÓXIMO →</button>}
+              {navigation.next && <button onClick={() => router.push(`/central-scouting/lista-preferencial/${encodeURIComponent(navigation.next.ID_ATLETA || navigation.next.Jogador)}`)} className="bg-amber-500 text-black px-3 py-1 rounded-md text-xs font-bold hover:bg-amber-400 transition-colors">PRÓXIMO →</button>}
             </div>
             <div className="bg-amber-500 text-black px-6 py-1 font-black text-xl uppercase italic shadow-md">Relatório de Prospecção</div>
             <div className="text-slate-600 font-black text-[10px] mt-1 tracking-wider uppercase">DATA: {new Date().toLocaleDateString('pt-BR')} | ID: {player.ID_ATLETA}</div>
