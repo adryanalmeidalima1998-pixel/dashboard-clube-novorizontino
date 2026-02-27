@@ -34,6 +34,30 @@ export function normalizePosicao(posicao) {
 
 export const POSITION_METRICS = {
 
+  GOLEIRO: {
+    label: 'Goleiro',
+    cor: '#06b6d4',
+    radarMetrics: [
+      { label: 'Defesas/90', key: 'Defesas', type: 'per90', max: 6 },
+      { label: 'Defesas %', key: 'Defesas, %', type: 'raw', max: 100 },
+      { label: 'Gols Sofridos/90', key: 'Gols sofridos', type: 'per90', max: 3 },
+      { label: 'Saídas/90', key: 'Saídas do goleiro', type: 'per90', max: 3 },
+      { label: 'Duelos Aéreos/90', key: 'Disputas aéreas', type: 'per90', max: 4 },
+      { label: 'Passes Longos/90', key: 'Passes longos', type: 'per90', max: 6 },
+      { label: 'Passes Precisos %', key: 'Passes precisos %', type: 'raw', max: 100 },
+      { label: 'Passes Prog./90', key: 'Passes progressivos', type: 'per90', max: 4 },
+      { label: 'xG Concedido/90', key: 'Xg sofridos', type: 'per90', max: 2 },
+      { label: 'Prevenção de Gol/90', key: 'Prevenção de gol', type: 'per90', max: 1 },
+    ],
+    scatterPlots: [
+      { id: 'gk-defesas', titulo: 'Volume vs Qualidade', subtitulo: 'Defesas/90 × Defesas %', xLabel: 'Defesas/90', yLabel: 'Defesas %', xKey: 'Defesas', yKey: 'Defesas, %', xType: 'per90', yType: 'raw' },
+      { id: 'gk-passes', titulo: 'Jogo com os Pés', subtitulo: 'Passes longos/90 × Passes precisos %', xLabel: 'Passes Longos/90', yLabel: 'Passes Precisos %', xKey: 'Passes longos', yKey: 'Passes precisos %', xType: 'per90', yType: 'raw' },
+      { id: 'gk-aereo', titulo: 'Domínio Aéreo', subtitulo: 'Duelos aéreos/90 × Saídas/90', xLabel: 'Duelos Aéreos/90', yLabel: 'Saídas/90', xKey: 'Disputas aéreas', yKey: 'Saídas do goleiro', xType: 'per90', yType: 'per90' },
+      { id: 'gk-construcao', titulo: 'Construção do Jogo', subtitulo: 'Passes progressivos/90 × Passes precisos %', xLabel: 'Passes Prog./90', yLabel: 'Passes Precisos %', xKey: 'Passes progressivos', yKey: 'Passes precisos %', xType: 'per90', yType: 'raw' },
+      { id: 'gk-prevencao', titulo: 'Prevenção vs xG', subtitulo: 'xG concedido/90 × Gols sofridos/90', xLabel: 'xG Concedido/90', yLabel: 'Gols Sofridos/90', xKey: 'Xg sofridos', yKey: 'Gols sofridos', xType: 'per90', yType: 'per90' },
+    ],
+  },
+
   ZAGUEIRO: {
     label: 'Zagueiro',
     cor: '#3b82f6',
@@ -141,7 +165,7 @@ export const POSITION_METRICS = {
       { label: 'Chances Criadas/90', key: 'Chances criadas', type: 'per90', max: 4 },
       { label: 'xA/90', key: 'xA', type: 'per90', max: 0.35 },
       { label: 'xG/90', key: 'Xg', type: 'per90', max: 0.4 },
-      { label: 'Chutes no Gol %', key: 'Chutes no gol, %', type: 'raw', max: 1 }, 
+      { label: 'Chutes no Gol %', key: 'Chutes no gol, %', type: 'raw', max: 100 }, 
       { label: 'Ações Área Adv./90', key: 'Ações na área adversária bem-sucedidas', type: 'per90', max: 4 },
       { label: 'Rec. Campo Adv./90', key: 'Bolas recuperadas no campo do adversário', type: 'per90', max: 4 },
     ],
@@ -160,7 +184,7 @@ export const POSITION_METRICS = {
     radarMetrics: [
       { label: 'xG/90', key: 'Xg', type: 'per90', max: 0.8 },
       { label: 'Chutes/90', key: 'Chutes', type: 'per90', max: 5 },
-      { label: 'Chutes no Gol %', key: 'Chutes no gol, %', type: 'raw', max: 1 }, 
+      { label: 'Chutes no Gol %', key: 'Chutes no gol, %', type: 'raw', max: 100 }, 
       { label: 'xG Conversão', key: 'Chutes/gol', type: 'raw', max: 50 },
       { label: 'Ações Área/90', key: 'Ações na área adversária bem-sucedidas', type: 'per90', max: 5 },
       { label: 'Passes na Área/90', key: 'Passes para a área certos', type: 'per90', max: 3 },
