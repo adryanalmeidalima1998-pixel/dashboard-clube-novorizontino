@@ -25,29 +25,53 @@ function heatColor(v) {
   return `rgba(${r},${g},${b},${a})`;
 }
 
+// LÓGICA REESCRITA PARA ZAGUEIROS
 function computeZones(playerData) {
   const s = (key) => (playerData[key] || 0) * (90 / (playerData.minutes || 1));
   const isRight = playerData.foot === 'R';
-  const wideRow = isRight ? 0 : 3;
-  const semiRow = isRight ? 1 : 2;
-  const centerRow = isRight ? 2 : 1;
+  
+  // Zagueiro Destro joga na "Meia Dir" (Row 1). Canhoto joga na "Meia Esq" (Row 2).
+  const mainRow = isRight ? 1 : 2; 
+  const sideRow = isRight ? 0 : 3; // Lado da cobertura do lateral
+  const centerRow = isRight ? 2 : 1; // Lado da cobertura do companheiro de zaga
+
   const z = Array.from({ length: COLS }, () => new Array(ROWS).fill(0));
   const add = (col, row, val) => { if (val > 0) z[col][row] += val; };
-  const def = s('tackles') + s('intercepts');
-  add(0,wideRow,def*0.55); add(0,semiRow,def*0.25); add(0,centerRow,def*0.1);
-  add(1,wideRow,def*0.25); add(1,semiRow,def*0.1);
-  const mid = s('passes')*0.06 + s('prog_passes')*0.6;
-  add(1,wideRow,mid*0.45); add(1,semiRow,mid*0.3); add(1,centerRow,mid*0.15);
-  add(2,wideRow,mid*0.35); add(2,semiRow,mid*0.45); add(2,centerRow,mid*0.15);
-  const approach = s('passes_final3')*0.6 + s('entries_final3')*1.2 + s('entries_carry')*1.8;
-  add(2,wideRow,approach*0.5); add(2,semiRow,approach*0.3);
-  add(3,wideRow,approach*0.9); add(3,semiRow,approach*0.55); add(3,centerRow,approach*0.25);
-  const wideAtk = s('drb_final3')*2.5 + s('crosses')*1.5;
-  add(3,wideRow,wideAtk*1.2); add(4,wideRow,wideAtk*0.7);
-  add(3,semiRow,wideAtk*0.35); add(4,semiRow,wideAtk*0.2);
-  const box = s('shots')*1.2 + s('actions_opp_box')*0.8 + s('passes_box')*0.5;
-  add(4,centerRow,box*0.7); add(4,semiRow,box*0.65); add(4,wideRow,box*0.35);
-  add(3,centerRow,box*0.3); add(3,semiRow,box*0.2);
+
+  // 1. Presença Base (Onde o zagueiro fica 80% do tempo, independente de tocar na bola)
+  const basePresence = 15;
+  add(0, mainRow, basePresence); // Miolo da zaga (Lado dele)
+  add(0, centerRow, basePresence * 0.4); // Miolo da zaga (Lado do parceiro)
+  add(0, sideRow, basePresence * 0.35); // Cobertura do lateral
+  add(1, mainRow, basePresence * 0.25); // Linha alta / meio campo
+
+  // 2. Ações Defensivas (Desarmes, interceptações)
+  const def = s('tackles') * 1.5 + s('intercepts') * 2.0;
+  add(0, mainRow, def * 1.0);
+  add(0, sideRow, def * 0.6); // Cobertura lateral na defesa
+  add(0, centerRow, def * 0.3);
+  add(1, mainRow, def * 0.4); // Bote mais alto no meio
+  add(1, sideRow, def * 0.2); 
+
+  // 3. Construção / Passes (Saída de bola)
+  const mid = s('passes') * 0.1 + s('prog_passes') * 0.8;
+  add(0, mainRow, mid * 0.6);
+  add(1, mainRow, mid * 0.9);
+  add(1, sideRow, mid * 0.3);
+  add(1, centerRow, mid * 0.2);
+  add(2, mainRow, mid * 0.15); // Passe em progressão
+
+  // 4. Avanços (Raros para zagueiros, geralmente em condução ou passes longos)
+  const approach = s('passes_final3') * 0.8 + s('entries_final3') * 1.5;
+  add(2, mainRow, approach * 0.5);
+  add(3, mainRow, approach * 0.2);
+
+  // 5. Presença na Área Ofensiva (Bolas Paradas / Escanteios)
+  const box = s('shots') * 2.5 + s('actions_opp_box') * 2.0;
+  add(4, 1, box * 0.5); // Área de ataque central
+  add(4, 2, box * 0.5); // Área de ataque central
+
+  // Normalização
   let maxVal = 0;
   z.forEach(col => col.forEach(v => { if (v > maxVal) maxVal = v; }));
   if (maxVal > 0) z.forEach(col => col.forEach((v,r) => { col[r] = v / maxVal; }));
@@ -227,22 +251,24 @@ export default function HeatmapComponent({ playerData }) {
 
   const p90 = (v) => ((v*90)/(playerData.minutes||1)).toFixed(1);
 
+  // AJUSTES NAS BARRAS PARA ZAGUEIROS: Reduzi os "máximos" (max) para que as barras
+  // defensivas fiquem mais preenchidas e as ofensivas não pareçam "zeradas".
   const statGroups = [
     { label:'ATAQUE', accent:'linear-gradient(90deg,#f97316,#ef4444)', stats:[
-      {label:'Chutes / 90', value:parseFloat(p90(playerData.shots||0)), max:5},
-      {label:'Gols', value:playerData.goals||0, max:25},
-      {label:'Assistências', value:playerData.assists||0, max:10},
-      {label:'Ações área adv. / 90', value:parseFloat(p90(playerData.actions_opp_box||0)), max:10},
+      {label:'Chutes / 90', value:parseFloat(p90(playerData.shots||0)), max:2},
+      {label:'Gols', value:playerData.goals||0, max:5},
+      {label:'Assistências', value:playerData.assists||0, max:5},
+      {label:'Ações área adv. / 90', value:parseFloat(p90(playerData.actions_opp_box||0)), max:3},
     ]},
     { label:'CRIAÇÃO', accent:'linear-gradient(90deg,#22d3ee,#3b82f6)', stats:[
       {label:'Passes prog. / 90', value:parseFloat(p90(playerData.prog_passes||0)), max:8},
-      {label:'Dribles últ. terço / 90', value:parseFloat(p90(playerData.drb_final3||0)), max:8},
-      {label:'Cruzamentos / 90', value:parseFloat(p90(playerData.crosses||0)), max:4},
-      {label:'Entradas terço final / 90', value:parseFloat(p90(playerData.entries_final3||0)), max:5},
+      {label:'Dribles últ. terço / 90', value:parseFloat(p90(playerData.drb_final3||0)), max:2},
+      {label:'Cruzamentos / 90', value:parseFloat(p90(playerData.crosses||0)), max:1},
+      {label:'Entradas terço final / 90', value:parseFloat(p90(playerData.entries_final3||0)), max:3},
     ]},
     { label:'DEFESA', accent:'linear-gradient(90deg,#a78bfa,#6366f1)', stats:[
-      {label:'Desarmes / 90', value:parseFloat(p90(playerData.tackles||0)), max:5},
-      {label:'Interceptações / 90', value:parseFloat(p90(playerData.intercepts||0)), max:4},
+      {label:'Desarmes / 90', value:parseFloat(p90(playerData.tackles||0)), max:4},
+      {label:'Interceptações / 90', value:parseFloat(p90(playerData.intercepts||0)), max:6},
     ]},
   ];
 
@@ -335,7 +361,8 @@ export default function HeatmapComponent({ playerData }) {
             </div>
             <div>
               <div style={{fontSize:'16px',fontWeight:'800',color:'#f0f4ff',lineHeight:1}}>{playerData.name}</div>
-              <div style={{fontSize:'11px',color:'#3b82f6',marginTop:'3px'}}>{playerData.team} · EXTREMO · {playerData.age} anos</div>
+              {/* Ajustado: Removida a string fixa "EXTREMO" */}
+              <div style={{fontSize:'11px',color:'#3b82f6',marginTop:'3px'}}>{playerData.team} · {playerData.position ? playerData.position.toUpperCase() : 'ZAGUEIRO'} · {playerData.age} anos</div>
             </div>
             <div style={{marginLeft:'auto',textAlign:'right'}}>
               <div style={{fontSize:'10px',color:'#4a5a76'}}>MIN JOGADOS</div>
@@ -447,9 +474,9 @@ export default function HeatmapComponent({ playerData }) {
           <div style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.06)',borderRadius:'10px',padding:'14px 16px'}}>
             <div style={{fontSize:'10px',color:'#4a5a76',letterSpacing:'0.2em',marginBottom:'10px'}}>VOLUME DE JOGO / 90</div>
             {[
-              {label:'Passes',v:p90(playerData.passes||0),max:30},
-              {label:'Dribles',v:p90(playerData.dribbles||0),max:12},
-              {label:'Passes p/ área',v:p90(playerData.passes_box||0),max:8},
+              {label:'Passes',v:p90(playerData.passes||0),max:60}, // Aumentado o max de passes para zagueiros
+              {label:'Dribles',v:p90(playerData.dribbles||0),max:3},
+              {label:'Passes p/ área',v:p90(playerData.passes_box||0),max:2},
             ].map(s=><StatBar key={s.label} label={s.label} value={parseFloat(s.v)} max={s.max} accent="linear-gradient(90deg,#34d399,#10b981)"/>)}
           </div>
         </div>
