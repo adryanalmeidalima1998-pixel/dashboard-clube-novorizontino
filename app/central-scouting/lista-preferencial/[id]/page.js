@@ -118,8 +118,24 @@ function PlayerProfileContent() {
 
         const pos = normPos(player?.['Posição'] || player?.['POSIÇÃO'] || player?.Posicao || '');
         const listaMesmaPos  = lista.filter(j => mesmaPos(j['Posição'] || j['POSIÇÃO'] || j.Posicao, pos));
-        const gnMesmaPos     = gn.filter(j   => mesmaPos(j['Posição'] || j['POSIÇÃO'] || j.Posicao, pos));
         const serieBMesmaPos = serieB.filter(j => mesmaPos(j['Posição'] || j['POSIÇÃO'] || j.Posicao, pos));
+
+        // Para o elenco GN no radar de zagueiros:
+        // - Excluir Alemão (GN21) — substituído por Alvariño (GN3)
+        // - Alvariño entra como zagueiro de origem mesmo que cadastrado em outra posição
+        const gnMesmaPos = (() => {
+          const EXCLUIR_GN = ['Alemão'];
+          const INCLUIR_GN_FORCADO = ['Alvariño']; // zagueiro de origem, independente do cadastro
+          const porPos = gn.filter(j =>
+            mesmaPos(j['Posição'] || j['POSIÇÃO'] || j.Posicao, pos) &&
+            !EXCLUIR_GN.includes((j.Jogador || '').trim())
+          );
+          const forcados = gn.filter(j =>
+            INCLUIR_GN_FORCADO.includes((j.Jogador || '').trim()) &&
+            !porPos.find(p => p.Jogador === j.Jogador)
+          );
+          return [...porPos, ...forcados];
+        })();
 
         setDados({ player, lista, gn, serieB, listaMesmaPos, gnMesmaPos, serieBMesmaPos });
       } catch (e) {
