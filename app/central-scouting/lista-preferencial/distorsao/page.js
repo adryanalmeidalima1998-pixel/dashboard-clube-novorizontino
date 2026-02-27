@@ -84,29 +84,26 @@ const GRAFICOS_FALLBACK = [
   },
 ];
 // ─── Processar dados: pré-calcula per90 para todas as colunas numéricas ──────
-function processarDados(dados, aba) {
+// jaPer90: dados já vêm normalizados por 90min (GN gid=1236859817 e Série B)
+function processarDados(dados, aba, jaPer90 = false) {
   return dados.map(jogador => {
     const minutos = safeParseFloat(jogador['Minutos jogados']);
     const processado = { ...jogador, aba };
     Object.keys(jogador).forEach(key => {
       const rawVal = safeParseFloat(jogador[key]);
       if (!isNaN(rawVal)) {
-        processado[`${key}_per90`] = minutos > 0 ? (rawVal / minutos) * 90 : 0;
+        processado[`${key}_per90`] = jaPer90
+          ? rawVal                                          // já é per90 — copia direto
+          : (minutos > 0 ? (rawVal / minutos) * 90 : 0);  // normaliza
       }
     });
     return processado;
   });
 }
 
-// ─── Série B: valores já vêm por/90 — mapeia direto, sem transformar ─────────
+// ─── Série B: alias — valores já vêm por/90 ──────────────────────────────────
 function processarDadosSB(dados) {
-  return dados.map(jogador => {
-    const processado = { ...jogador, aba: 'SERIEB' };
-    Object.keys(jogador).forEach(key => {
-      processado[`${key}_per90`] = safeParseFloat(jogador[key]);
-    });
-    return processado;
-  });
+  return processarDados(dados, 'SERIEB', true);
 }
 
 function getVal(jogador, key, type) {
@@ -446,10 +443,10 @@ function DispersaoContent() {
         const [r1, r2, r3] = await Promise.all([fetch(urlLista), fetch(urlGN), fetch(urlSerieB)]);
         const [c1, c2, c3] = await Promise.all([r1.text(), r2.text(), r3.text()]);
 
-        const parseCSV = (csv, aba) => new Promise(resolve => {
+        const parseCSV = (csv, aba, jaPer90 = false) => new Promise(resolve => {
           Papa.parse(csv, {
             header: true, skipEmptyLines: true,
-            complete: r => resolve(processarDados(cleanData(r.data), aba))
+            complete: r => resolve(processarDados(cleanData(r.data), aba, jaPer90))
           });
         });
 
@@ -462,7 +459,7 @@ function DispersaoContent() {
 
         const [d1, d2, d3] = await Promise.all([
           parseCSV(c1, 'LISTA'),
-          parseCSV(c2, 'GN'),
+          parseCSV(c2, 'GN', true),  // GN gid=1236859817 já vem per/90
           parseSB(c3),
         ]);
 
