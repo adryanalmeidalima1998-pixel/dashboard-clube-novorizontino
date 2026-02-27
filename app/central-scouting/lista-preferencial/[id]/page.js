@@ -36,14 +36,17 @@ const FALLBACK_METRICS = [
 
 function processarJogador(raw, fonte) {
   const minutos = safeParseFloat(raw['Minutos jogados']);
-  const jaPer90 = fonte === 'GN' || fonte === 'SERIEB';
   const obj = { ...raw, _fonte: fonte, _minutos: minutos };
   
   Object.keys(raw).forEach(k => {
     const v = safeParseFloat(raw[k]);
     obj[`_v_${k}_raw`] = v;
-    obj[`_v_${k}_per90`] = jaPer90 ? v : (minutos > 0 ? (v / minutos) * 90 : 0);
+    
+    // A MÁGICA CORRIGIDA: Se tiver minutos jogados, converte para média por jogo (per90).
+    // Isso vai normalizar o Elenco GN e fazer as linhas deles ficarem baixinhas e proporcionais!
+    obj[`_v_${k}_per90`] = (minutos > 0) ? (v / minutos) * 90 : v;
   });
+  
   return obj;
 }
 
