@@ -84,27 +84,29 @@ const GRAFICOS_FALLBACK = [
   },
 ];
 // ─── Processar dados: pré-calcula per90 para todas as colunas numéricas ──────
-// jaPer90: true quando os valores já chegam normalizados por 90min (GN, Série B)
-function processarDados(dados, aba, jaPer90 = false) {
+function processarDados(dados, aba) {
   return dados.map(jogador => {
     const minutos = safeParseFloat(jogador['Minutos jogados']);
     const processado = { ...jogador, aba };
     Object.keys(jogador).forEach(key => {
       const rawVal = safeParseFloat(jogador[key]);
       if (!isNaN(rawVal)) {
-        // GN e Série B já entregam valores per/90 — não dividir de novo
-        processado[`${key}_per90`] = jaPer90
-          ? rawVal
-          : (minutos > 0 ? (rawVal / minutos) * 90 : 0);
+        processado[`${key}_per90`] = minutos > 0 ? (rawVal / minutos) * 90 : 0;
       }
     });
     return processado;
   });
 }
 
-// ─── Série B: valores já vêm por/90 — alias para clareza ────────────────────
+// ─── Série B: valores já vêm por/90 — mapeia direto, sem transformar ─────────
 function processarDadosSB(dados) {
-  return processarDados(dados, 'SERIEB', true);
+  return dados.map(jogador => {
+    const processado = { ...jogador, aba: 'SERIEB' };
+    Object.keys(jogador).forEach(key => {
+      processado[`${key}_per90`] = safeParseFloat(jogador[key]);
+    });
+    return processado;
+  });
 }
 
 function getVal(jogador, key, type) {
@@ -402,9 +404,28 @@ function DispersaoContent() {
   }, [lista, posicaoFiltro]);
 
   // GN filtrado pela mesma posição
+  // Regra especial para ZAGUEIRO: excluir Alemão (GN21), incluir Alvariño (GN3) de origem
   const gnFiltrado = useMemo(() => {
-    if (posicaoFiltro === 'TODOS') return gn;
-    return gn.filter(j => normalizePosicao(j.Posição) === posicaoFiltro);
+    const EXCLUIR_GN = ['Alemão'];
+    const INCLUIR_GN_FORCADO = { 'Alvariño': 'ZAGUEIRO' }; // nome → posição de origem forçada
+
+    if (posicaoFiltro === 'TODOS') {
+      return gn.filter(j => !EXCLUIR_GN.includes((j.Jogador || '').trim()));
+    }
+
+    const porPos = gn.filter(j =>
+      normalizePosicao(j.Posição) === posicaoFiltro &&
+      !EXCLUIR_GN.includes((j.Jogador || '').trim())
+    );
+
+    // Adiciona jogadores forçados se a posição filtrada bater com a posição de origem
+    const forcados = gn.filter(j => {
+      const nome = (j.Jogador || '').trim();
+      return INCLUIR_GN_FORCADO[nome] === posicaoFiltro &&
+             !porPos.find(p => p.Jogador === j.Jogador);
+    });
+
+    return [...porPos, ...forcados];
   }, [gn, posicaoFiltro]);
 
   // Gráficos dinâmicos baseados na posição selecionada
@@ -425,10 +446,10 @@ function DispersaoContent() {
         const [r1, r2, r3] = await Promise.all([fetch(urlLista), fetch(urlGN), fetch(urlSerieB)]);
         const [c1, c2, c3] = await Promise.all([r1.text(), r2.text(), r3.text()]);
 
-        const parseCSV = (csv, aba, jaPer90 = false) => new Promise(resolve => {
+        const parseCSV = (csv, aba) => new Promise(resolve => {
           Papa.parse(csv, {
             header: true, skipEmptyLines: true,
-            complete: r => resolve(processarDados(cleanData(r.data), aba, jaPer90))
+            complete: r => resolve(processarDados(cleanData(r.data), aba))
           });
         });
 
@@ -441,7 +462,7 @@ function DispersaoContent() {
 
         const [d1, d2, d3] = await Promise.all([
           parseCSV(c1, 'LISTA'),
-          parseCSV(c2, 'GN', true),
+          parseCSV(c2, 'GN'),
           parseSB(c3),
         ]);
 
