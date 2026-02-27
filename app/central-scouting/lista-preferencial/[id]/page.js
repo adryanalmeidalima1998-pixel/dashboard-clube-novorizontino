@@ -207,21 +207,27 @@ function PlayerProfileContent() {
     }
 
     // Converte valor real em raio do radar (0–95).
-    // Usa o campo `max` da métrica como teto absoluto realista (ex: xG/90 max = 0.8).
-    // Isso garante que nenhum jogador "preenche o radar" — só lendas chegariam a 95.
-    // Fallback: se não houver max, usa o p99 da população como teto dinâmico.
+    // Usa o campo `max` da métrica como teto absoluto realista.
+    // IMPORTANTE: getVal já converte métricas % de decimal para 0-100 (ex: 0.45 → 45).
+    // Então se max=1 para uma métrica %, o teto efetivo é 100 (não 1).
     const calcRadarRadius = (valorRaw, metrica) => {
       const vals = populacaoMercado.map(j => getVal(j, metrica)).filter(v => isFinite(v) && v >= 0);
 
-      // Teto: usa max da métrica se definido, senão p95 da população
+      // Detecta se getVal vai converter o valor para escala 0-100
+      const isPercentMetric =
+        (metrica.label && metrica.label.includes('%')) ||
+        (metrica.key   && metrica.key.includes('%'));
+
+      // Ajusta o teto para a mesma escala que getVal retorna
       let teto;
       if (metrica.max && metrica.max > 0) {
-        teto = metrica.max;
+        teto = (isPercentMetric && metrica.max <= 2) ? metrica.max * 100 : metrica.max;
       } else if (vals.length > 0) {
-        vals.sort((a, b) => a - b);
-        teto = vals[Math.floor(vals.length * 0.95)] || vals[vals.length - 1];
+        // Fallback: p95 da população quando não há max definido
+        const sorted = [...vals].sort((a, b) => a - b);
+        teto = sorted[Math.floor(sorted.length * 0.95)] || sorted[sorted.length - 1];
       } else {
-        return 30;
+        return 20;
       }
 
       // Raio proporcional ao teto, capado em 95 (nunca toca a borda)
