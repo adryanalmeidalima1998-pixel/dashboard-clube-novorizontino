@@ -10,20 +10,17 @@ import HeatmapComponent from '@/app/components/HeatmapComponent';
 import { calcularPerfilSugerido } from '@/app/utils/perfilAnalyzer';
 import { gerarTextoAnalise } from '@/app/utils/textGenerator';
 import { PERFIL_DESCRICOES } from '@/app/utils/perfilWeights';
-
-// Importação Dinâmica de Posições
 import { getMetricsByPosicao, normalizePosicao } from '@/app/utils/positionMetrics';
 
 const Plot = dynamic(() => import('react-plotly.js'), {
   ssr: false,
   loading: () => (
     <div className="h-full flex items-center justify-center text-slate-400 font-bold italic animate-pulse text-sm">
-      CARREGANDO...
+      CARREGANDO GRÁFICOS...
     </div>
   ),
 });
 
-// Fallback de segurança
 const FALLBACK_METRICS = [
   { label: 'Passes Chave', key: 'Passes chave', type: 'per90' },
   { label: 'Passes Progressivos %', key: 'Passes progressivos precisos,%', type: 'raw' },
@@ -51,17 +48,16 @@ function processarJogador(raw, fonte) {
 }
 
 function getVal(jogador, metrica) {
-  if (!jogador) return 0;
+  if (!jogador || !metrica) return 0;
   const isPer90 = metrica.type === 'per90' || metrica.per90 === true;
   const key = isPer90 ? `_v_${metrica.key}_per90` : `_v_${metrica.key}_raw`;
   let val = jogador[key] !== undefined ? jogador[key] : safeParseFloat(jogador[metrica.key]);
 
-  // Correção inteligente para porcentagens (transforma 0.31 em 31.0)
-  const isPercentage = metrica.label.includes('%') || metrica.key.includes('%');
+  const isPercentage = (metrica.label && metrica.label.includes('%')) || (metrica.key && metrica.key.includes('%'));
   if (isPercentage && val > 0 && val <= 2) {
     val = val * 100;
   }
-  return val;
+  return val || 0; // fallback de segurança
 }
 
 function normPos(p) {
@@ -127,7 +123,7 @@ function PlayerProfileContent() {
 
         setDados({ player, lista, gn, serieB, listaMesmaPos, gnMesmaPos, serieBMesmaPos });
       } catch (e) {
-        console.error('Erro ao carregar:', e);
+        console.error('Erro ao carregar os dados:', e);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -156,26 +152,34 @@ function PlayerProfileContent() {
 
   useEffect(() => {
     if (!dados?.player || !perfilSelecionado || !dados?.lista?.length) return;
-    const texto = gerarTextoAnalise({
-      player: dados.player,
-      perfil: perfilSelecionado,
-      descricaoPerfil: PERFIL_DESCRICOES[perfilSelecionado] || '',
-      listaPreferencial: dados.lista,
-      serieB: dados.serieB,
-      metricas: metricasAtuais.map(m => ({ label: m.label, key: m.key, type: m.type || 'per90' })),
-    });
-    setTextoAnalitico(texto);
+    try {
+      const texto = gerarTextoAnalise({
+        player: dados.player,
+        perfil: perfilSelecionado,
+        descricaoPerfil: PERFIL_DESCRICOES[perfilSelecionado] || '',
+        listaPreferencial: dados.lista,
+        serieB: dados.serieB,
+        metricas: metricasAtuais.map(m => ({ label: m.label, key: m.key, type: m.type || 'per90' })),
+      });
+      setTextoAnalitico(texto);
+    } catch (e) {
+      console.error("Erro ao gerar texto analitico", e);
+      setTextoAnalitico("");
+    }
   }, [perfilSelecionado, dados, metricasAtuais]);
 
   const pontosFortesFragos = useMemo(() => {
-    if (!dados?.player || !dados?.listaMesmaPos?.length) return { fortes: [], fracos: [] };
+    if (!dados?.player || !dados?.listaMesmaPos || dados.listaMesmaPos.length === 0) return { fortes: [], fracos: [] };
     const { player, listaMesmaPos, serieBMesmaPos } = dados;
     const base = [...listaMesmaPos, ...serieBMesmaPos];
+
+    if (base.length === 0) return { fortes: [], fracos: [] }; // Prevenção de divisão por zero
 
     const comparacoes = metricasAtuais.map(m => {
       const vAtleta = getVal(player, m);
       const vals    = base.map(j => getVal(j, m)).filter(v => isFinite(v) && v >= 0);
-      if (!vals.length) return null;
+      if (vals.length === 0) return null;
+      
       const media   = vals.reduce((a, b) => a + b, 0) / vals.length;
       const diff    = media > 0 ? ((vAtleta - media) / media) * 100 : 0;
       const pctil   = Math.round((vals.filter(v => v <= vAtleta).length / vals.length) * 100);
@@ -195,19 +199,22 @@ function PlayerProfileContent() {
 
     const labels = [...metricasAtuais.map(m => m.label), metricasAtuais[0].label];
     const pColor = configPosicao?.cor || '#fbbf24';
-    const populacaoMercado = [...listaMesmaPos, ...serieBMesmaPos]; // Base para medir nível de todos
+    
+    // Garante que populacaoMercado nunca seja vazio (usa a própria lista geral como fallback)
+    let populacaoMercado = [...(listaMesmaPos || []), ...(serieBMesmaPos || [])];
+    if (populacaoMercado.length === 0) {
+        populacaoMercado = dados.lista || [player]; 
+    }
 
-    // Função que transforma qualquer valor num raio proporcional de 0 a 100
     const calcPercentilRadar = (valorRaw, metrica) => {
       const vals = populacaoMercado.map(j => getVal(j, metrica)).filter(v => isFinite(v));
-      if (vals.length === 0) return 50;
+      if (vals.length === 0) return 50; // Retorna meio do radar se não houver dados pra comparar
       vals.sort((a, b) => a - b);
       const qtdAbaixo = vals.filter(v => v <= valorRaw).length;
       let p = (qtdAbaixo / vals.length) * 100;
-      return Math.max(p, 5); // Garante que nunca suma no centro (mínimo 5% de raio)
+      return Math.max(p, 5); 
     };
 
-    // Monta dados do Atleta
     const playerR = metricasAtuais.map(m => calcPercentilRadar(getVal(player, m), m));
     playerR.push(playerR[0]); 
     const playerHover = metricasAtuais.map(m => `${m.label}: ${getVal(player, m).toFixed(2)}`);
@@ -220,9 +227,8 @@ function PlayerProfileContent() {
       text: playerHover, hoverinfo: 'text+name'
     };
 
-    // Cria as Médias formatadas
     const buildMediaTrace = (listaComparacao, nome, colorLine, fillCol) => {
-      const baseParaMedia = listaComparacao.length >= 2 ? listaComparacao : populacaoMercado;
+      const baseParaMedia = (listaComparacao && listaComparacao.length >= 2) ? listaComparacao : populacaoMercado;
       const mediaR = metricasAtuais.map(m => {
         const vals = baseParaMedia.map(j => getVal(j, m)).filter(v => isFinite(v));
         const mediaReal = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
@@ -248,9 +254,9 @@ function PlayerProfileContent() {
     const traceMediaLista = buildMediaTrace(listaMesmaPos, `Média Lista`, '#ef4444', 'rgba(239,68,68,0.12)');
     const traceMediaSB = buildMediaTrace(serieBMesmaPos, `Média Série B`, '#3b82f6', 'rgba(59,130,246,0.12)');
 
-    // Elenco GN
     const CORES = ['#3b82f6','#10b981','#8b5cf6','#f97316','#ec4899','#06b6d4','#84cc16','#a855f7'];
-    const gnCandidatos = gnMesmaPos.length > 0 ? gnMesmaPos : dados.gn;
+    const gnCandidatos = (gnMesmaPos && gnMesmaPos.length > 0) ? gnMesmaPos : (dados.gn || []);
+    
     const tracesGN = gnCandidatos.map((p, i) => {
       const gnR = metricasAtuais.map(m => calcPercentilRadar(getVal(p, m), m));
       gnR.push(gnR[0]);
@@ -274,8 +280,10 @@ function PlayerProfileContent() {
   const scatterPlotData = useMemo(() => {
     if (!dados?.player || !scatterPlots || scatterPlots.length === 0) return [];
     const { player, listaMesmaPos, serieBMesmaPos } = dados;
-    const base = [...listaMesmaPos, ...serieBMesmaPos];
+    let base = [...(listaMesmaPos || []), ...(serieBMesmaPos || [])];
     
+    if (base.length === 0) return [];
+
     return scatterPlots.map(plot => {
       const getX = (j) => getVal(j, { key: plot.xKey, type: plot.xType });
       const getY = (j) => getVal(j, { key: plot.yKey, type: plot.yType });
