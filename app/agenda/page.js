@@ -47,7 +47,6 @@ export default function AgendaPage() {
                 }
               }
 
-              // Lógica de automação de status e resultado
               const golsM = data['Gols Mandante']
               const golsV = data['Gols Visitante']
               const resultadoCSV = data['Resultado'] || ''
@@ -58,7 +57,6 @@ export default function AgendaPage() {
                 resultadoExibicao = `${golsM} - ${golsV}`
               }
               
-              // O jogo é considerado "passado" se tiver resultado OU gols OU código de escalação
               const isJogoPassado = resultadoExibicao !== '' || escalacaoCode !== '' || (golsM !== '' && golsV !== '')
 
               return {
@@ -111,71 +109,82 @@ export default function AgendaPage() {
   }
 
   if (loading) return (
-    <div className="min-h-screen bg-[#0a0c10] text-white flex items-center justify-center font-sans">
-      <div className="text-center">
-        <div className="w-12 h-12 border-2 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin mx-auto mb-4"></div>
-        <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 italic">Sincronizando Calendário...</span>
-      </div>
+    <div className="min-h-screen bg-white flex items-center justify-center text-amber-600 font-black italic animate-pulse text-2xl uppercase">
+      A carregar Calendário...
     </div>
   )
 
   return (
-    <div className="min-h-screen bg-[#0a0c10] text-white p-4 md:p-8 font-sans">
-      <div className="max-w-6xl mx-auto">
-        
-        <div className="flex items-center gap-6 mb-12">
-          <button onClick={() => router.push('/')} className="p-3 bg-slate-900/50 hover:bg-emerald-500/10 rounded-xl border border-slate-800 transition-all group">
-            <svg className="w-5 h-5 text-slate-500 group-hover:text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-          </button>
-          <div>
-            <h1 className="text-3xl font-black italic tracking-tighter uppercase leading-none">Calendário <span className="text-emerald-500">2026</span></h1>
-            <p className="text-slate-500 text-[9px] font-bold uppercase tracking-widest mt-1">Tabela de Jogos e Detalhes Técnicos</p>
-          </div>
-        </div>
+    <div className="min-h-screen bg-white text-black p-4 font-sans">
+      <div className="max-w-[1400px] mx-auto flex flex-col gap-4">
 
-        <div className="space-y-12">
+        {/* HEADER */}
+        <header className="flex justify-between items-center border-b-4 border-amber-500 pb-2">
+          <div className="flex items-center gap-4">
+            <img src="/club/escudonovorizontino.png" alt="Shield" className="h-16 w-auto" />
+            <div>
+              <h1 className="text-3xl font-black tracking-tighter text-black uppercase leading-none">Grêmio Novorizontino</h1>
+              <p className="text-base font-bold tracking-widest text-slate-600 uppercase">Departamento de Scouting</p>
+            </div>
+          </div>
+          <div className="text-right flex flex-col items-end gap-2">
+            <button onClick={() => router.push('/')} className="bg-slate-200 text-slate-800 px-3 py-1 rounded-md text-xs font-bold hover:bg-slate-300 transition-colors">
+              ← VOLTAR
+            </button>
+            <div className="bg-amber-500 text-black px-6 py-1 font-black text-xl uppercase italic shadow-md">
+              Calendário 2026
+            </div>
+            <div className="text-slate-600 font-black text-[10px] mt-1 tracking-wider uppercase">
+              Tabela de Jogos e Detalhes Técnicos
+            </div>
+          </div>
+        </header>
+
+        {/* CONTEÚDO */}
+        <div className="space-y-8">
           {Object.keys(jogosAgrupados).map(mes => (
-            <div key={mes} className="space-y-4">
+            <div key={mes} className="space-y-3">
               <div className="flex items-center gap-4">
                 <h2 className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-500">{mes}</h2>
-                <div className="h-px bg-slate-800/50 flex-grow"></div>
+                <div className="h-px bg-slate-200 flex-grow"></div>
               </div>
 
-              <div className="bg-slate-900/20 rounded-3xl border border-slate-800/50 overflow-hidden">
+              <div className="border-2 border-slate-200 rounded-2xl overflow-hidden">
                 <div className="w-full overflow-x-auto">
                   <div className="min-w-[800px]">
-                    <div className="grid grid-cols-[15%_10%_30%_8%_8%_14%_15%] bg-slate-950/40 border-b border-slate-800/50 px-6 py-4">
-                      <div className="text-[9px] font-black uppercase tracking-widest text-slate-500">Data</div>
-                      <div className="text-[9px] font-black uppercase tracking-widest text-slate-500 text-center">Hora</div>
-                      <div className="text-[9px] font-black uppercase tracking-widest text-slate-500">Adversário</div>
-                      <div className="text-[9px] font-black uppercase tracking-widest text-slate-500 text-center">TV</div>
-                      <div className="text-[9px] font-black uppercase tracking-widest text-slate-500 text-center">Local</div>
-                      <div className="text-[9px] font-black uppercase tracking-widest text-slate-500 text-center">Resultado</div>
-                      <div className="text-[9px] font-black uppercase tracking-widest text-slate-500">Competição</div>
+                    {/* TABLE HEADER */}
+                    <div className="grid grid-cols-[15%_10%_30%_8%_8%_14%_15%] bg-slate-900 px-6 py-3">
+                      <div className="text-[9px] font-black uppercase tracking-widest text-slate-300">Data</div>
+                      <div className="text-[9px] font-black uppercase tracking-widest text-slate-300 text-center">Hora</div>
+                      <div className="text-[9px] font-black uppercase tracking-widest text-slate-300">Adversário</div>
+                      <div className="text-[9px] font-black uppercase tracking-widest text-slate-300 text-center">TV</div>
+                      <div className="text-[9px] font-black uppercase tracking-widest text-slate-300 text-center">Local</div>
+                      <div className="text-[9px] font-black uppercase tracking-widest text-slate-300 text-center">Resultado</div>
+                      <div className="text-[9px] font-black uppercase tracking-widest text-slate-300">Competição</div>
                     </div>
 
-                    <div className="divide-y divide-slate-800/30">
+                    <div className="divide-y divide-slate-100">
                       {jogosAgrupados[mes].map((jogo) => (
                         <div key={jogo.id} className="group">
-                          <div 
+                          <div
                             onClick={() => toggleExpandir(jogo.id)}
-                            className={`grid grid-cols-[15%_10%_30%_8%_8%_14%_15%] items-center px-6 py-4 hover:bg-white/[0.02] transition-colors cursor-pointer ${jogoExpandido === jogo.id ? 'bg-white/[0.03]' : ''}`}
+                            className={`grid grid-cols-[15%_10%_30%_8%_8%_14%_15%] items-center px-6 py-4 hover:bg-amber-50/60 transition-colors cursor-pointer ${jogoExpandido === jogo.id ? 'bg-amber-50/40' : ''}`}
                           >
-                            <div className="text-[11px] font-black italic text-slate-300 group-hover:text-emerald-500 transition-colors">{jogo.data}</div>
-                            <div className="text-[10px] font-bold text-slate-500 text-center">{jogo.hora}</div>
+                            <div className="text-[11px] font-black italic text-slate-700 group-hover:text-amber-600 transition-colors">{jogo.data}</div>
+                            <div className="text-[10px] font-bold text-slate-400 text-center">{jogo.hora}</div>
                             <div className="flex items-center gap-3 overflow-hidden">
-                              <div className="w-6 h-6 bg-slate-950 rounded-lg p-1 border border-slate-800 flex items-center justify-center shadow-inner flex-shrink-0">
+                              <div className="w-6 h-6 bg-white rounded-lg p-1 border border-slate-200 flex items-center justify-center flex-shrink-0">
                                 <img src={jogo.logoAdversario} alt={jogo.adversario} className="w-full h-full object-contain" onError={(e) => { e.target.onerror = null; e.target.src = DEFAULT_LOGO; }} />
                               </div>
-                              <span className="text-[11px] font-black uppercase italic tracking-tight text-white truncate">{jogo.adversario}</span>
+                              <span className="text-[11px] font-black uppercase italic tracking-tight text-black truncate">{jogo.adversario}</span>
                             </div>
                             <div className="flex justify-center">
                               {jogo.tv ? (
-                                <svg className="w-4 h-4 text-slate-600 group-hover:text-emerald-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-                              ) : <span className="text-slate-800">-</span>}
+                                <svg className="w-4 h-4 text-slate-400 group-hover:text-amber-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                              ) : <span className="text-slate-300">-</span>}
                             </div>
                             <div className="text-center">
-                              <span className={`text-[10px] font-black rounded-md px-2 py-1 ${jogo.local === 'C' ? 'text-emerald-500 bg-emerald-500/5' : 'text-slate-500 bg-slate-500/5'}`}>
+                              <span className={`text-[10px] font-black rounded-md px-2 py-1 ${jogo.local === 'C' ? 'text-emerald-600 bg-emerald-50' : 'text-slate-500 bg-slate-100'}`}>
                                 {jogo.local}
                               </span>
                             </div>
@@ -183,40 +192,40 @@ export default function AgendaPage() {
                               {jogo.isPassado ? (
                                 <>
                                   <div className={`w-2 h-2 rounded-full ${
-                                    jogo.resultado.includes('V') || (jogo.resultado.includes('-') && parseInt(jogo.resultado.split('-')[0]) > parseInt(jogo.resultado.split('-')[1])) ? 'bg-emerald-500' : 
-                                    jogo.resultado.includes('D') || (jogo.resultado.includes('-') && parseInt(jogo.resultado.split('-')[0]) < parseInt(jogo.resultado.split('-')[1])) ? 'bg-red-500' : 
-                                    'bg-emerald-500/50'
+                                    jogo.resultado.includes('V') || (jogo.resultado.includes('-') && parseInt(jogo.resultado.split('-')[0]) > parseInt(jogo.resultado.split('-')[1])) ? 'bg-emerald-500' :
+                                    jogo.resultado.includes('D') || (jogo.resultado.includes('-') && parseInt(jogo.resultado.split('-')[0]) < parseInt(jogo.resultado.split('-')[1])) ? 'bg-red-500' :
+                                    'bg-amber-400'
                                   }`}></div>
-                                  <span className="text-xs font-black italic text-white tracking-widest">
+                                  <span className="text-xs font-black italic text-black tracking-widest">
                                     {jogo.resultado ? (jogo.resultado.length === 1 ? `${jogo.golsM} - ${jogo.golsV}` : jogo.resultado) : 'FIM'}
                                   </span>
                                 </>
                               ) : (
-                                <span className="text-[10px] font-black text-slate-600 italic uppercase">Agendado</span>
+                                <span className="text-[10px] font-black text-slate-400 italic uppercase">Agendado</span>
                               )}
                             </div>
-                            <div className="text-[9px] font-black uppercase tracking-widest text-slate-500 group-hover:text-slate-300 transition-colors truncate">{jogo.competicao}</div>
+                            <div className="text-[9px] font-black uppercase tracking-widest text-slate-400 group-hover:text-slate-600 transition-colors truncate">{jogo.competicao}</div>
                           </div>
 
                           {jogoExpandido === jogo.id && (
-                            <div className="bg-slate-950/60 border-t border-slate-800/50 px-8 py-8 animate-in fade-in slide-in-from-top-2 duration-300">
+                            <div className="bg-slate-50 border-t border-slate-200 px-8 py-8">
                               <div className="flex flex-col gap-8">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-12 border-b border-slate-800/50 pb-8">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-12 border-b border-slate-200 pb-8">
                                   <div className="space-y-4">
                                     <div className="flex items-center gap-3">
-                                      <div className="w-1 h-4 bg-emerald-500 rounded-full"></div>
-                                      <h4 className="text-[10px] font-black uppercase tracking-widest text-white">Gols {jogo.mandante}</h4>
+                                      <div className="w-1 h-4 bg-amber-500 rounded-full"></div>
+                                      <h4 className="text-[10px] font-black uppercase tracking-widest text-black">Gols {jogo.mandante}</h4>
                                     </div>
-                                    <p className="text-[11px] font-bold text-slate-300 italic leading-relaxed whitespace-pre-line">
+                                    <p className="text-[11px] font-bold text-slate-600 italic leading-relaxed whitespace-pre-line">
                                       {jogo.artilheirosMandante || 'Nenhum gol registrado'}
                                     </p>
                                   </div>
                                   <div className="space-y-4">
                                     <div className="flex items-center gap-3">
-                                      <div className="w-1 h-4 bg-emerald-500 rounded-full"></div>
-                                      <h4 className="text-[10px] font-black uppercase tracking-widest text-white">Gols {jogo.visitante}</h4>
+                                      <div className="w-1 h-4 bg-amber-500 rounded-full"></div>
+                                      <h4 className="text-[10px] font-black uppercase tracking-widest text-black">Gols {jogo.visitante}</h4>
                                     </div>
-                                    <p className="text-[11px] font-bold text-slate-300 italic leading-relaxed whitespace-pre-line">
+                                    <p className="text-[11px] font-bold text-slate-600 italic leading-relaxed whitespace-pre-line">
                                       {jogo.artilheirosVisitante || 'Nenhum gol registrado'}
                                     </p>
                                   </div>
@@ -225,31 +234,29 @@ export default function AgendaPage() {
                                 {jogo.escalacaoCode ? (
                                   <div className="space-y-6">
                                     <div className="flex items-center gap-3">
-                                      <div className="w-1 h-4 bg-emerald-500 rounded-full"></div>
-                                      <h4 className="text-[10px] font-black uppercase tracking-widest text-white">Escalação e Estatísticas</h4>
+                                      <div className="w-1 h-4 bg-amber-500 rounded-full"></div>
+                                      <h4 className="text-[10px] font-black uppercase tracking-widest text-black">Escalação e Estatísticas</h4>
                                     </div>
-                                    <div className="w-full bg-white rounded-2xl overflow-hidden shadow-2xl">
-                                      <div 
+                                    <div className="w-full bg-white rounded-2xl overflow-hidden shadow border border-slate-200">
+                                      <div
                                         className="sofascore-embed-container"
                                         dangerouslySetInnerHTML={{ __html: jogo.escalacaoCode.replace(/style=height:786px!important;max-width:800px!important;width:100%!important;/g, 'style="height:786px;width:100%;border:0;"') }}
                                       />
                                     </div>
                                   </div>
                                 ) : (
-                                  <div className="py-12 text-center border-2 border-dashed border-slate-800 rounded-3xl">
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-600 italic">Escalação não disponível para esta partida</p>
+                                  <div className="py-12 text-center border-2 border-dashed border-slate-200 rounded-2xl">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 italic">Escalação não disponível para esta partida</p>
                                   </div>
                                 )}
 
                                 {jogo.eventos && (
                                   <div className="pt-4">
                                     <div className="flex items-center gap-3 mb-4">
-                                      <div className="w-1 h-4 bg-emerald-500 rounded-full"></div>
-                                      <h4 className="text-[10px] font-black uppercase tracking-widest text-white">Observações</h4>
+                                      <div className="w-1 h-4 bg-amber-500 rounded-full"></div>
+                                      <h4 className="text-[10px] font-black uppercase tracking-widest text-black">Observações</h4>
                                     </div>
-                                    <p className="text-[11px] font-bold text-slate-400 italic leading-relaxed">
-                                      {jogo.eventos}
-                                    </p>
+                                    <p className="text-[11px] font-bold text-slate-500 italic leading-relaxed">{jogo.eventos}</p>
                                   </div>
                                 )}
                               </div>
@@ -265,34 +272,27 @@ export default function AgendaPage() {
           ))}
         </div>
 
-        <div className="mt-12 pt-8 border-t border-slate-800/50 flex flex-col md:flex-row justify-between items-center gap-6">
-          <p className="text-[9px] font-bold text-slate-600 uppercase tracking-widest">© 2026 Grêmio Novorizontino • Departamento de Análise de Desempenho</p>
+        {/* FOOTER */}
+        <footer className="flex justify-between items-center border-t-2 border-slate-900 pt-3 mt-4">
           <div className="flex gap-6">
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
+              <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
               <span className="text-[8px] font-black uppercase text-slate-500 tracking-widest">Vitória</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-emerald-500/50 shadow-[0_0_8px_rgba(16,185,129,0.3)]"></div>
+              <div className="w-2 h-2 rounded-full bg-amber-400"></div>
               <span className="text-[8px] font-black uppercase text-slate-500 tracking-widest">Empate</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]"></div>
+              <div className="w-2 h-2 rounded-full bg-red-500"></div>
               <span className="text-[8px] font-black uppercase text-slate-500 tracking-widest">Derrota</span>
             </div>
           </div>
-        </div>
+          <p className="text-[10px] text-slate-500 font-black italic tracking-tight uppercase">© Scouting System GN</p>
+        </footer>
 
       </div>
       <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
-        @keyframes in {
-          from { opacity: 0; transform: translateY(-10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-in { animation: in 0.3s ease-out fill-mode-forwards; }
         .sofascore-embed-container iframe {
           width: 100% !important;
           max-width: 100% !important;

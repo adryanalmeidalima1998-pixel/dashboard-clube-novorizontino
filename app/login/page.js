@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import Image from 'next/image'
 
 export default function LoginPage() {
   const [username, setUsername] = useState('')
@@ -32,65 +31,66 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0c10] text-white flex items-center justify-center p-6 font-sans selection:bg-brand-yellow/30">
+    <div className="min-h-screen bg-white text-black flex items-center justify-center p-6 font-sans">
       <div className="w-full max-w-md">
-        {/* LOGO E HEADER */}
-        <div className="text-center mb-12">
-          <div className="relative w-32 h-32 mx-auto mb-8 group">
-            <div className="absolute inset-0 bg-brand-yellow/20 rounded-full blur-2xl group-hover:bg-brand-yellow/40 transition-all duration-500"></div>
-            <div className="relative bg-slate-900 p-4 rounded-full border border-slate-800 shadow-2xl">
-              <img 
-                src="/club/escudonovorizontino.png" 
-                alt="Novorizontino Logo" 
-                className="w-full h-full object-contain"
-                onError={(e) => {
-                  e.target.src = "https://upload.wikimedia.org/wikipedia/pt/8/89/Gremio_Novorizontino_2010.png"
-                }}
-              />
-            </div>
+
+        {/* HEADER */}
+        <div className="flex items-center gap-4 border-b-4 border-amber-500 pb-4 mb-10">
+          <img
+            src="/club/escudonovorizontino.png"
+            alt="Novorizontino"
+            className="h-16 w-auto"
+            onError={(e) => { e.target.src = "https://upload.wikimedia.org/wikipedia/pt/8/89/Gremio_Novorizontino_2010.png" }}
+          />
+          <div>
+            <h1 className="text-3xl font-black tracking-tighter text-black uppercase leading-none">Grêmio Novorizontino</h1>
+            <p className="text-base font-bold tracking-widest text-slate-600 uppercase">Departamento de Scouting</p>
           </div>
-          <h1 className="text-4xl font-black italic tracking-tighter uppercase leading-none bg-gradient-to-r from-white via-white to-slate-500 bg-clip-text text-transparent">
-            Performance <span className="text-brand-yellow">Hub</span>
-          </h1>
-          <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-4 italic">Acesso Restrito à Comissão Técnica</p>
+        </div>
+
+        {/* BADGE */}
+        <div className="flex justify-end mb-8">
+          <div className="bg-amber-500 text-black px-6 py-1 font-black text-xl uppercase italic shadow-md">
+            Acesso ao Sistema
+          </div>
         </div>
 
         {/* FORMULÁRIO */}
-        <div className="bg-slate-900/30 rounded-[2.5rem] p-10 border border-slate-800/50 backdrop-blur-sm shadow-2xl">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-[9px] font-black text-slate-600 uppercase tracking-widest ml-2">Identificação</label>
-              <input 
-                type="text" 
-                placeholder="USUÁRIO" 
+        <div className="border-2 border-slate-200 rounded-2xl p-8 shadow-sm">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+            <div className="flex flex-col gap-1">
+              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Identificação</label>
+              <input
+                type="text"
+                placeholder="USUÁRIO"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-[10px] font-black uppercase tracking-widest focus:border-brand-yellow/50 outline-none transition-all"
+                className="w-full border-2 border-slate-200 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest focus:border-amber-500 outline-none transition-all"
                 required
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-[9px] font-black text-slate-600 uppercase tracking-widest ml-2">Chave de Acesso</label>
-              <input 
-                type="password" 
-                placeholder="SENHA" 
+            <div className="flex flex-col gap-1">
+              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Chave de Acesso</label>
+              <input
+                type="password"
+                placeholder="SENHA"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-[10px] font-black uppercase tracking-widest focus:border-brand-yellow/50 outline-none transition-all"
+                className="w-full border-2 border-slate-200 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest focus:border-amber-500 outline-none transition-all"
                 required
               />
             </div>
 
             {erro && (
-              <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-center">
-                <span className="text-[9px] font-black text-red-500 uppercase tracking-widest">{erro}</span>
+              <div className="border-2 border-red-300 bg-red-50 rounded-xl p-3 text-center">
+                <span className="text-[9px] font-black text-red-600 uppercase tracking-widest">{erro}</span>
               </div>
             )}
 
-            <button 
+            <button
               type="submit"
               disabled={carregando}
-              className="w-full bg-brand-yellow hover:bg-brand-yellow/80 disabled:bg-slate-800 disabled:text-slate-600 text-slate-950 font-black italic uppercase text-[11px] tracking-widest py-5 rounded-2xl transition-all shadow-[0_0_30px_rgba(251,191,36,0.2)] active:scale-95"
+              className="w-full bg-amber-500 hover:bg-amber-600 disabled:bg-slate-200 disabled:text-slate-400 text-black font-black italic uppercase text-[11px] tracking-widest py-4 rounded-2xl transition-all shadow-md active:scale-95 mt-2"
             >
               {carregando ? 'AUTENTICANDO...' : 'ENTRAR NO SISTEMA'}
             </button>
@@ -98,9 +98,12 @@ export default function LoginPage() {
         </div>
 
         {/* FOOTER */}
-        <p className="text-center text-slate-600 text-[8px] font-bold uppercase tracking-[0.3em] mt-12 italic">
-          Grêmio Novorizontino • Gestão de Alta Performance
-        </p>
+        <div className="flex justify-between items-center border-t-2 border-slate-900 pt-3 mt-8">
+          <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest italic">
+            Acesso Restrito à Comissão Técnica
+          </span>
+          <p className="text-[10px] text-slate-500 font-black italic tracking-tight uppercase">© Scouting System GN</p>
+        </div>
       </div>
     </div>
   )

@@ -157,45 +157,51 @@ export default function BenchmarkPage() {
   }
 
   if (carregando) return (
-    <div className="min-h-screen bg-[#0a0c10] text-white flex items-center justify-center">
+    <div className="min-h-screen bg-white text-black flex items-center justify-center">
       <div className="text-center">
-        <div className="w-16 h-16 border-4 border-brand-yellow/20 border-t-brand-yellow rounded-full animate-spin mx-auto mb-4"></div>
+        <div className="w-16 h-16 border-4 border-amber-200 border-t-brand-yellow rounded-full animate-spin mx-auto mb-4"></div>
         <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 animate-pulse italic">Calculando Benchmarks...</span>
       </div>
     </div>
   )
 
   return (
-    <div className="min-h-screen bg-[#0a0c10] text-white p-4 md:p-8 font-sans">
+    <div className="min-h-screen bg-white text-black p-4 md:p-8 font-sans">
       <div className="max-w-[1600px] mx-auto">
         
         {/* HEADER */}
-        <div className="flex items-center gap-6 mb-12">
-          <button onClick={() => router.push('/central-dados')} className="p-4 bg-slate-900/80 hover:bg-brand-yellow/20 rounded-2xl border border-slate-800 transition-all group">
-            <svg className="w-6 h-6 text-slate-500 group-hover:text-brand-yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-          </button>
-          <div>
-            <h1 className="text-4xl md:text-5xl font-black italic tracking-tighter uppercase leading-none bg-gradient-to-r from-white via-white to-slate-500 bg-clip-text text-transparent">
-              Benchmark <span className="text-brand-yellow">Performance</span>
-            </h1>
-            <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-2">Comparação Técnica com a Média da Liga</p>
+        <header className="flex justify-between items-center border-b-4 border-amber-500 pb-2 mb-6">
+          <div className="flex items-center gap-4">
+            <img src="/club/escudonovorizontino.png" alt="Shield" className="h-16 w-auto" />
+            <div>
+              <h1 className="text-3xl font-black tracking-tighter text-black uppercase leading-none">Grêmio Novorizontino</h1>
+              <p className="text-base font-bold tracking-widest text-slate-600 uppercase">Departamento de Scouting</p>
+            </div>
           </div>
-        </div>
+          <div className="text-right flex flex-col items-end gap-2">
+            <button onClick={() => router.push('/central-dados')} className="bg-slate-200 text-slate-800 px-3 py-1 rounded-md text-xs font-bold hover:bg-slate-300 transition-colors">
+              ← VOLTAR
+            </button>
+            <div className="bg-amber-500 text-black px-6 py-1 font-black text-xl uppercase italic shadow-md">
+              Benchmark Performance
+            </div>
+          </div>
+        </header>
 
         {/* SELETOR DE MÉTRICAS NO TOPO */}
-        <div className="bg-slate-900/40 backdrop-blur-md p-8 rounded-[2.5rem] border border-slate-800/50 shadow-2xl mb-8">
+        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-2xl mb-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
             <div className="flex flex-col gap-2">
-              <h2 className="text-xl font-black italic uppercase tracking-tighter">Configurar <span className="text-brand-yellow">Benchmark</span></h2>
+              <h2 className="text-xl font-black italic uppercase tracking-tighter">Configurar <span className="text-amber-600">Benchmark</span></h2>
               <div className="flex gap-2">
                 <input 
                   type="text" 
                   placeholder="NOME DO TEMPLATE..." 
                   value={nomeNovoTemplate} 
                   onChange={e => setNomeNovoTemplate(e.target.value)} 
-                  className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-[10px] font-black uppercase outline-none focus:border-brand-yellow/50"
+                  className="bg-slate-100 border border-slate-200 rounded-xl px-4 py-2 text-[10px] font-black uppercase outline-none focus:border-amber-400"
                 />
-                <button onClick={salvarTemplate} className="bg-brand-yellow text-slate-950 px-4 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-brand-yellow/80 transition-all">Salvar</button>
+                <button onClick={salvarTemplate} className="bg-amber-500 text-black px-4 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-amber-400 transition-all">Salvar</button>
               </div>
             </div>
             
@@ -203,16 +209,16 @@ export default function BenchmarkPage() {
               <div className="flex items-center gap-4 mb-1">
                 <button 
                   onClick={() => setMetricasBenchmark([])}
-                  className="text-[10px] font-black uppercase text-slate-500 hover:text-brand-yellow transition-colors ml-1"
+                  className="text-[10px] font-black uppercase text-slate-500 hover:text-amber-600 transition-colors ml-1"
                 >
                   [ Desmarcar Tudo ]
                 </button>
-                <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 overflow-x-auto custom-scrollbar flex-1">
+                <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 overflow-x-auto custom-scrollbar flex-1">
                   {Object.keys(categoriasMetricas).map(cat => (
                   <button 
                     key={cat} 
                     onClick={() => setAbaAtiva(cat)}
-                    className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${abaAtiva === cat ? 'bg-brand-yellow text-slate-950' : 'text-slate-500 hover:text-slate-300'}`}
+                    className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${abaAtiva === cat ? 'bg-amber-500 text-black' : 'text-slate-500 hover:text-slate-600'}`}
                   >
                     {cat}
                   </button>
@@ -224,7 +230,7 @@ export default function BenchmarkPage() {
                   <button 
                     key={t.id} 
                     onClick={() => setMetricasBenchmark(t.metricas)}
-                    className="px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-[8px] font-black uppercase text-slate-400 hover:text-brand-yellow hover:border-brand-yellow/50 transition-all"
+                    className="px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-[8px] font-black uppercase text-slate-400 hover:text-amber-600 hover:border-amber-400 transition-all"
                   >
                     {t.nome}
                   </button>
@@ -241,10 +247,10 @@ export default function BenchmarkPage() {
                   if (metricasBenchmark.includes(metrica)) setMetricasBenchmark(metricasBenchmark.filter(m => m !== metrica))
                   else setMetricasBenchmark([...metricasBenchmark, metrica])
                 }}
-                className={`p-3 rounded-xl border text-[9px] font-black uppercase tracking-widest transition-all text-left flex items-center justify-between group ${metricasBenchmark.includes(metrica) ? 'bg-brand-yellow/10 border-brand-yellow text-brand-yellow' : 'bg-slate-950/50 border-slate-800 text-slate-500 hover:border-slate-600'}`}
+                className={`p-3 rounded-xl border text-[9px] font-black uppercase tracking-widest transition-all text-left flex items-center justify-between group ${metricasBenchmark.includes(metrica) ? 'bg-amber-50 border-amber-500 text-amber-600' : 'bg-slate-100 border-slate-200 text-slate-500 hover:border-slate-600'}`}
               >
                 <span className="truncate mr-2">{metrica}</span>
-                {metricasBenchmark.includes(metrica) && <div className="w-2 h-2 bg-brand-yellow rounded-full shadow-[0_0_8px_rgba(251,191,36,0.8)]"></div>}
+                {metricasBenchmark.includes(metrica) && <div className="w-2 h-2 bg-amber-500 rounded-full shadow-[0_0_8px_rgba(251,191,36,0.8)]"></div>}
               </button>
             ))}
           </div>
@@ -253,7 +259,7 @@ export default function BenchmarkPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* PAINEL DE FILTROS E LISTA */}
           <div className="lg:col-span-4 space-y-6">
-            <div className="bg-slate-900/40 p-6 rounded-[2rem] border border-slate-800/50 shadow-xl">
+            <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-xl">
               <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-6">Seleção de Atleta</h3>
               
               <div className="space-y-4 mb-6">
@@ -262,12 +268,12 @@ export default function BenchmarkPage() {
                   placeholder="BUSCAR NOME..." 
                   value={busca} 
                   onChange={e => setBusca(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black uppercase outline-none focus:border-brand-yellow/50"
+                  className="w-full bg-slate-100 border border-slate-200 rounded-xl p-3 text-[10px] font-black uppercase outline-none focus:border-amber-400"
                 />
                 <select 
                   value={filtroTime} 
                   onChange={e => setFiltroTime(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black uppercase outline-none focus:border-brand-yellow/50"
+                  className="w-full bg-slate-100 border border-slate-200 rounded-xl p-3 text-[10px] font-black uppercase outline-none focus:border-amber-400"
                 >
                   {times.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
                 </select>
@@ -278,7 +284,7 @@ export default function BenchmarkPage() {
                   <button 
                     key={p} 
                     onClick={() => togglePosicao(p)}
-                    className={`px-3 py-1.5 rounded-lg text-[8px] font-black uppercase border transition-all ${filtrosPosicao.includes(p) ? 'bg-brand-yellow text-slate-950 border-brand-yellow' : 'bg-slate-950 text-slate-500 border-slate-800 hover:border-slate-700'}`}
+                    className={`px-3 py-1.5 rounded-lg text-[8px] font-black uppercase border transition-all ${filtrosPosicao.includes(p) ? 'bg-amber-500 text-black border-amber-500' : 'bg-slate-100 text-slate-500 border-slate-200 hover:border-slate-700'}`}
                   >
                     {p}
                   </button>
@@ -290,14 +296,14 @@ export default function BenchmarkPage() {
                   <button 
                     key={`${j.Jogador}-${j.Time}`}
                     onClick={() => setJogadorSelecionado(j)}
-                    className={`w-full p-4 rounded-2xl border text-left transition-all flex items-center justify-between group ${jogadorSelecionado?.Jogador === j.Jogador ? 'bg-brand-yellow border-brand-yellow shadow-[0_0_20px_rgba(251,191,36,0.2)]' : 'bg-slate-950/50 border-slate-800 hover:border-slate-600'}`}
+                    className={`w-full p-4 rounded-2xl border text-left transition-all flex items-center justify-between group ${jogadorSelecionado?.Jogador === j.Jogador ? 'bg-amber-500 border-amber-500 ' : 'bg-slate-100 border-slate-200 hover:border-slate-600'}`}
                   >
                     <div>
-                      <div className={`text-[10px] font-black uppercase italic ${jogadorSelecionado?.Jogador === j.Jogador ? 'text-slate-950' : 'text-white'}`}>{j.Jogador}</div>
+                      <div className={`text-[10px] font-black uppercase italic ${jogadorSelecionado?.Jogador === j.Jogador ? 'text-black' : 'text-black'}`}>{j.Jogador}</div>
                       <div className={`text-[8px] font-bold uppercase tracking-widest mt-1 ${jogadorSelecionado?.Jogador === j.Jogador ? 'text-slate-800' : 'text-slate-500'}`}>{j.Posição} • {j.Time}</div>
                     </div>
-                    <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${jogadorSelecionado?.Jogador === j.Jogador ? 'bg-slate-950/20' : 'bg-slate-900 border border-slate-800'}`}>
-                      <svg className={`w-3 h-3 ${jogadorSelecionado?.Jogador === j.Jogador ? 'text-slate-950' : 'text-slate-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" /></svg>
+                    <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${jogadorSelecionado?.Jogador === j.Jogador ? 'bg-slate-100/20' : 'bg-slate-900 border border-slate-200'}`}>
+                      <svg className={`w-3 h-3 ${jogadorSelecionado?.Jogador === j.Jogador ? 'text-black' : 'text-slate-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" /></svg>
                     </div>
                   </button>
                 ))}
@@ -308,30 +314,30 @@ export default function BenchmarkPage() {
           {/* PAINEL DE BENCHMARK */}
           <div className="lg:col-span-8 space-y-8">
             {jogadorSelecionado && (
-              <div className="bg-slate-900/40 p-10 rounded-[2.5rem] border border-slate-800/50 shadow-2xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-brand-yellow/5 rounded-full blur-[100px] -mr-32 -mt-32"></div>
+              <div className="bg-white p-10 rounded-[2.5rem] border border-slate-200 shadow-2xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 rounded-full blur-[100px] -mr-32 -mt-32"></div>
                 
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-12 relative z-10">
                   <div className="flex items-center gap-8">
-                    <div className="w-24 h-24 bg-slate-950 rounded-3xl border-2 border-brand-yellow/30 flex items-center justify-center text-3xl font-black italic text-brand-yellow shadow-2xl">
+                    <div className="w-24 h-24 bg-slate-100 rounded-3xl border-2 border-amber-300 flex items-center justify-center text-3xl font-black italic text-amber-600 shadow-2xl">
                       {jogadorSelecionado.Jogador.substring(0, 2).toUpperCase()}
                     </div>
                     <div>
-                      <h2 className="text-4xl font-black italic uppercase tracking-tighter text-white leading-none mb-2">{jogadorSelecionado.Jogador}</h2>
+                      <h2 className="text-4xl font-black italic uppercase tracking-tighter text-black leading-none mb-2">{jogadorSelecionado.Jogador}</h2>
                       <div className="flex items-center gap-4">
-                        <span className="text-brand-yellow text-[10px] font-black uppercase tracking-[0.2em]">{jogadorSelecionado.Posição}</span>
+                        <span className="text-amber-600 text-[10px] font-black uppercase tracking-[0.2em]">{jogadorSelecionado.Posição}</span>
                         <div className="w-1.5 h-1.5 rounded-full bg-slate-700"></div>
                         <span className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">{jogadorSelecionado.Time}</span>
                       </div>
                     </div>
                   </div>
                   
-                  <div className="bg-slate-950/80 backdrop-blur-md p-2 rounded-2xl border border-slate-800 flex gap-1">
+                  <div className="bg-slate-100 p-2 rounded-2xl border border-slate-200 flex gap-1">
                     {['MESMA', 'LIGA'].map(p => (
                       <button 
                         key={p} 
                         onClick={() => setPosicaoReferencia(p)}
-                        className={`px-4 py-2 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all ${posicaoReferencia === p ? 'bg-brand-yellow text-slate-950' : 'text-slate-500 hover:text-slate-300'}`}
+                        className={`px-4 py-2 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all ${posicaoReferencia === p ? 'bg-amber-500 text-black' : 'text-slate-500 hover:text-slate-600'}`}
                       >
                         {p === 'MESMA' ? 'Média Posição' : 'Média Liga'}
                       </button>
@@ -349,15 +355,15 @@ export default function BenchmarkPage() {
                     return (
                       <div key={m} className="group">
                         <div className="flex justify-between items-end mb-3">
-                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:text-brand-yellow transition-colors">{m}</span>
+                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:text-amber-600 transition-colors">{m}</span>
                           <div className="flex items-center gap-3">
-                            <span className="text-xs font-black italic text-white">{valAtleta.toLocaleString()}</span>
+                            <span className="text-xs font-black italic text-black">{valAtleta.toLocaleString()}</span>
                             <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${isPositive ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'}`}>
                               {isPositive ? '+' : ''}{diff.toFixed(1)}%
                             </span>
                           </div>
                         </div>
-                        <div className="h-3 bg-slate-950 rounded-full border border-slate-800 overflow-hidden p-0.5 shadow-inner">
+                        <div className="h-3 bg-slate-100 rounded-full border border-slate-200 overflow-hidden p-0.5 shadow-inner">
                           <div className="relative h-full w-full">
                             {/* Média da Liga (Marcador) */}
                             <div 
@@ -366,7 +372,7 @@ export default function BenchmarkPage() {
                             ></div>
                             {/* Barra do Atleta */}
                             <div 
-                              className={`absolute top-0 h-full rounded-full transition-all duration-1000 ${isPositive ? 'bg-brand-yellow shadow-[0_0_10px_rgba(251,191,36,0.4)]' : 'bg-slate-700'}`}
+                              className={`absolute top-0 h-full rounded-full transition-all duration-1000 ${isPositive ? 'bg-amber-500 shadow-[0_0_10px_rgba(251,191,36,0.4)]' : 'bg-slate-700'}`}
                               style={{ 
                                 left: isPositive ? '50%' : `${Math.max(0, 50 + diff/2)}%`,
                                 width: `${Math.min(50, Math.abs(diff/2))}%`
@@ -384,7 +390,7 @@ export default function BenchmarkPage() {
                 </div>
 
                 {metricasBenchmark.length === 0 && (
-                  <div className="py-20 text-center border-2 border-dashed border-slate-800 rounded-[2rem]">
+                  <div className="py-20 text-center border-2 border-dashed border-slate-200 rounded-[2rem]">
                     <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.3em] italic">Selecione métricas no painel superior para comparar</p>
                   </div>
                 )}

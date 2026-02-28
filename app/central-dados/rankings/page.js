@@ -216,40 +216,44 @@ export default function RankingsPage() {
     }
   }
 
-  if (carregando) return <div className="min-h-screen bg-[#0a0c10] flex items-center justify-center text-brand-yellow font-black italic uppercase animate-pulse">Processando Rankings...</div>
+  if (carregando) return <div className="min-h-screen bg-white flex items-center justify-center text-amber-600 font-black italic uppercase animate-pulse">Processando Rankings...</div>
 
   return (
-    <div className="min-h-screen bg-[#0a0c10] text-white p-4 md:p-8 font-sans">
+    <div className="min-h-screen bg-white text-black p-4 md:p-8 font-sans">
       <div className="max-w-[1600px] mx-auto">
 
         {/* HEADER */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-12">
-          <div className="flex items-center gap-6">
-            <button onClick={() => router.push('/central-dados')} className="p-4 bg-slate-900/80 hover:bg-brand-yellow/20 rounded-2xl border border-slate-800 transition-all group">
-              <svg className="w-6 h-6 text-slate-500 group-hover:text-brand-yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-            </button>
+        <header className="flex justify-between items-center border-b-4 border-amber-500 pb-2 mb-6">
+          <div className="flex items-center gap-4">
+            <img src="/club/escudonovorizontino.png" alt="Shield" className="h-16 w-auto" />
             <div>
-              <h1 className="text-4xl md:text-6xl font-black italic uppercase tracking-tighter leading-none">
-                <span className="text-brand-yellow">Rankings</span> por Perfil
-              </h1>
-              <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-2">Inteligência de Scout baseada em Z-Score</p>
+              <h1 className="text-3xl font-black tracking-tighter text-black uppercase leading-none">Grêmio Novorizontino</h1>
+              <p className="text-base font-bold tracking-widest text-slate-600 uppercase">Departamento de Scouting</p>
             </div>
           </div>
-          <div className="flex flex-wrap gap-3">
-            <button onClick={exportarPDF} className="px-6 py-3 bg-brand-yellow text-slate-950 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-yellow/80 transition-all shadow-[0_0_20px_rgba(251,191,36,0.2)]">Exportar PDF</button>
+          <div className="text-right flex flex-col items-end gap-2">
+            <button onClick={() => router.push('/central-dados')} className="bg-slate-200 text-slate-800 px-3 py-1 rounded-md text-xs font-bold hover:bg-slate-300 transition-colors">
+              ← VOLTAR
+            </button>
+            <div className="bg-amber-500 text-black px-6 py-1 font-black text-xl uppercase italic shadow-md">
+              Rankings por Perfil
+            </div>
+            <div className="flex gap-2 mt-1">
+              <button onClick={exportarPDF} className="bg-slate-900 text-white px-3 py-1 rounded-md text-[10px] font-black uppercase hover:bg-black transition-colors">Exportar PDF</button>
+            </div>
           </div>
-        </div>
+        </header>
 
         {/* SELETOR DE PERFIL */}
-        <div className="bg-slate-900/40 p-8 rounded-[2.5rem] border border-slate-800/50 mb-8 shadow-xl">
-          <h2 className="text-lg font-black italic uppercase mb-6 tracking-tighter">Selecionar <span className="text-brand-yellow">Perfil Técnico</span></h2>
+        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 mb-8 shadow-xl">
+          <h2 className="text-lg font-black italic uppercase mb-6 tracking-tighter">Selecionar <span className="text-amber-600">Perfil Técnico</span></h2>
           <div className="space-y-6">
             {Object.entries(perfisPorCategoria).map(([categoria, perfis]) => (
               <div key={categoria}>
                 <h3 className="text-[9px] font-black uppercase tracking-widest text-slate-600 mb-3 ml-1">{categoria}</h3>
                 <div className="flex flex-wrap gap-2">
                   {perfis.map(perfil => (
-                    <button key={perfil} onClick={() => setPerfilAtivo(perfil)} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-tight transition-all ${perfilAtivo === perfil ? 'bg-brand-yellow text-slate-950 shadow-[0_0_15px_rgba(251,191,36,0.3)]' : 'bg-slate-950/50 text-slate-500 hover:text-white border border-slate-800'}`}>{perfil}</button>
+                    <button key={perfil} onClick={() => setPerfilAtivo(perfil)} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-tight transition-all ${perfilAtivo === perfil ? 'bg-amber-500 text-black ' : 'bg-slate-100 text-slate-500 hover:text-black border border-slate-200'}`}>{perfil}</button>
                   ))}
                 </div>
               </div>
@@ -259,40 +263,40 @@ export default function RankingsPage() {
 
         {/* FILTROS AVANÇADOS */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
+          <div className="bg-white p-6 rounded-3xl border border-slate-200">
             <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4 ml-1">Busca & Time</h3>
             <div className="space-y-3">
-              <input type="text" placeholder="BUSCAR ATLETA..." value={busca} onChange={e => setBusca(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50" />
-              <select value={filtroTime} onChange={e => setFiltroTime(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black outline-none focus:border-brand-yellow/50">
+              <input type="text" placeholder="BUSCAR ATLETA..." value={busca} onChange={e => setBusca(e.target.value)} className="w-full bg-slate-100 border border-slate-200 rounded-xl p-3 text-[10px] font-black outline-none focus:border-amber-400" />
+              <select value={filtroTime} onChange={e => setFiltroTime(e.target.value)} className="w-full bg-slate-100 border border-slate-200 rounded-xl p-3 text-[10px] font-black outline-none focus:border-amber-400">
                 {times.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
               </select>
             </div>
           </div>
 
-          <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50 md:col-span-2">
+          <div className="bg-white p-6 rounded-3xl border border-slate-200 md:col-span-2">
             <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4 ml-1">Contexto (Idade: {filtroIdade.min}-{filtroIdade.max} | Minutos: {filtroMinutagem})</h3>
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-4">
-                <input type="range" min="15" max="45" value={filtroIdade.min} onChange={e => setFiltroIdade({...filtroIdade, min: parseInt(e.target.value)})} className="w-full accent-brand-yellow" />
-                <input type="range" min="15" max="45" value={filtroIdade.max} onChange={e => setFiltroIdade({...filtroIdade, max: parseInt(e.target.value)})} className="w-full accent-brand-yellow" />
+                <input type="range" min="15" max="45" value={filtroIdade.min} onChange={e => setFiltroIdade({...filtroIdade, min: parseInt(e.target.value)})} className="w-full accent-amber-500" />
+                <input type="range" min="15" max="45" value={filtroIdade.max} onChange={e => setFiltroIdade({...filtroIdade, max: parseInt(e.target.value)})} className="w-full accent-amber-500" />
               </div>
               <div className="space-y-4">
-                <input type="range" min="0" max="3500" step="100" value={filtroMinutagem} onChange={e => setFiltroMinutagem(parseInt(e.target.value))} className="w-full accent-brand-yellow" />
+                <input type="range" min="0" max="3500" step="100" value={filtroMinutagem} onChange={e => setFiltroMinutagem(parseInt(e.target.value))} className="w-full accent-amber-500" />
                 <div className="flex flex-wrap gap-1">
                   {todasPosicoes.map(p => (
-                    <button key={p} onClick={() => toggleFiltro(filtroPosicoes, setFiltroPosicoes, p)} className={`px-3 py-1.5 rounded-lg text-[9px] font-black transition-all ${filtroPosicoes.includes(p) ? 'bg-brand-yellow text-slate-950' : 'bg-slate-950 text-slate-500 hover:text-white border border-slate-800'}`}>{p}</button>
+                    <button key={p} onClick={() => toggleFiltro(filtroPosicoes, setFiltroPosicoes, p)} className={`px-3 py-1.5 rounded-lg text-[9px] font-black transition-all ${filtroPosicoes.includes(p) ? 'bg-amber-500 text-black' : 'bg-slate-100 text-slate-500 hover:text-black border border-slate-200'}`}>{p}</button>
                   ))}
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50 overflow-hidden">
+          <div className="bg-white p-6 rounded-3xl border border-slate-200 overflow-hidden">
             <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4 ml-1">Nacionalidades</h3>
             <div className="max-h-[100px] overflow-y-auto pr-2 custom-scrollbar">
               <div className="flex flex-wrap gap-1">
                 {nacionalidadesDisponiveis.map(nac => (
-                  <button key={nac} onClick={() => toggleFiltro(filtroNacionalidades, setFiltroNacionalidades, nac)} className={`px-2 py-1 rounded-md text-[8px] font-black transition-all ${filtroNacionalidades.includes(nac) ? 'bg-brand-yellow text-slate-950' : 'bg-slate-950 text-slate-500 hover:text-white border border-slate-800'}`}>{nac}</button>
+                  <button key={nac} onClick={() => toggleFiltro(filtroNacionalidades, setFiltroNacionalidades, nac)} className={`px-2 py-1 rounded-md text-[8px] font-black transition-all ${filtroNacionalidades.includes(nac) ? 'bg-amber-500 text-black' : 'bg-slate-100 text-slate-500 hover:text-black border border-slate-200'}`}>{nac}</button>
                 ))}
               </div>
             </div>
@@ -301,23 +305,23 @@ export default function RankingsPage() {
 
         {/* INFO PERFIL */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          <div className="lg:col-span-1 bg-slate-900/40 p-8 rounded-[2.5rem] border border-slate-800/50">
+          <div className="lg:col-span-1 bg-white p-8 rounded-[2.5rem] border border-slate-200">
             <div className="flex items-center gap-4 mb-4">
-              <div className="w-12 h-12 bg-brand-yellow/10 rounded-2xl flex items-center justify-center text-brand-yellow"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></div>
-              <h3 className="text-sm font-black uppercase italic tracking-tighter">O que é um <span className="text-brand-yellow">{perfilAtivo}</span>?</h3>
+              <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-600"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></div>
+              <h3 className="text-sm font-black uppercase italic tracking-tighter">O que é um <span className="text-amber-600">{perfilAtivo}</span>?</h3>
             </div>
             <p className="text-[11px] font-bold text-slate-400 leading-relaxed uppercase">{PERFIL_DESCRICOES[perfilAtivo] || 'Descrição técnica do perfil selecionado.'}</p>
           </div>
 
-          <div className="lg:col-span-2 bg-slate-900/40 p-8 rounded-[2.5rem] border border-slate-800/50 overflow-hidden">
+          <div className="lg:col-span-2 bg-white p-8 rounded-[2.5rem] border border-slate-200 overflow-hidden">
             <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-6 ml-1">Métricas do Perfil & Pesos (%)</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {Object.entries(pesosPerfil).map(([metrica, peso]) => (
-                <div key={metrica} className="bg-slate-950/50 p-4 rounded-2xl border border-slate-800/50 group hover:border-brand-yellow/30 transition-all">
-                  <div className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-2 group-hover:text-brand-yellow transition-colors">{metrica}</div>
+                <div key={metrica} className="bg-slate-100 p-4 rounded-2xl border border-slate-200 group hover:border-amber-300 transition-all">
+                  <div className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-2 group-hover:text-amber-600 transition-colors">{metrica}</div>
                   <div className="flex items-end justify-between">
-                    <div className="text-xl font-black italic text-white leading-none">{(peso * 100).toFixed(0)}<span className="text-[10px] ml-0.5 text-brand-yellow">%</span></div>
-                    <div className="w-1.5 h-6 bg-slate-800 rounded-full overflow-hidden"><div className="w-full bg-brand-yellow" style={{ height: `${peso * 100}%` }} /></div>
+                    <div className="text-xl font-black italic text-black leading-none">{(peso * 100).toFixed(0)}<span className="text-[10px] ml-0.5 text-amber-600">%</span></div>
+                    <div className="w-1.5 h-6 bg-slate-800 rounded-full overflow-hidden"><div className="w-full bg-amber-500" style={{ height: `${peso * 100}%` }} /></div>
                   </div>
                 </div>
               ))}
@@ -326,30 +330,30 @@ export default function RankingsPage() {
         </div>
 
         {/* TABELA RANKING */}
-        <div className="bg-slate-900/20 rounded-[2.5rem] border border-slate-800/50 overflow-hidden shadow-2xl backdrop-blur-sm">
+        <div className="bg-white rounded-[2.5rem] border border-slate-200 overflow-hidden shadow-2xl backdrop-blur-sm">
           <div className="overflow-x-auto">
             <table className="w-full border-collapse">
               <thead>
-                <tr className="border-b border-slate-800/50">
+                <tr className="border-b border-slate-200">
                   <th className="p-6 text-left text-[10px] font-black uppercase tracking-widest text-slate-500">Rank</th>
                   <th className="p-6 text-left text-[10px] font-black uppercase tracking-widest text-slate-500 cursor-pointer" onClick={() => handleOrdenacao('Jogador')}>Atleta</th>
                   <th className="p-6 text-left text-[10px] font-black uppercase tracking-widest text-slate-500">Equipe</th>
                   <th className="p-6 text-center text-[10px] font-black uppercase tracking-widest text-slate-500 cursor-pointer" onClick={() => handleOrdenacao('Idade')}>Idade</th>
                   <th className="p-6 text-center text-[10px] font-black uppercase tracking-widest text-slate-500">Nac</th>
-                  <th className="p-6 text-center text-[10px] font-black uppercase tracking-widest text-brand-yellow cursor-pointer" onClick={() => handleOrdenacao('nota')}>Nota Perfil</th>
+                  <th className="p-6 text-center text-[10px] font-black uppercase tracking-widest text-amber-600 cursor-pointer" onClick={() => handleOrdenacao('nota')}>Nota Perfil</th>
                   {metricasPerfil.map(m => (
                     <th key={m} className="p-6 text-center text-[10px] font-black uppercase tracking-widest text-slate-500">{m}</th>
                   ))}
                   <th className="p-6 text-right text-[10px] font-black uppercase tracking-widest text-slate-500">Ações</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/30">
+              <tbody className="divide-y divide-slate-100">
                 {jogadoresRankeados.map((j, idx) => (
-                  <tr key={idx} className="group hover:bg-brand-yellow/[0.02] transition-colors">
+                  <tr key={idx} className="group hover:bg-amber-500/[0.02] transition-colors">
                     <td className="p-6">
                       <div className="flex items-center gap-3">
                         {idx < 3 ? (
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[12px] font-black ${idx === 0 ? 'bg-brand-yellow text-slate-950' : idx === 1 ? 'bg-slate-300 text-slate-950' : 'bg-amber-700 text-white'}`}>
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[12px] font-black ${idx === 0 ? 'bg-amber-500 text-black' : idx === 1 ? 'bg-slate-300 text-black' : 'bg-amber-700 text-black'}`}>
                             {idx + 1}
                           </div>
                         ) : (
@@ -359,12 +363,12 @@ export default function RankingsPage() {
                     </td>
                     <td className="p-6">
                       <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-500 border border-slate-700 group-hover:border-brand-yellow/50 transition-all">{j.Jogador?.substring(0,2).toUpperCase()}</div>
+                        <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-500 border border-slate-700 group-hover:border-amber-400 transition-all">{j.Jogador?.substring(0,2).toUpperCase()}</div>
                         <div>
-                          <div className="text-sm font-black uppercase italic tracking-tighter group-hover:text-brand-yellow transition-colors leading-none mb-1">{j.Jogador}</div>
+                          <div className="text-sm font-black uppercase italic tracking-tighter group-hover:text-amber-600 transition-colors leading-none mb-1">{j.Jogador}</div>
                           <div className="flex items-center gap-2">
                             <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">ID: {j.ID_ATLETA || '-'}</span>
-                            <span className="px-1.5 py-0.5 bg-slate-900 rounded text-[8px] font-black text-brand-yellow/70 border border-slate-800 uppercase tracking-tighter">{j.perfilDominante?.perfil}</span>
+                            <span className="px-1.5 py-0.5 bg-slate-900 rounded text-[8px] font-black text-amber-600/70 border border-slate-200 uppercase tracking-tighter">{j.perfilDominante?.perfil}</span>
                           </div>
                         </div>
                       </div>
@@ -373,12 +377,12 @@ export default function RankingsPage() {
                     <td className="p-6 text-center font-black italic text-slate-400">{j.Idade}</td>
                     <td className="p-6 text-center font-black text-[10px] uppercase text-slate-500">{(j.Nacionalidade || '').split('/')[0].split(',')[0].trim()}</td>
                     <td className="p-6 text-center">
-                      <div className={`inline-block px-4 py-2 rounded-xl text-sm font-black italic shadow-lg ${j.nota >= 8 ? 'bg-green-500/10 text-green-400 border border-green-500/20' : j.nota >= 6.5 ? 'bg-brand-yellow/10 text-brand-yellow border border-brand-yellow/20' : j.nota >= 5 ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+                      <div className={`inline-block px-4 py-2 rounded-xl text-sm font-black italic shadow-lg ${j.nota >= 8 ? 'bg-green-500/10 text-green-400 border border-green-500/20' : j.nota >= 6.5 ? 'bg-amber-50 text-amber-600 border border-amber-200' : j.nota >= 5 ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
                         {j.nota.toFixed(1)}
                       </div>
                     </td>
                     {metricasPerfil.map(m => (
-                      <td key={m} className="p-6 text-center"><span className="text-sm font-black italic tabular-nums text-slate-400 group-hover:text-white transition-colors">{j[m] || '0'}</span></td>
+                      <td key={m} className="p-6 text-center"><span className="text-sm font-black italic tabular-nums text-slate-400 group-hover:text-black transition-colors">{j[m] || '0'}</span></td>
                     ))}
                     <td className="p-6 text-right">
                       <button 
@@ -386,7 +390,7 @@ export default function RankingsPage() {
                           const p2 = jogadoresRankeados.find(atleta => atleta.Jogador !== j.Jogador);
                           if (p2) setComparisonModal({ open: true, player1: j, player2: p2 });
                         }}
-                        className="px-4 py-2 bg-slate-900 text-slate-500 hover:text-brand-yellow border border-slate-800 hover:border-brand-yellow rounded-xl text-[9px] font-black uppercase tracking-widest transition-all"
+                        className="px-4 py-2 bg-slate-900 text-slate-500 hover:text-amber-600 border border-slate-200 hover:border-amber-500 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all"
                       >VS</button>
                     </td>
                   </tr>
@@ -399,31 +403,31 @@ export default function RankingsPage() {
 
       {/* MODAL DE COMPARAÇÃO */}
       {comparisonModal.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-xl">
-          <div className="bg-[#0d1117] border border-slate-800 w-full max-w-5xl rounded-[3rem] overflow-hidden shadow-2xl">
-            <div className="p-8 border-b border-slate-800 flex justify-between items-center bg-slate-900/20">
-              <h2 className="text-2xl font-black italic uppercase tracking-tighter">Comparação <span className="text-brand-yellow">Head-to-Head</span></h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-100/90 backdrop-blur-xl">
+          <div className="bg-white border border-slate-200 w-full max-w-5xl rounded-[3rem] overflow-hidden shadow-2xl">
+            <div className="p-8 border-b border-slate-200 flex justify-between items-center bg-white">
+              <h2 className="text-2xl font-black italic uppercase tracking-tighter">Comparação <span className="text-amber-600">Head-to-Head</span></h2>
               <div className="flex gap-4">
-                <button onClick={exportComparisonPDF} className="px-6 py-2 bg-brand-yellow text-slate-950 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-yellow/80 transition-all">Exportar PDF</button>
-                <button onClick={() => setComparisonModal({ open: false, player1: null, player2: null })} className="p-2 text-slate-500 hover:text-white transition-all"><svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+                <button onClick={exportComparisonPDF} className="px-6 py-2 bg-amber-500 text-black rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-400 transition-all">Exportar PDF</button>
+                <button onClick={() => setComparisonModal({ open: false, player1: null, player2: null })} className="p-2 text-slate-500 hover:text-black transition-all"><svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
               </div>
             </div>
             
             <div className="p-8">
               <div className="grid grid-cols-3 gap-8 mb-12">
                 <div className="text-center">
-                  <div className="w-24 h-24 bg-slate-800 rounded-3xl mx-auto mb-4 border-2 border-brand-yellow flex items-center justify-center text-2xl font-black text-slate-600 shadow-[0_0_30px_rgba(251,191,36,0.1)]">{comparisonModal.player1.Jogador.substring(0,2).toUpperCase()}</div>
-                  <h3 className="text-xl font-black uppercase italic tracking-tighter text-brand-yellow">{comparisonModal.player1.Jogador}</h3>
+                  <div className="w-24 h-24 bg-slate-800 rounded-3xl mx-auto mb-4 border-2 border-amber-500 flex items-center justify-center text-2xl font-black text-slate-600 ">{comparisonModal.player1.Jogador.substring(0,2).toUpperCase()}</div>
+                  <h3 className="text-xl font-black uppercase italic tracking-tighter text-amber-600">{comparisonModal.player1.Jogador}</h3>
                   <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1">{comparisonModal.player1.Time || comparisonModal.player1.Equipe}</p>
                 </div>
                 
                 <div className="flex items-center justify-center">
-                  <div className="w-16 h-16 bg-slate-900 rounded-full border border-slate-800 flex items-center justify-center text-xl font-black italic text-slate-700">VS</div>
+                  <div className="w-16 h-16 bg-slate-900 rounded-full border border-slate-200 flex items-center justify-center text-xl font-black italic text-slate-700">VS</div>
                 </div>
 
                 <div className="text-center">
                   <div className="w-24 h-24 bg-slate-800 rounded-3xl mx-auto mb-4 border-2 border-slate-700 flex items-center justify-center text-2xl font-black text-slate-600">{comparisonModal.player2.Jogador.substring(0,2).toUpperCase()}</div>
-                  <h3 className="text-xl font-black uppercase italic tracking-tighter text-white">{comparisonModal.player2.Jogador}</h3>
+                  <h3 className="text-xl font-black uppercase italic tracking-tighter text-black">{comparisonModal.player2.Jogador}</h3>
                   <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1">{comparisonModal.player2.Time || comparisonModal.player2.Equipe}</p>
                 </div>
               </div>
@@ -438,14 +442,14 @@ export default function RankingsPage() {
                     const p2 = (v2 / total) * 100
 
                     return (
-                      <div key={m} className="bg-slate-900/30 p-5 rounded-2xl border border-slate-800/50">
+                      <div key={m} className="bg-white p-5 rounded-2xl border border-slate-200">
                         <div className="flex justify-between items-center mb-3">
-                          <span className="text-sm font-black italic tabular-nums text-brand-yellow">{v1}</span>
+                          <span className="text-sm font-black italic tabular-nums text-amber-600">{v1}</span>
                           <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{m}</span>
-                          <span className="text-sm font-black italic tabular-nums text-white">{v2}</span>
+                          <span className="text-sm font-black italic tabular-nums text-black">{v2}</span>
                         </div>
                         <div className="h-2 bg-slate-800 rounded-full overflow-hidden flex">
-                          <div className="h-full bg-brand-yellow transition-all duration-1000" style={{ width: `${p1}%` }} />
+                          <div className="h-full bg-amber-500 transition-all duration-1000" style={{ width: `${p1}%` }} />
                           <div className="h-full bg-slate-600 transition-all duration-1000" style={{ width: `${p2}%` }} />
                         </div>
                       </div>

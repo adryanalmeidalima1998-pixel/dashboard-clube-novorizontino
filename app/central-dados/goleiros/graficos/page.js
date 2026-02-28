@@ -180,38 +180,49 @@ export default function GraficosGoleirosPage() {
     setNomeNovoTemplate('')
   }
 
-  if (carregando) return <div className="min-h-screen bg-[#0a0c10] flex items-center justify-center text-emerald-500">Carregando Gráficos de Goleiros...</div>
+  if (carregando) return <div className="min-h-screen bg-white flex items-center justify-center text-emerald-600">Carregando Gráficos de Goleiros...</div>
 
   return (
-    <div className="min-h-screen bg-[#0a0c10] text-white p-4 md:p-8 font-sans">
+    <div className="min-h-screen bg-white text-black p-4 md:p-8 font-sans">
       <div className="max-w-[1600px] mx-auto">
         
         {/* HEADER */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-12">
-          <div className="flex items-center gap-6">
-            <button onClick={() => router.push('/central-dados/goleiros')} className="p-4 bg-slate-900/80 hover:bg-emerald-500/20 rounded-2xl border border-slate-800 transition-all group"><svg className="w-6 h-6 text-slate-500 group-hover:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button>
-            <div><h1 className="text-4xl md:text-6xl font-black italic uppercase tracking-tighter leading-none">Gráficos de <span className="text-emerald-500">Goleiros</span></h1></div>
+        <header className="flex justify-between items-center border-b-4 border-amber-500 pb-2 mb-6">
+          <div className="flex items-center gap-4">
+            <img src="/club/escudonovorizontino.png" alt="Shield" className="h-16 w-auto" />
+            <div>
+              <h1 className="text-3xl font-black tracking-tighter text-black uppercase leading-none">Grêmio Novorizontino</h1>
+              <p className="text-base font-bold tracking-widest text-slate-600 uppercase">Departamento de Scouting</p>
+            </div>
           </div>
-          <div className="flex gap-3">
-            <button onClick={() => setTipoGrafico(tipoGrafico === 'radar' ? 'dispersao' : 'radar')} className="px-6 py-3 bg-slate-900/80 border border-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500/20 transition-all">{tipoGrafico === 'radar' ? 'Ver Dispersão' : 'Ver Radar'}</button>
-            <button onClick={exportarPDF} className="px-6 py-3 bg-emerald-500 text-slate-950 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-400 transition-all">PDF Clean</button>
+          <div className="text-right flex flex-col items-end gap-2">
+            <button onClick={() => router.push('/central-dados/goleiros')} className="bg-slate-200 text-slate-800 px-3 py-1 rounded-md text-xs font-bold hover:bg-slate-300 transition-colors">
+              ← VOLTAR
+            </button>
+            <div className="bg-amber-500 text-black px-6 py-1 font-black text-xl uppercase italic shadow-md">
+              Gráficos de Goleiros
+            </div>
+            <div className="flex gap-2 mt-1">
+              <button onClick={() => setTipoGrafico(tipoGrafico === 'radar' ? 'dispersao' : 'radar')} className="bg-slate-200 text-slate-800 px-3 py-1 rounded-md text-[10px] font-black uppercase hover:bg-slate-300 transition-colors">{tipoGrafico === 'radar' ? 'Ver Dispersão' : 'Ver Radar'}</button>
+              <button onClick={exportarPDF} className="bg-slate-900 text-white px-3 py-1 rounded-md text-[10px] font-black uppercase hover:bg-black transition-colors">PDF</button>
+            </div>
           </div>
-        </div>
+        </header>
 
         {/* SELETOR DE MÉTRICAS NO TOPO */}
-        <div className="bg-slate-900/40 backdrop-blur-md p-8 rounded-[2.5rem] border border-slate-800/50 shadow-2xl mb-8">
+        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-2xl mb-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
             <div className="flex flex-col gap-2">
-              <h2 className="text-xl font-black italic uppercase tracking-tighter">Configurar <span className="text-emerald-500">Métricas</span></h2>
+              <h2 className="text-xl font-black italic uppercase tracking-tighter">Configurar <span className="text-emerald-600">Métricas</span></h2>
               <div className="flex gap-2">
                 <input 
                   type="text" 
                   placeholder="NOME DO TEMPLATE..." 
                   value={nomeNovoTemplate} 
                   onChange={e => setNomeNovoTemplate(e.target.value)} 
-                  className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-[10px] font-black uppercase outline-none focus:border-emerald-500/50"
+                  className="bg-slate-100 border border-slate-200 rounded-xl px-4 py-2 text-[10px] font-black uppercase outline-none focus:border-emerald-500/50"
                 />
-                <button onClick={salvarTemplate} className="bg-emerald-500 text-slate-950 px-4 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-emerald-400 transition-all">Salvar</button>
+                <button onClick={salvarTemplate} className="bg-emerald-500 text-black px-4 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-emerald-400 transition-all">Salvar</button>
               </div>
             </div>
             
@@ -226,12 +237,12 @@ export default function GraficosGoleirosPage() {
                 >
                   [ Desmarcar Tudo ]
                 </button>
-                <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 overflow-x-auto custom-scrollbar flex-1">
+                <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 overflow-x-auto custom-scrollbar flex-1">
                   {Object.keys(categoriasMetricas).map(cat => (
                   <button 
                     key={cat} 
                     onClick={() => setAbaAtiva(cat)}
-                    className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${abaAtiva === cat ? 'bg-emerald-500 text-slate-950' : 'text-slate-500 hover:text-slate-300'}`}
+                    className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${abaAtiva === cat ? 'bg-emerald-500 text-black' : 'text-slate-500 hover:text-slate-600'}`}
                   >
                     {cat}
                   </button>
@@ -271,7 +282,7 @@ export default function GraficosGoleirosPage() {
                       setMetricaX(metrica)
                     }
                   }}
-                  className={`p-3 rounded-xl border text-[9px] font-black uppercase tracking-widest transition-all text-left flex items-center justify-between group ${isSelected ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400' : 'bg-slate-950/50 border-slate-800 text-slate-500 hover:border-slate-600'}`}
+                  className={`p-3 rounded-xl border text-[9px] font-black uppercase tracking-widest transition-all text-left flex items-center justify-between group ${isSelected ? 'bg-emerald-50 border-emerald-500 text-emerald-400' : 'bg-slate-100 border-slate-200 text-slate-500 hover:border-slate-600'}`}
                 >
                   <span className="truncate mr-2">{metrica}</span>
                   {isSelected && <div className="w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>}
@@ -284,18 +295,18 @@ export default function GraficosGoleirosPage() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Sidebar Filtros */}
           <div className="space-y-6">
-            <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
+            <div className="bg-white p-6 rounded-3xl border border-slate-200">
               <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Filtros Goleiros</h3>
               <div className="space-y-4">
-                <select value={filtroTime} onChange={e => setFiltroTime(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black uppercase outline-none">{times.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}</select>
+                <select value={filtroTime} onChange={e => setFiltroTime(e.target.value)} className="w-full bg-slate-100 border border-slate-200 rounded-xl p-3 text-[10px] font-black uppercase outline-none">{times.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}</select>
                 <div className="flex gap-2">
-                  <input type="number" value={filtroIdade.min} onChange={e => setFiltroIdade({...filtroIdade, min: parseInt(e.target.value)})} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-[10px] font-bold" placeholder="Idade Min" />
-                  <input type="number" value={filtroIdade.max} onChange={e => setFiltroIdade({...filtroIdade, max: parseInt(e.target.value)})} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-[10px] font-bold" placeholder="Idade Max" />
+                  <input type="number" value={filtroIdade.min} onChange={e => setFiltroIdade({...filtroIdade, min: parseInt(e.target.value)})} className="w-full bg-slate-100 border border-slate-200 rounded-lg p-2 text-[10px] font-bold" placeholder="Idade Min" />
+                  <input type="number" value={filtroIdade.max} onChange={e => setFiltroIdade({...filtroIdade, max: parseInt(e.target.value)})} className="w-full bg-slate-100 border border-slate-200 rounded-lg p-2 text-[10px] font-bold" placeholder="Idade Max" />
                 </div>
               </div>
             </div>
 
-            <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50">
+            <div className="bg-white p-6 rounded-3xl border border-slate-200">
               <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Selecionar Goleiros ({jogadoresSelecionados.length})</h3>
               <div className="max-h-[300px] overflow-y-auto space-y-1 pr-2 custom-scrollbar">
                 {jogadoresFiltrados.map(j => (
@@ -313,7 +324,7 @@ export default function GraficosGoleirosPage() {
 
           {/* Área do Gráfico */}
           <div className="lg:col-span-3">
-            <div className="bg-slate-900/40 p-8 rounded-[2rem] border border-slate-800/50 h-[600px] relative">
+            <div className="bg-white p-8 rounded-[2rem] border border-slate-200 h-[600px] relative">
               {tipoGrafico === 'radar' ? (
                 radarData && <Radar data={radarData} options={{ 
                   responsive: true, 

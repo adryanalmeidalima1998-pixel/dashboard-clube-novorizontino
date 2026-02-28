@@ -241,38 +241,49 @@ export default function GraficosPage() {
     setNomeNovoTemplate('')
   }
 
-  if (carregando) return <div className="min-h-screen bg-[#0a0c10] flex items-center justify-center text-brand-yellow">Carregando Gráficos...</div>
+  if (carregando) return <div className="min-h-screen bg-white flex items-center justify-center text-amber-600">Carregando Gráficos...</div>
 
   return (
-    <div className="min-h-screen bg-[#0a0c10] text-white p-4 md:p-8 font-sans">
+    <div className="min-h-screen bg-white text-black p-4 md:p-8 font-sans">
       <div className="max-w-[1600px] mx-auto">
         
         {/* HEADER */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-12">
-          <div className="flex items-center gap-6">
-            <button onClick={() => router.push('/central-dados')} className="p-4 bg-slate-900/80 hover:bg-brand-yellow/20 rounded-2xl border border-slate-800 transition-all group"><svg className="w-6 h-6 text-slate-500 group-hover:text-brand-yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button>
-            <div><h1 className="text-4xl md:text-6xl font-black italic uppercase tracking-tighter leading-none">Gráficos de <span className="text-brand-yellow">Performance</span></h1></div>
+        <header className="flex justify-between items-center border-b-4 border-amber-500 pb-2 mb-6">
+          <div className="flex items-center gap-4">
+            <img src="/club/escudonovorizontino.png" alt="Shield" className="h-16 w-auto" />
+            <div>
+              <h1 className="text-3xl font-black tracking-tighter text-black uppercase leading-none">Grêmio Novorizontino</h1>
+              <p className="text-base font-bold tracking-widest text-slate-600 uppercase">Departamento de Scouting</p>
+            </div>
           </div>
-          <div className="flex gap-3">
-            <button onClick={() => setTipoGrafico(tipoGrafico === 'radar' ? 'dispersao' : 'radar')} className="px-6 py-3 bg-slate-900/80 border border-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-yellow/20 transition-all">{tipoGrafico === 'radar' ? 'Ver Dispersão' : 'Ver Radar'}</button>
-            <button onClick={exportarPDF} className="px-6 py-3 bg-brand-yellow text-slate-950 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-yellow/80 transition-all">PDF Clean</button>
+          <div className="text-right flex flex-col items-end gap-2">
+            <button onClick={() => router.push('/central-dados')} className="bg-slate-200 text-slate-800 px-3 py-1 rounded-md text-xs font-bold hover:bg-slate-300 transition-colors">
+              ← VOLTAR
+            </button>
+            <div className="bg-amber-500 text-black px-6 py-1 font-black text-xl uppercase italic shadow-md">
+              Gráficos de Performance
+            </div>
+            <div className="flex gap-2 mt-1">
+              <button onClick={() => setTipoGrafico(tipoGrafico === 'radar' ? 'dispersao' : 'radar')} className="bg-slate-200 text-slate-800 px-3 py-1 rounded-md text-[10px] font-black uppercase hover:bg-slate-300 transition-colors">{tipoGrafico === 'radar' ? 'Ver Dispersão' : 'Ver Radar'}</button>
+              <button onClick={exportarPDF} className="bg-slate-900 text-white px-3 py-1 rounded-md text-[10px] font-black uppercase hover:bg-black transition-colors">PDF</button>
+            </div>
           </div>
-        </div>
+        </header>
 
         {/* SELETOR DE MÉTRICAS NO TOPO */}
-        <div className="bg-slate-900/40 backdrop-blur-md p-8 rounded-[2.5rem] border border-slate-800/50 shadow-2xl mb-8">
+        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-2xl mb-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
             <div className="flex flex-col gap-2">
-              <h2 className="text-xl font-black italic uppercase tracking-tighter">Configurar <span className="text-brand-yellow">Métricas</span></h2>
+              <h2 className="text-xl font-black italic uppercase tracking-tighter">Configurar <span className="text-amber-600">Métricas</span></h2>
               <div className="flex gap-2">
                 <input 
                   type="text" 
                   placeholder="NOME DO TEMPLATE..." 
                   value={nomeNovoTemplate} 
                   onChange={e => setNomeNovoTemplate(e.target.value)} 
-                  className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-[10px] font-black uppercase outline-none focus:border-brand-yellow/50"
+                  className="bg-slate-100 border border-slate-200 rounded-xl px-4 py-2 text-[10px] font-black uppercase outline-none focus:border-amber-400"
                 />
-                <button onClick={salvarTemplate} className="bg-brand-yellow text-slate-950 px-4 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-brand-yellow/80 transition-all">Salvar</button>
+                <button onClick={salvarTemplate} className="bg-amber-500 text-black px-4 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-amber-400 transition-all">Salvar</button>
               </div>
             </div>
             
@@ -283,7 +294,7 @@ export default function GraficosPage() {
                     if (tipoGrafico === 'radar') setMetricasRadar([])
                     else { setMetricaX(''); setMetricaY('') }
                   }}
-                  className="text-[9px] font-black uppercase text-slate-500 hover:text-brand-yellow transition-all"
+                  className="text-[9px] font-black uppercase text-slate-500 hover:text-amber-600 transition-all"
                 >
                   [ Desmarcar Tudo ]
                 </button>
@@ -293,7 +304,7 @@ export default function GraficosPage() {
                   <button 
                     key={cat} 
                     onClick={() => setAbaAtiva(cat)}
-                    className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border ${abaAtiva === cat ? 'bg-brand-yellow border-brand-yellow text-slate-950 shadow-[0_0_15px_rgba(251,191,36,0.3)]' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-700'}`}
+                    className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border ${abaAtiva === cat ? 'bg-amber-500 border-amber-500 text-black ' : 'bg-slate-100 border-slate-200 text-slate-500 hover:border-slate-700'}`}
                   >
                     {cat}
                   </button>
@@ -319,13 +330,13 @@ export default function GraficosPage() {
                 }}
                 className={`p-3 rounded-xl text-[9px] font-bold text-left transition-all border ${
                   (tipoGrafico === 'radar' ? metricasRadar.includes(metrica) : (metricaX === metrica || metricaY === metrica))
-                    ? 'bg-brand-yellow/10 border-brand-yellow text-brand-yellow' 
-                    : 'bg-slate-950/50 border-slate-800 text-slate-500 hover:border-slate-700'
+                    ? 'bg-amber-50 border-amber-500 text-amber-600' 
+                    : 'bg-slate-100 border-slate-200 text-slate-500 hover:border-slate-700'
                 }`}
               >
                 {metrica.toUpperCase()}
-                {(tipoGrafico === 'dispersao' && metricaX === metrica) && <span className="ml-2 text-white font-black">[X]</span>}
-                {(tipoGrafico === 'dispersao' && metricaY === metrica) && <span className="ml-2 text-white font-black">[Y]</span>}
+                {(tipoGrafico === 'dispersao' && metricaX === metrica) && <span className="ml-2 text-black font-black">[X]</span>}
+                {(tipoGrafico === 'dispersao' && metricaY === metrica) && <span className="ml-2 text-black font-black">[Y]</span>}
               </button>
             ))}
           </div>
@@ -337,27 +348,27 @@ export default function GraficosPage() {
           <div className="lg:col-span-1 space-y-6">
             
             {/* Filtros de Base */}
-            <div className="bg-slate-900/40 p-6 rounded-[2rem] border border-slate-800/50">
+            <div className="bg-white p-6 rounded-[2rem] border border-slate-200">
               <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-6">Filtros de Base</h3>
               <div className="space-y-4">
                 <div>
                   <label className="text-[8px] font-black text-slate-600 uppercase mb-2 block">Equipe</label>
-                  <select value={filtroTime} onChange={e => setFiltroTime(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black uppercase outline-none focus:border-brand-yellow/50">
+                  <select value={filtroTime} onChange={e => setFiltroTime(e.target.value)} className="w-full bg-slate-100 border border-slate-200 rounded-xl p-3 text-[10px] font-black uppercase outline-none focus:border-amber-400">
                     {times.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="text-[8px] font-black text-slate-600 uppercase mb-2 block">Minutagem Mínima</label>
-                  <input type="number" value={filtroMinutagem} onChange={e => setFiltroMinutagem(parseInt(e.target.value) || 0)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black uppercase outline-none focus:border-brand-yellow/50" />
+                  <input type="number" value={filtroMinutagem} onChange={e => setFiltroMinutagem(parseInt(e.target.value) || 0)} className="w-full bg-slate-100 border border-slate-200 rounded-xl p-3 text-[10px] font-black uppercase outline-none focus:border-amber-400" />
                 </div>
               </div>
             </div>
 
             {/* Seleção de Jogadores */}
-            <div className="bg-slate-900/40 p-6 rounded-[2rem] border border-slate-800/50 h-[500px] flex flex-col">
+            <div className="bg-white p-6 rounded-[2rem] border border-slate-200 h-[500px] flex flex-col">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500">Atletas ({jogadoresFiltrados.length}) <span className="text-brand-yellow ml-2">[Máx 8]</span></h3>
-                <button onClick={() => setJogadoresSelecionados([])} className="text-[8px] font-black uppercase text-brand-yellow hover:underline">Limpar</button>
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500">Atletas ({jogadoresFiltrados.length}) <span className="text-amber-600 ml-2">[Máx 8]</span></h3>
+                <button onClick={() => setJogadoresSelecionados([])} className="text-[8px] font-black uppercase text-amber-600 hover:underline">Limpar</button>
               </div>
               <div className="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
                 {jogadoresFiltrados.map((j, idx) => (
@@ -369,8 +380,8 @@ export default function GraficosPage() {
                     }}
                     className={`w-full p-3 rounded-xl text-left transition-all border flex items-center justify-between group ${
                       jogadoresSelecionados.includes(j.Jogador) 
-                        ? 'bg-brand-yellow border-brand-yellow text-slate-950' 
-                        : 'bg-slate-950/50 border-slate-800 text-slate-400 hover:border-slate-700'
+                        ? 'bg-amber-500 border-amber-500 text-black' 
+                        : 'bg-slate-100 border-slate-200 text-slate-400 hover:border-slate-700'
                     }`}
                   >
                     <div className="flex flex-col">
@@ -378,7 +389,7 @@ export default function GraficosPage() {
                       <span className={`text-[8px] font-bold uppercase ${jogadoresSelecionados.includes(j.Jogador) ? 'text-slate-800' : 'text-slate-600'}`}>{j.Time}</span>
                     </div>
                     {jogadoresSelecionados.includes(j.Jogador) && (
-                      <div className="w-4 h-4 rounded-full bg-slate-950/20 flex items-center justify-center">
+                      <div className="w-4 h-4 rounded-full bg-slate-100/20 flex items-center justify-center">
                         <span className="text-[8px] font-black">{jogadoresSelecionados.indexOf(j.Jogador) + 1}</span>
                       </div>
                     )}
@@ -390,17 +401,17 @@ export default function GraficosPage() {
 
           {/* GRÁFICO PRINCIPAL */}
           <div className="lg:col-span-3">
-            <div className="bg-slate-900/40 p-10 rounded-[3rem] border border-slate-800/50 h-full flex flex-col shadow-2xl relative overflow-hidden">
+            <div className="bg-white p-10 rounded-[3rem] border border-slate-200 h-full flex flex-col shadow-2xl relative overflow-hidden">
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-brand-yellow/20 to-transparent"></div>
               
               <div className="flex items-center justify-between mb-10">
                 <div className="flex items-center gap-4">
-                  <div className="w-3 h-3 bg-brand-yellow rounded-full animate-pulse"></div>
-                  <h2 className="text-2xl font-black italic uppercase tracking-tighter">Visualização <span className="text-brand-yellow">Dinâmica</span></h2>
+                  <div className="w-3 h-3 bg-amber-500 rounded-full animate-pulse"></div>
+                  <h2 className="text-2xl font-black italic uppercase tracking-tighter">Visualização <span className="text-amber-600">Dinâmica</span></h2>
                 </div>
                 <div className="flex gap-4">
                   {jogadoresSelecionados.map((nome, idx) => (
-                    <div key={nome} className="flex items-center gap-2 px-3 py-1 bg-slate-950 border border-slate-800 rounded-full">
+                    <div key={nome} className="flex items-center gap-2 px-3 py-1 bg-slate-100 border border-slate-200 rounded-full">
                       <div className="w-2 h-2 rounded-full" style={{ backgroundColor: getCorJogador(idx) }}></div>
                       <span className="text-[8px] font-black uppercase text-slate-400">{nome.split(' ')[0]}</span>
                     </div>
@@ -461,7 +472,7 @@ export default function GraficosPage() {
                 )}
               </div>
 
-              <div className="mt-8 flex items-center justify-between text-slate-600 border-t border-slate-800/50 pt-8">
+              <div className="mt-8 flex items-center justify-between text-slate-600 border-t border-slate-200 pt-8">
                 <div className="text-[9px] font-black uppercase tracking-widest">Metodologia: Normalização por Média do Grupo (1.0 = Média)</div>
                 <div className="text-[9px] font-black uppercase tracking-widest">Grêmio Novorizontino • Inteligência de Dados</div>
               </div>

@@ -119,7 +119,7 @@ export default function BenchmarkGoleirosPage() {
   }
 
   if (carregando) return (
-    <div className="min-h-screen bg-[#0a0c10] text-white flex items-center justify-center">
+    <div className="min-h-screen bg-white text-black flex items-center justify-center">
       <div className="text-center">
         <div className="w-16 h-16 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin mx-auto mb-4"></div>
         <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 animate-pulse italic">Calculando Benchmarks de Goleiros...</span>
@@ -128,36 +128,42 @@ export default function BenchmarkGoleirosPage() {
   )
 
   return (
-    <div className="min-h-screen bg-[#0a0c10] text-white p-4 md:p-8 font-sans">
+    <div className="min-h-screen bg-white text-black p-4 md:p-8 font-sans">
       <div className="max-w-[1600px] mx-auto">
         
         {/* HEADER */}
-        <div className="flex items-center gap-6 mb-12">
-          <button onClick={() => router.push('/central-dados/goleiros')} className="p-4 bg-slate-900/80 hover:bg-emerald-500/20 rounded-2xl border border-slate-800 transition-all group">
-            <svg className="w-6 h-6 text-slate-500 group-hover:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-          </button>
-          <div>
-            <h1 className="text-4xl md:text-5xl font-black italic tracking-tighter uppercase leading-none bg-gradient-to-r from-white via-white to-slate-500 bg-clip-text text-transparent">
-              Benchmark <span className="text-emerald-500">Goleiros</span>
-            </h1>
-            <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-2">Comparação Técnica com a Média da Liga</p>
+        <header className="flex justify-between items-center border-b-4 border-amber-500 pb-2 mb-6">
+          <div className="flex items-center gap-4">
+            <img src="/club/escudonovorizontino.png" alt="Shield" className="h-16 w-auto" />
+            <div>
+              <h1 className="text-3xl font-black tracking-tighter text-black uppercase leading-none">Grêmio Novorizontino</h1>
+              <p className="text-base font-bold tracking-widest text-slate-600 uppercase">Departamento de Scouting</p>
+            </div>
           </div>
-        </div>
+          <div className="text-right flex flex-col items-end gap-2">
+            <button onClick={() => router.push('/central-dados/goleiros')} className="bg-slate-200 text-slate-800 px-3 py-1 rounded-md text-xs font-bold hover:bg-slate-300 transition-colors">
+              ← VOLTAR
+            </button>
+            <div className="bg-amber-500 text-black px-6 py-1 font-black text-xl uppercase italic shadow-md">
+              Benchmark Goleiros
+            </div>
+          </div>
+        </header>
 
         {/* SELETOR DE MÉTRICAS NO TOPO */}
-        <div className="bg-slate-900/40 backdrop-blur-md p-8 rounded-[2.5rem] border border-slate-800/50 shadow-2xl mb-8">
+        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-2xl mb-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
             <div className="flex flex-col gap-2">
-              <h2 className="text-xl font-black italic uppercase tracking-tighter">Configurar <span className="text-emerald-500">Benchmark</span></h2>
+              <h2 className="text-xl font-black italic uppercase tracking-tighter">Configurar <span className="text-emerald-600">Benchmark</span></h2>
               <div className="flex gap-2">
                 <input 
                   type="text" 
                   placeholder="NOME DO TEMPLATE..." 
                   value={nomeNovoTemplate} 
                   onChange={e => setNomeNovoTemplate(e.target.value)} 
-                  className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-[10px] font-black uppercase outline-none focus:border-emerald-500/50"
+                  className="bg-slate-100 border border-slate-200 rounded-xl px-4 py-2 text-[10px] font-black uppercase outline-none focus:border-emerald-500/50"
                 />
-                <button onClick={salvarTemplate} className="bg-emerald-500 text-slate-950 px-4 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-emerald-400 transition-all">Salvar</button>
+                <button onClick={salvarTemplate} className="bg-emerald-500 text-black px-4 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-emerald-400 transition-all">Salvar</button>
               </div>
             </div>
             
@@ -169,12 +175,12 @@ export default function BenchmarkGoleirosPage() {
                 >
                   [ Desmarcar Tudo ]
                 </button>
-                <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 overflow-x-auto custom-scrollbar flex-1">
+                <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 overflow-x-auto custom-scrollbar flex-1">
                   {Object.keys(categoriasMetricas).map(cat => (
                   <button 
                     key={cat} 
                     onClick={() => setAbaAtiva(cat)}
-                    className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${abaAtiva === cat ? 'bg-emerald-500 text-slate-950' : 'text-slate-500 hover:text-slate-300'}`}
+                    className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${abaAtiva === cat ? 'bg-emerald-500 text-black' : 'text-slate-500 hover:text-slate-600'}`}
                   >
                     {cat}
                   </button>
@@ -203,7 +209,7 @@ export default function BenchmarkGoleirosPage() {
                   if (metricasBenchmark.includes(metrica)) setMetricasBenchmark(metricasBenchmark.filter(m => m !== metrica))
                   else setMetricasBenchmark([...metricasBenchmark, metrica])
                 }}
-                className={`p-3 rounded-xl border text-[9px] font-black uppercase tracking-widest transition-all text-left flex items-center justify-between group ${metricasBenchmark.includes(metrica) ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400' : 'bg-slate-950/50 border-slate-800 text-slate-500 hover:border-slate-600'}`}
+                className={`p-3 rounded-xl border text-[9px] font-black uppercase tracking-widest transition-all text-left flex items-center justify-between group ${metricasBenchmark.includes(metrica) ? 'bg-emerald-50 border-emerald-500 text-emerald-400' : 'bg-slate-100 border-slate-200 text-slate-500 hover:border-slate-600'}`}
               >
                 <span className="truncate mr-2">{metrica}</span>
                 {metricasBenchmark.includes(metrica) && <div className="w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>}
@@ -216,7 +222,7 @@ export default function BenchmarkGoleirosPage() {
           
           {/* SIDEBAR FILTROS */}
           <div className="lg:col-span-1 space-y-6">
-            <div className="bg-slate-900/40 backdrop-blur-md p-6 rounded-3xl border border-slate-800/50 shadow-2xl">
+            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xl">
               <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Filtros de Contexto</h3>
               <div className="space-y-3">
                 <input 
@@ -224,22 +230,22 @@ export default function BenchmarkGoleirosPage() {
                   placeholder="BUSCAR GOLEIRO..." 
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black uppercase tracking-widest focus:border-emerald-500/50 outline-none"
+                  className="w-full bg-slate-100 border border-slate-200 rounded-xl p-3 text-[10px] font-black uppercase tracking-widest focus:border-emerald-500/50 outline-none"
                 />
-                <select value={filtroTime} onChange={(e) => setFiltroTime(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-black uppercase tracking-widest focus:outline-none">
+                <select value={filtroTime} onChange={(e) => setFiltroTime(e.target.value)} className="w-full bg-slate-100 border border-slate-200 rounded-xl p-3 text-[10px] font-black uppercase tracking-widest focus:outline-none">
                   {times.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
                 </select>
               </div>
             </div>
 
-            <div className="bg-slate-900/40 backdrop-blur-md p-6 rounded-3xl border border-slate-800/50 shadow-2xl">
+            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xl">
               <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Goleiros ({jogadoresFiltrados.length})</h3>
               <div className="space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
                 {jogadoresFiltrados.map(j => (
                   <button 
                     key={j.Jogador}
                     onClick={() => setJogadorSelecionado(j)}
-                    className={`w-full p-4 rounded-2xl text-left transition-all border ${jogadorSelecionado?.Jogador === j.Jogador ? 'bg-emerald-500 border-emerald-500 text-slate-950' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-700'}`}
+                    className={`w-full p-4 rounded-2xl text-left transition-all border ${jogadorSelecionado?.Jogador === j.Jogador ? 'bg-emerald-500 border-emerald-500 text-black' : 'bg-slate-100 border-slate-200 text-slate-500 hover:border-slate-700'}`}
                   >
                     <div className="font-black italic uppercase text-[11px] tracking-tighter">{j.Jogador}</div>
                     <div className="text-[8px] font-bold uppercase tracking-widest opacity-60 mt-1">{j.Posição} • {j.Time || j.Equipe}</div>
@@ -252,25 +258,25 @@ export default function BenchmarkGoleirosPage() {
           {/* MAIN CONTENT */}
           <div className="lg:col-span-3 space-y-6">
             {jogadorSelecionado && (
-              <div className="bg-slate-900/40 backdrop-blur-md rounded-[3rem] p-10 border border-slate-800/50 shadow-2xl">
+              <div className="bg-white rounded-[3rem] p-10 border border-slate-200 shadow-2xl">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-12">
                   <div className="flex items-center gap-6">
-                    <div className="w-20 h-20 bg-slate-950 rounded-[2rem] flex items-center justify-center border border-slate-800 shadow-[0_0_30px_rgba(16,185,129,0.1)]">
-                      <span className="text-emerald-500 font-black italic text-2xl">{jogadorSelecionado.Jogador.substring(0, 2).toUpperCase()}</span>
+                    <div className="w-20 h-20 bg-slate-100 rounded-[2rem] flex items-center justify-center border border-slate-200 shadow-[0_0_30px_rgba(16,185,129,0.1)]">
+                      <span className="text-emerald-600 font-black italic text-2xl">{jogadorSelecionado.Jogador.substring(0, 2).toUpperCase()}</span>
                     </div>
                     <div>
                       <div className="flex items-center gap-3 mb-1">
                         <div className="w-1.5 h-4 bg-emerald-500 rounded-full"></div>
-                        <span className="text-emerald-500 text-[10px] font-black uppercase tracking-[0.3em]">Perfil de Benchmark Goleiro</span>
+                        <span className="text-emerald-600 text-[10px] font-black uppercase tracking-[0.3em]">Perfil de Benchmark Goleiro</span>
                       </div>
-                      <h2 className="text-5xl font-black italic uppercase tracking-tighter text-white leading-none">{jogadorSelecionado.Jogador}</h2>
+                      <h2 className="text-5xl font-black italic uppercase tracking-tighter text-black leading-none">{jogadorSelecionado.Jogador}</h2>
                       <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-2">{jogadorSelecionado.Posição} • {jogadorSelecionado.Time || jogadorSelecionado.Equipe}</p>
                     </div>
                   </div>
 
-                  <div className="bg-slate-950/50 p-4 rounded-2xl border border-slate-800">
+                  <div className="bg-slate-100 p-4 rounded-2xl border border-slate-200">
                     <label className="text-[8px] font-black text-slate-600 uppercase tracking-widest block mb-2 ml-1">Referência de Comparação</label>
-                    <div className="text-emerald-500 text-[10px] font-black uppercase tracking-widest">Média Geral da Liga</div>
+                    <div className="text-emerald-600 text-[10px] font-black uppercase tracking-widest">Média Geral da Liga</div>
                   </div>
                 </div>
 
@@ -282,13 +288,13 @@ export default function BenchmarkGoleirosPage() {
                     const isPositive = metrica.includes('sofrido') ? diferenca <= 0 : diferenca >= 0
 
                     return (
-                      <div key={idx} className="bg-slate-950/50 p-8 rounded-[2rem] border border-slate-800/50 group hover:border-emerald-500/30 transition-all duration-500">
+                      <div key={idx} className="bg-slate-100 p-8 rounded-[2rem] border border-slate-200 group hover:border-emerald-300 transition-all duration-500">
                         <div className="flex justify-between items-start mb-6">
                           <div>
                             <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-1">{metrica}</span>
-                            <div className="text-3xl font-black italic text-white group-hover:text-emerald-400 transition-colors">{jogadorSelecionado[metrica] || '0'}</div>
+                            <div className="text-3xl font-black italic text-black group-hover:text-amber-600 transition-colors">{jogadorSelecionado[metrica] || '0'}</div>
                           </div>
-                          <div className={`px-3 py-1.5 rounded-xl text-[10px] font-black ${isPositive ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
+                          <div className={`px-3 py-1.5 rounded-xl text-[10px] font-black ${isPositive ? 'bg-emerald-50 text-emerald-600' : 'bg-red-500/10 text-red-500'}`}>
                             {diferenca >= 0 ? '+' : ''}{diferenca.toFixed(1)}%
                           </div>
                         </div>
@@ -298,7 +304,7 @@ export default function BenchmarkGoleirosPage() {
                             <span className="text-slate-600">Atleta</span>
                             <span className="text-slate-600">Média Liga</span>
                           </div>
-                          <div className="relative h-3 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
+                          <div className="relative h-3 bg-slate-900 rounded-full overflow-hidden border border-slate-200">
                             <div className="absolute top-0 bottom-0 bg-slate-700/50 border-r-2 border-white/20 z-10" style={{ width: '50%' }}></div>
                             <div 
                               className={`absolute top-0 bottom-0 transition-all duration-1000 ${isPositive ? 'bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)]' : 'bg-red-500/50'}`}
