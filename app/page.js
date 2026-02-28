@@ -67,7 +67,7 @@ export default function Home() {
               {[
                 { id: 'serie-b', name: 'Série B' },
                 { id: 'paulista', name: 'Paulistão' },
-                { id: 'copa-brasil', name: 'Copa Brasil' },
+                { id: 'copa-do-brasil', name: 'Copa Brasil' },
                 { id: 'copa-sul-sudeste', name: 'Sul-Sudeste' }
               ].map((comp) => (
                 <Link
